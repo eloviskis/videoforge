@@ -1,0 +1,17 @@
+{
+  "name": "videoforge",
+  "version": "1.0.0",
+  "description": "**Plataforma de Automação de Vídeos para YouTube**",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.13.1",
+    "esbuild": "^0.27.3"
+  }
+}

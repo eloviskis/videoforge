@@ -1,0 +1,85 @@
+# Variáveis de ambiente
+.env
+.env.local
+
+# Arquivos de mídia
+media/
+*.mp4
+*.mp3
+*.wav
+*.jpg
+*.jpeg
+*.png
+
+# Credenciais
+client_secret.json
+youtube_token.json
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+build/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+.dockerignore
+
+# Workflows n8n (opcional - remover se quiser versionar)
+# workflows/*.json
+
+# Temporários
+tmp/
+temp/
+*.tmp
+
+# Desktop build output
+dist-desktop/
+desktop/dist/
+
+# Backend temp files
+backend/clips/
+backend/downloads/
+backend/temp/
+backend/*.json
+
+# Python worker venv
+python-worker/.venv/
+python-worker/venv/
+
+# Logs
+backend.log

@@ -1,0 +1,158 @@
+services:
+  # ============================================
+  # FRONTEND - React (servido com Nginx)
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: videoforge-frontend
+    restart: always
+    networks:
+      - videoforge-network
+
+  # ============================================
+  # BACKEND - Node.js API
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: videoforge-backend
+    restart: always
+    env_file:
+      - ./backend/.env.production
+    volumes:
+      - ./media:/media
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - videoforge-network
+
+  # ============================================
+  # NGINX REVERSE PROXY + SSL
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: videoforge-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - videoforge-network
+
+  # ============================================
+  # CERTBOT - SSL Let's Encrypt (renovação auto)
+  # ============================================
+  certbot:
+    image: certbot/certbot
+    container_name: videoforge-certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+  # ============================================
+  # n8n - Orquestrador de workflows
+  # ============================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: videoforge-n8n
+    restart: always
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-videoforge2026}
+      - N8N_HOST=${DOMAIN:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - N8N_METRICS=true
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=${DB_N8N_PASSWORD:-n8n123}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./media:/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - videoforge-network
+
+  # ============================================
+  # PostgreSQL
+  # ============================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: videoforge-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=videoforge
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-forge123}
+      - POSTGRES_DB=videoforge
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U videoforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - videoforge-network
+
+  # ============================================
+  # Redis
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: videoforge-redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis_data:/data
+    networks:
+      - videoforge-network
+
+  # ============================================
+  # Python Worker (FFmpeg + TTS)
+  # ============================================
+  python-worker:
+    build:
+      context: ./python-worker
+      dockerfile: Dockerfile
+    container_name: videoforge-python-worker
+    restart: always
+    volumes:
+      - ./python-scripts:/app/scripts
+      - ./media:/media
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: tail -f /dev/null
+    networks:
+      - videoforge-network
+
+volumes:
+  n8n_data:
+  postgres_data:
+  redis_data:
+
+networks:
+  videoforge-network:
+    driver: bridge

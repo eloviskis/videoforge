@@ -1,0 +1,26 @@
+# TTS (Text-to-Speech)
+edge-tts>=7.0
+elevenlabs>=1.0.0
+openai>=1.0.0
+
+# Legendas automáticas (GRÁTIS - roda local, sem API key)
+faster-whisper>=1.0.0
+ctranslate2>=4.0.0
+
+# Manipulação de áudio
+pydub>=0.25.1
+
+# YouTube API
+google-api-python-client==2.108.0
+google-auth-oauthlib==1.2.0
+google-auth-httplib2==0.2.0
+
+# Image Processing
+Pillow==10.1.0
+
+# Utilities
+requests==2.31.0
+python-dotenv==1.0.0
+
+# CORTES - Download de vídeos YouTube
+yt-dlp>=2024.1.0

@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # n8n - Orquestrador de workflows
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: videoforge-n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=videoforge2026
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_METRICS=true
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=n8n123
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./media:/media
+      - ./workflows:/workflows
+    depends_on:
+      - postgres
+    links:
+      - postgres:postgres
+    networks:
+      - videoforge-network
+
+  # PostgreSQL - Banco de dados principal
+  postgres:
+    image: postgres:15-alpine
+    container_name: videoforge-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=videoforge
+      - POSTGRES_PASSWORD=forge123
+      - POSTGRES_DB=videoforge
+      - POSTGRES_MULTIPLE_DATABASES=n8n
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U videoforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - videoforge-network
+
+  # Redis - Fila de jobs (para uso futuro)
+  redis:
+    image: redis:7-alpine
+    container_name: videoforge-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - videoforge-network
+
+  # Python Worker - Scripts para TTS, renderização, etc.
+  python-worker:
+    build:
+      context: ./python-worker
+      dockerfile: Dockerfile
+    container_name: videoforge-python-worker
+    restart: always
+    volumes:
+      - ./python-scripts:/app/scripts
+      - ./media:/media
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: tail -f /dev/null  # Mantém container ativo
+    networks:
+      - videoforge-network
+
+  # AI Worker - Geração de vídeo local com modelos open source (CPU)
+  # ⚠️ Container grande (~6GB) - requer ~8-16GB de RAM durante geração
+  # Modelos: ModelScope T2V, ZeroScope v2, CogVideoX-2b
+  ai-worker:
+    build:
+      context: ./ai-worker
+      dockerfile: Dockerfile
+    container_name: videoforge-ai-worker
+    restart: unless-stopped
+    volumes:
+      - ./media:/media
+      - ai_models_cache:/models    # Cache de modelos (evita re-download)
+    environment:
+      - PYTHONUNBUFFERED=1
+      - HF_HOME=/models
+      - TRANSFORMERS_CACHE=/models
+    deploy:
+      resources:
+        limits:
+          memory: 16G    # Limitar uso de RAM
+    command: tail -f /dev/null  # Mantém container ativo
+    networks:
+      - videoforge-network
+
+  # pgAdmin - Interface web para PostgreSQL (opcional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: videoforge-pgadmin
+    restart: always
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@videoforge.com
+      - PGADMIN_DEFAULT_PASSWORD=admin123
+      - PGADMIN_LISTEN_PORT=80
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - videoforge-network
+
+volumes:
+  n8n_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  ai_models_cache:
+    driver: local  # Cache de modelos IA (~3-5GB por modelo)
+
+networks:
+  videoforge-network:
+    driver: bridge
