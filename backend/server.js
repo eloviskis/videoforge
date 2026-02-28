@@ -66,8 +66,20 @@ function findDockerPath() {
 
 const DOCKER_CMD = findDockerPath();
 
+// Modo sem Docker (Railway/cloud): define NO_DOCKER=true para rodar Python/FFmpeg diretamente
+const NO_DOCKER = process.env.NO_DOCKER === 'true';
+if (NO_DOCKER) console.log('☁️  Modo NO_DOCKER ativo — Python/FFmpeg executados diretamente');
+
+// Helper: monta comando para executar dentro do container OU diretamente
+// Em modo NO_DOCKER, containerCmd deve usar /media/xxx — o Railway expõe MEDIA_DIR em /media
+function makeExecCmd(containerCmd) {
+  if (NO_DOCKER) return containerCmd;
+  return `"${DOCKER_CMD}" exec videoforge-python-worker ${containerCmd}`;
+}
+
 // Caminhos - detectar diretório de mídia montado pelo Docker
 function detectDockerMediaPath() {
+  if (NO_DOCKER) return null;
   try {
     const result = execSync(
       `"${DOCKER_CMD}" inspect videoforge-python-worker --format "{{json .Mounts}}"`,
@@ -83,10 +95,11 @@ function detectDockerMediaPath() {
   return null;
 }
 
-const MEDIA_DIR = process.env.MEDIA_DIR        // passado explicitamente pelo Electron (mais confiável)
-  || (process.env.ELECTRON_RUN
+const MEDIA_DIR = process.env.MEDIA_DIR        // passado explicitamente pelo Electron ou Railway
+  || (NO_DOCKER ? '/media'                      // Railway: usa /media diretamente
+  : (process.env.ELECTRON_RUN
     ? (detectDockerMediaPath() || resolve(process.cwd(), 'media'))
-    : resolve(__dirname, '..', 'media'));
+    : resolve(__dirname, '..', 'media')));
 console.log(`📂 MEDIA_DIR: ${MEDIA_DIR}`);
 
 const app = express();
@@ -95,7 +108,19 @@ const N8N_URL = process.env.N8N_URL || 'http://localhost:5678';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const PEXELS_API_KEY = process.env.PEXELS_API_KEY;
 
-app.use(cors());
+// CORS: em produção (NO_DOCKER/Railway), aceita o frontend do Vercel e qualquer localhost
+const ALLOWED_ORIGIN = process.env.FRONTEND_URL; // ex: https://videoforge-app.vercel.app
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // requests sem origin (Electron, curl, etc.)
+    if (!ALLOWED_ORIGIN) return callback(null, true); // sem restrição quando não configurado
+    if (origin === ALLOWED_ORIGIN || origin.startsWith('http://localhost')) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 // Servir frontend estático (quando build existe)
@@ -1804,7 +1829,7 @@ asyncio.run(main())
   const scriptPath = resolve(MEDIA_DIR, 'temp', `${videoId}_tts.py`);
   await fs.writeFile(scriptPath, scriptContent, 'utf-8');
 
-  const cmd = `"${DOCKER_CMD}" exec videoforge-python-worker python /media/temp/${videoId}_tts.py "${videoId}" "${dockerAudioPath}" "/media/temp/${videoId}_cenas_texto.json"`;
+  const cmd = makeExecCmd(`python /media/temp/${videoId}_tts.py "${videoId}" "${dockerAudioPath}" "/media/temp/${videoId}_cenas_texto.json"`);
 
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -2279,7 +2304,7 @@ except Exception as e:
   await fs.writeFile(scriptPath, scriptContent, 'utf-8');
 
   try {
-    const cmd = `"${DOCKER_CMD}" exec videoforge-python-worker python /media/temp/${videoId}_whisper.py "${audioPaths.docker}" "${dockerSrtPath}"`;
+    const cmd = makeExecCmd(`python /media/temp/${videoId}_whisper.py "${audioPaths.docker}" "${dockerSrtPath}"`);
     const { stdout } = await execAsync(cmd, { timeout: 300000 });
     console.log('💬 Whisper:', stdout.trim());
     try { await fs.access(hostSrtPath); return { host: hostSrtPath, docker: dockerSrtPath }; } catch {}
@@ -2414,7 +2439,7 @@ except Exception as e:
   const imgSource = primeiraImg.localPath || '';
   const titulo = (roteiro.titulo || '').replace(/"/g, "'");
   try {
-    const cmd = `"${DOCKER_CMD}" exec videoforge-python-worker python /media/temp/${videoId}_thumbnail.py "${imgSource}" "${titulo}" "${thumbDockerPath}"`;
+    const cmd = makeExecCmd(`python /media/temp/${videoId}_thumbnail.py "${imgSource}" "${titulo}" "${thumbDockerPath}"`);
     await execAsync(cmd, { timeout: 30000 });
     await fs.access(thumbHostPath);
     console.log(`🖼️ Thumbnail gerada via Pillow`);
@@ -2649,13 +2674,13 @@ Contexto: ${cena.texto_narrado || cena.narracaoTexto || ''}`.trim();
   const concatOutputHost = resolve(MEDIA_DIR, 'veo_clips', `${videoId}_concat.mp4`);
   
   // Concatenar clips
-  const concatCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${concatListPath}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`;
+  const concatCmd = makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${concatListPath}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`);
   console.log(`  🔗 [Veo 3] Concatenando ${clipPaths.length} clips...`);
   await execAsync(concatCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
   
   // 4. Mesclar áudio + vídeo (loopear vídeo para cobrir duração total do áudio)
   const audioDocker = audioPaths.docker;
-  const mergeCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`;
+  const mergeCmd = makeExecCmd(`ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`);
   console.log(`  🔊 [Veo 3] Mesclando áudio (loop vídeo para cobrir narração completa)...`);
   await execAsync(mergeCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
   
@@ -2757,13 +2782,13 @@ Context: ${cena.texto_narracao || ''}`.trim().substring(0, 500);
   const concatOutputDocker = `/media/sora_clips/${videoId}_concat.mp4`;
   const concatOutputHost = resolve(MEDIA_DIR, 'sora_clips', `${videoId}_concat.mp4`);
   
-  const concatCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`;
+  const concatCmd = makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`);
   console.log(`  🔗 [Sora] Concatenando ${clipPaths.length} clips...`);
   await execAsync(concatCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
   
   // Mesclar áudio (loop vídeo para cobrir narração completa)
   const audioDocker = audioPaths.docker;
-  const mergeCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`;
+  const mergeCmd = makeExecCmd(`ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`);
   console.log(`  🔊 [Sora] Mesclando áudio (loop vídeo)...`);
   await execAsync(mergeCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
   
@@ -2913,12 +2938,12 @@ ${cena.acao || ''}`.trim().substring(0, 500);
   const concatOutputDocker = `/media/replicate_clips/${videoId}_concat.mp4`;
   const concatOutputHost = resolve(MEDIA_DIR, 'replicate_clips', `${videoId}_concat.mp4`);
   
-  const concatCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`;
+  const concatCmd = makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`);
   console.log(`  🔗 [Replicate] Concatenando ${clipPaths.length} clips...`);
   await execAsync(concatCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
   
   const audioDocker = audioPaths.docker;
-  const mergeCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`;
+  const mergeCmd = makeExecCmd(`ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`);
   console.log(`  🔊 [Replicate] Mesclando áudio...`);
   await execAsync(mergeCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
   
@@ -3117,11 +3142,11 @@ async function gerarVideoKling(videoId, roteiro, audioPaths) {
   const concatOutputDocker = `/media/kling_clips/${videoId}_concat.mp4`;
   const concatOutputHost = resolve(MEDIA_DIR, 'kling_clips', `${videoId}_concat.mp4`);
   
-  const concatCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`;
+  const concatCmd = makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`);
   await execAsync(concatCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
   
   const audioDocker = audioPaths.docker;
-  const mergeCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`;
+  const mergeCmd = makeExecCmd(`ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`);
   await execAsync(mergeCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
   
   try {
@@ -3270,12 +3295,12 @@ ${cena.acao || ''}`.trim().substring(0, 300);
   const concatOutputDocker = `/media/hf_clips/${videoId}_concat.mp4`;
   const concatOutputHost = resolve(MEDIA_DIR, 'hf_clips', `${videoId}_concat.mp4`);
   
-  const concatCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`;
+  const concatCmd = makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`);
   console.log(`  🔗 [HuggingFace] Concatenando ${clipPaths.length} clips...`);
   await execAsync(concatCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
   
   const audioDocker = audioPaths.docker;
-  const mergeCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`;
+  const mergeCmd = makeExecCmd(`ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`);
   console.log(`  🔊 [HuggingFace] Mesclando áudio...`);
   await execAsync(mergeCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
   
@@ -3440,12 +3465,12 @@ ${cena.acao || ''}. ${cena.texto_narracao || ''}`.trim().substring(0, 480);
   const concatOutputDocker = `/media/gemini_clips/${videoId}_concat.mp4`;
   const concatOutputHost = resolve(MEDIA_DIR, 'gemini_clips', `${videoId}_concat.mp4`);
   
-  const concatCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`;
+  const concatCmd = makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`);
   console.log(`  🔗 [Gemini Veo] Concatenando ${clipPaths.length} clips...`);
   await execAsync(concatCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
   
   const audioDocker = audioPaths.docker;
-  const mergeCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`;
+  const mergeCmd = makeExecCmd(`ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`);
   console.log(`  🔊 [Gemini Veo] Mesclando áudio...`);
   await execAsync(mergeCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
   
@@ -3467,10 +3492,19 @@ ${cena.acao || ''}. ${cena.texto_narracao || ''}`.trim().substring(0, 480);
 
 // Helper: executa docker exec com spawn e parsing de progresso em tempo real
 // Aceita um array de argumentos do docker (sem shell intermediário = sem problemas de aspas)
+// Em modo NO_DOCKER: dockerArgs = ['exec', 'videoforge-python-worker', 'python3', ...] → roda python3 ... diretamente
 function spawnDockerAI(dockerArgs, video, cenaNum, totalCenas, timeoutMs = 7200000) {
   return new Promise((resolve, reject) => {
-    // Chamar docker diretamente como array de argumentos — sem shell, sem problemas de aspas
-    const proc = spawn(DOCKER_CMD, dockerArgs, { 
+    let cmd, args;
+    if (NO_DOCKER) {
+      // Pular 'exec' e 'videoforge-python-worker' — rodar o restante direto
+      const directArgs = dockerArgs[0] === 'exec' ? dockerArgs.slice(2) : dockerArgs;
+      [cmd, ...args] = directArgs;
+    } else {
+      cmd = DOCKER_CMD;
+      args = dockerArgs;
+    }
+    const proc = spawn(cmd, args, {
       timeout: timeoutMs,
       env: { ...process.env },
       windowsHide: true
@@ -3580,7 +3614,7 @@ async function gerarVideoDarkStickman(videoId, roteiro, audioPaths) {
     console.log(`  🎥 [Dark Stickman] Cena ${cenaNum}: "${text.substring(0, 50)}..." (tipo: ${sceneType}, ${duration}s)`);
     
     // Criar cena com stickman figures animados
-    const cmd = `"${DOCKER_CMD}" exec videoforge-python-worker python3 /app/draw_stickman_scene.py "${text.replace(/"/g, '\\"')}" "${sceneType}" "${clipDocker}" ${duration}`;
+    const cmd = makeExecCmd(`python3 /app/draw_stickman_scene.py "${text.replace(/"/g, '\\"')}" "${sceneType}" "${clipDocker}" ${duration}`);
     
     try {
       await execAsync(cmd, { timeout: 180000, maxBuffer: 50 * 1024 * 1024 }); // 3 min timeout para renderizar frames
@@ -3606,13 +3640,13 @@ async function gerarVideoDarkStickman(videoId, roteiro, audioPaths) {
   const concatListDocker = `/media/dark_scenes/${videoId}_concat.txt`;
   const concatOutputDocker = `/media/dark_scenes/${videoId}_concat.mp4`;
   
-  const concatCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c copy "${concatOutputDocker}"`;
+  const concatCmd = makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c copy "${concatOutputDocker}"`);
   console.log(`  🔗 [Dark Stickman] Concatenando ${clipPaths.length} clips...`);
   await execAsync(concatCmd, { timeout: 120000, maxBuffer: 50 * 1024 * 1024 });
   
   // Mesclar com áudio (narração)
   const audioDocker = audioPaths.docker;
-  const mergeCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`;
+  const mergeCmd = makeExecCmd(`ffmpeg -y -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`);
   console.log(`  🔊 [Dark Stickman] Mesclando áudio...`);
   await execAsync(mergeCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
   
@@ -3724,12 +3758,12 @@ ${cena.acao || ''}. ${cena.texto_narracao || ''}`.trim().substring(0, 500);
   const concatOutputDocker = `/media/local_clips/${videoId}_concat.mp4`;
   const concatOutputHost = resolve(MEDIA_DIR, 'local_clips', `${videoId}_concat.mp4`);
   
-  const concatCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`;
+  const concatCmd = makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${concatListDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p "${concatOutputDocker}"`);
   console.log(`  🔗 [Local AI] Concatenando ${clipPaths.length} clips...`);
   await execAsync(concatCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
   
   const audioDocker = audioPaths.docker;
-  const mergeCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`;
+  const mergeCmd = makeExecCmd(`ffmpeg -y -stream_loop -1 -i "${concatOutputDocker}" -i "${audioDocker}" -c:v libx264 -preset fast -crf 22 -pix_fmt yuv420p -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`);
   console.log(`  🔊 [Local AI] Mesclando áudio...`);
   await execAsync(mergeCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
   
@@ -4004,7 +4038,7 @@ print(f'Video pronto: {output_path} ({size // 1024 // 1024}MB)')
   const dockerDuracoesPath = `/media/temp/${videoId}_duracoes.json`;
   const dockerAudioPath = audioPaths.docker;
 
-  const cmd = `"${DOCKER_CMD}" exec videoforge-python-worker python ${dockerScriptPath} "${videoId}" "${dockerAudioPath}" "${dockerVisuaisPath}" "${dockerVideoPath}" "${dockerDuracoesPath}" "${dockerSrtPath}" "${dockerMusicPath}"`;
+  const cmd = makeExecCmd(`python ${dockerScriptPath} "${videoId}" "${dockerAudioPath}" "${dockerVisuaisPath}" "${dockerVideoPath}" "${dockerDuracoesPath}" "${dockerSrtPath}" "${dockerMusicPath}"`);
 
   try {
     const { stdout, stderr } = await execAsync(cmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
@@ -4094,7 +4128,7 @@ async function renderizarAnimacaoRemotion(videoId, cenasCodigo, audioPaths) {
   
   console.log('🔗 Concatenando clips via Docker FFmpeg...');
   await execAsync(
-    `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -f concat -safe 0 -i "${dockerConcatListPath}" -c copy "${dockerConcatVideoPath}"`,
+    makeExecCmd(`ffmpeg -y -f concat -safe 0 -i "${dockerConcatListPath}" -c copy "${dockerConcatVideoPath}"`),
     { timeout: 180000 }
   );
   
@@ -4105,7 +4139,7 @@ async function renderizarAnimacaoRemotion(videoId, cenasCodigo, audioPaths) {
   
   console.log('🎵 Adicionando áudio via Docker FFmpeg...');
   await execAsync(
-    `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -i "${dockerConcatVideoPath}" -i "${dockerAudioPath}" -c:v copy -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`,
+    makeExecCmd(`ffmpeg -y -i "${dockerConcatVideoPath}" -i "${dockerAudioPath}" -c:v copy -c:a aac -b:a 192k -shortest -movflags +faststart "${dockerVideoPath}"`),
     { timeout: 180000 }
   );
   
@@ -5203,7 +5237,7 @@ with yt_dlp.YoutubeDL(ydl_opts) as ydl:
 
       const dockerCorteDir = `/media/cortes/${jobId}`;
       const resultJsonPath = resolve(hostCorteDir, 'info.json');
-      const downloadCmd = `"${DOCKER_CMD}" exec videoforge-python-worker python ${dockerCorteDir}/download.py "${youtubeUrl}" "${dockerCorteDir}" "${dockerCorteDir}/info.json"`;
+      const downloadCmd = makeExecCmd(`python ${dockerCorteDir}/download.py "${youtubeUrl}" "${dockerCorteDir}" "${dockerCorteDir}/info.json"`);
       await execAsync(downloadCmd, { timeout: 300000 });
       const videoInfo = JSON.parse(await fs.readFile(resultJsonPath, 'utf-8'));
       job.videoInfo = videoInfo;
@@ -5360,7 +5394,7 @@ Responda SOMENTE com JSON válido, sem markdown, com exatamente ${topPeaks.lengt
       // ── FONTE 3: Fallback — Whisper transcrição + Gemini ──────────────────────
       if (segments.length === 0) {
         logCorte(job, '🔊 Heatmap não disponível — extraindo áudio para transcrição...');
-        const extractAudioCmd = `"${DOCKER_CMD}" exec videoforge-python-worker ffmpeg -y -i /media/cortes/${jobId}/original.mp4 -vn -ar 16000 -ac 1 -c:a pcm_s16le /media/cortes/${jobId}/audio.wav`;
+        const extractAudioCmd = makeExecCmd(`ffmpeg -y -i /media/cortes/${jobId}/original.mp4 -vn -ar 16000 -ac 1 -c:a pcm_s16le /media/cortes/${jobId}/audio.wav`);
         await execAsync(extractAudioCmd, { timeout: 120000 });
         logCorte(job, '🎤 Transcrevendo com Whisper (pode demorar alguns minutos)...');
 
@@ -5382,7 +5416,7 @@ print(f'Segmentos: {len(transcript)}, Duracao: {info.duration:.1f}s')
 
         const audioDurationMin = Math.ceil((videoInfo.duration || 600) / 60);
         const whisperTimeout = Math.max(900000, audioDurationMin * 60000);
-        const whisperCmd = `"${DOCKER_CMD}" exec videoforge-python-worker python /media/cortes/${jobId}/whisper.py /media/cortes/${jobId}/audio.wav /media/cortes/${jobId}/transcricao.json "${hfToken}"`;
+        const whisperCmd = makeExecCmd(`python /media/cortes/${jobId}/whisper.py /media/cortes/${jobId}/audio.wav /media/cortes/${jobId}/transcricao.json "${hfToken}"`);
         await execAsync(whisperCmd, { timeout: whisperTimeout });
         logCorte(job, '✅ Transcrição concluída');
 
@@ -5580,7 +5614,7 @@ print(json.dumps(results))
 
       const segmentsArg = JSON.stringify(selectedSegments).replace(/"/g, '\\"');
       const formatsArg = JSON.stringify(formats).replace(/"/g, '\\"');
-      const cutCmd = `"${DOCKER_CMD}" exec videoforge-python-worker python /media/cortes/${job.id}/cut.py "/media/cortes/${job.id}" "${segmentsArg}" "${formatsArg}"`;
+      const cutCmd = makeExecCmd(`python /media/cortes/${job.id}/cut.py "/media/cortes/${job.id}" "${segmentsArg}" "${formatsArg}"`);
       const { stdout: cutOut } = await execAsync(cutCmd, { timeout: 1200000 });
 
       const clipsRaw = cutOut.trim().split('\n').pop();

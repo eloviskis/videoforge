@@ -1,0 +1,70 @@
+# Dockerfile para deploy no Railway (sem Docker-in-Docker)
+# Inclui Node.js + Python + FFmpeg + yt-dlp numa imagem só
+FROM node:20-slim
+
+# Evitar prompts interativos
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar Python, FFmpeg e dependências do sistema
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-dev \
+    ffmpeg \
+    wget \
+    curl \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Criar symlink python -> python3
+RUN ln -sf /usr/bin/python3 /usr/bin/python
+
+# Criar diretórios de mídia (mesmo path que o Docker container usa: /media)
+RUN mkdir -p /media/videos /media/audios /media/temp /media/cortes \
+             /media/replicate_clips /media/veo_clips /media/news
+
+# Instalar dependências Python
+COPY python-worker/requirements.txt /tmp/requirements.txt
+RUN pip3 install --no-cache-dir --break-system-packages \
+    edge-tts \
+    elevenlabs \
+    openai \
+    faster-whisper \
+    pydub \
+    Pillow \
+    requests \
+    python-dotenv \
+    yt-dlp \
+    && pip3 install --no-cache-dir --break-system-packages google-api-python-client google-auth-oauthlib google-auth-httplib2
+
+# Copiar scripts Python do worker (os mesmos que o container Docker usa)
+COPY python-worker/ /app/
+COPY python-worker/ /code/
+
+# Instalar dependências Node.js do backend
+WORKDIR /srv/backend
+COPY backend/package*.json ./
+RUN npm ci --only=production
+
+# Copiar código do backend
+COPY backend/ ./
+
+# Copiar frontend buildado (se existir)
+# O frontend será buildado separado no Vercel, mas mantemos suporte
+# para servir localmente se /srv/frontend/dist existir
+COPY frontend/ /srv/frontend/ 2>/dev/null || true
+
+# Variáveis de ambiente para modo cloud
+ENV NO_DOCKER=true
+ENV MEDIA_DIR=/media
+ENV PORT=3001
+ENV NODE_ENV=production
+
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:3001/api/config || exit 1
+
+CMD ["node", "server.js"]

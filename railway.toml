@@ -1,0 +1,9 @@
+[build]
+dockerfilePath = "Dockerfile.railway"
+
+[deploy]
+startCommand = "node server.js"
+healthcheckPath = "/api/config"
+healthcheckTimeout = 60
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 
-const API_URL = window.location.port === '3000'
-  ? 'http://localhost:3001/api'
-  : `${window.location.origin}/api`
+// VITE_API_URL: configure no Vercel apontando para o backend no Railway
+// Em dev usa localhost:3001, em produção sem VITE_API_URL usa mesma origin
+const API_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : (window.location.port === '3000'
+    ? 'http://localhost:3001/api'
+    : `${window.location.origin}/api`)
 
 function App() {
   const [videos, setVideos] = useState([])
