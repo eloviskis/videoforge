@@ -307,11 +307,10 @@ export default function MinhaConta({ onBack, user }) {
             {socials.map(social => (
               <div key={social.platform} style={{
                 ...sty.card,
-                borderColor: social.connected ? `${social.color}33` : social.available ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+                borderColor: social.connected ? `${social.color}33` : 'rgba(255,255,255,0.08)',
                 background: social.connected ? `${social.color}0a` : 'rgba(255,255,255,0.02)',
                 display: 'flex', flexDirection: 'column', gap: '12px',
                 transition: 'all 0.3s', marginBottom: 0,
-                opacity: social.available || social.connected ? 1 : 0.5,
               }}>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -373,7 +372,7 @@ export default function MinhaConta({ onBack, user }) {
                     }}>
                       🔌 Desconectar
                     </button>
-                  ) : social.available ? (
+                  ) : (
                     <button
                       onClick={() => connectSocial(social.platform)}
                       disabled={socialLoading === social.platform}
@@ -392,16 +391,6 @@ export default function MinhaConta({ onBack, user }) {
                     >
                       {socialLoading === social.platform ? '⏳ Abrindo...' : `🔗 Conectar ${social.label}`}
                     </button>
-                  ) : (
-                    <div style={{
-                      padding: '10px', borderRadius: '8px',
-                      background: 'rgba(100,116,139,0.06)', border: '1px solid rgba(100,116,139,0.1)',
-                      textAlign: 'center',
-                    }}>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>
-                        🔒 Não configurado pelo administrador
-                      </span>
-                    </div>
                   )}
                 </div>
               </div>
