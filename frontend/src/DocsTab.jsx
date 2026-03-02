@@ -21,7 +21,7 @@ const APIS = [
       'Clique em "Create API key"',
       'Selecione ou crie um projeto Google Cloud',
       'Copie a chave gerada (começa com AIza...)',
-      'Cole no campo GEMINI_API_KEY em Configurações',
+      'Cole no campo GEMINI_API_KEY em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Grátis: 15 req/min, 1.500 req/dia no Gemini 1.5 Flash. Pago a partir de US$0,075/1M tokens.',
   },
@@ -39,7 +39,7 @@ const APIS = [
       'Acesse https://openrouter.ai e crie uma conta',
       'Vá em Keys → Create Key',
       'Copie a chave (começa com sk-or-...)',
-      'Cole no campo OPENROUTER_API_KEY em Configurações',
+      'Cole no campo OPENROUTER_API_KEY em ⚙️ Minha Conta → Minhas API Keys',
       'Modelos gratuitos: meta-llama/llama-3-8b-instruct, mistralai/mistral-7b-instruct',
     ],
     limites: 'Gratuito para modelos com ":free". Créditos a partir de US$5.',
@@ -59,7 +59,7 @@ const APIS = [
       'Vá em API Keys → Create new secret key',
       'Adicione créditos em Billing (mínimo US$5)',
       'Copie a chave (sk-proj-...)',
-      'Cole no campo OPENAI_API_KEY em Configurações',
+      'Cole no campo OPENAI_API_KEY em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'GPT-4o: ~US$0,005/1K tokens. Sem plano grátis (somente trial inicial).',
   },
@@ -98,7 +98,7 @@ const APIS = [
       'Crie uma conta gratuita',
       'Preencha o formulário (nome do app: VideoForge)',
       'Sua chave aparecerá no painel',
-      'Cole no campo PEXELS_API_KEY em Configurações',
+      'Cole no campo PEXELS_API_KEY em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Grátis: 200 req/hora, 20.000 req/mês.',
   },
@@ -116,7 +116,7 @@ const APIS = [
       'Acesse https://pixabay.com e crie uma conta',
       'Vá em https://pixabay.com/api/docs/',
       'Faça login — a chave aparece automaticamente na página',
-      'Cole no campo PIXABAY_API_KEY em Configurações',
+      'Cole no campo PIXABAY_API_KEY em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Grátis: 100 req/min.',
   },
@@ -136,7 +136,7 @@ const APIS = [
       'Clique em "New token"',
       'Tipo: Read',
       'Copie o token (hf_...)',
-      'Cole no campo HUGGINGFACE_API_TOKEN em Configurações',
+      'Cole no campo HUGGINGFACE_API_TOKEN em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Grátis: modelos públicos com cold start. PRO (US$9/mês) dá prioridade e GPU dedicada.',
   },
@@ -155,7 +155,7 @@ const APIS = [
       'Vá em Account → API Tokens',
       'Crie um novo token',
       'Adicione créditos em Billing (mínimo US$5)',
-      'Cole no campo REPLICATE_API_TOKEN em Configurações',
+      'Cole no campo REPLICATE_API_TOKEN em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: '~US$0,0055/img para SDXL. Sem mensalidade, paga pelo uso.',
   },
@@ -174,7 +174,7 @@ const APIS = [
       'Crie uma conta de desenvolvedor',
       'Vá em API Management → Create API Key',
       'Copie o Access Key ID e Access Key Secret',
-      'Cole nos campos correspondentes em Configurações',
+      'Cole nos campos correspondentes em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Plano gratuito: 66 créditos grátis. Pago a partir de US$14/mês.',
   },
@@ -192,7 +192,7 @@ const APIS = [
       'Acesse https://studio.d-id.com e crie conta',
       'Vá em Account Settings → API',
       'Copie a API Key (Basic ...)',
-      'Cole no campo DID_API_KEY em Configurações',
+      'Cole no campo DID_API_KEY em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Trial: 20 créditos grátis. Pago: US$5,90/mês (10 min de vídeo).',
   },
@@ -212,7 +212,7 @@ const APIS = [
       'Acesse https://elevenlabs.io e crie conta',
       'Vá em Profile → API Key',
       'Copie a chave',
-      'Cole no campo ELEVENLABS_API_KEY em Configurações',
+      'Cole no campo ELEVENLABS_API_KEY em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Grátis: 10 min/mês. Creator (US$22/mês): 100 min. Edge TTS é grátis e não precisa de chave.',
   },
@@ -236,10 +236,10 @@ const APIS = [
       '5. Vá em "Credenciais" → "Criar credenciais" → "ID do cliente OAuth 2.0"',
       '6. Tipo: Aplicativo Web',
       '7. Em "URIs de redirecionamento autorizados" adicione:',
-      '   → http://SEU-IP/api/youtube/callback (VPS)',
+      '   → https://videoforge.tech/api/youtube/callback',
       '   → http://localhost:3001/api/youtube/callback (local)',
       '8. Baixe o JSON ou copie Client ID e Client Secret',
-      '9. Cole nos campos em Configurações → YouTube',
+      '9. Cole nos campos em ⚙️ Minha Conta → Minhas API Keys (grupo YouTube)',
     ],
     limites: 'Grátis: 10.000 unidades/dia (1 upload = 1.600 unidades, ~6 uploads/dia). Aumento via pedido.',
     destaque: 'autCliInstructions',
@@ -260,8 +260,8 @@ const APIS = [
       'Vá em "Keys and Tokens"',
       'Copie: API Key (Client ID), API Secret (Client Secret) e Bearer Token',
       'Em "User authentication settings" ative OAuth 2.0',
-      'Redirect URI: http://SEU-IP/api/social/twitter/callback',
-      'Cole os campos em Configurações → Redes Sociais',
+      'Redirect URI: https://videoforge.tech/api/social/twitter/callback',
+      'Cole os campos em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Free tier: apenas leitura. Para postar vídeo: plano Basic (US$100/mês) ou Pro.',
   },
@@ -280,9 +280,9 @@ const APIS = [
       'Crie um novo App em "Manage Apps"',
       'Produtos: ative "Login Kit" e "Video Kit"',
       'Scope: video.upload',
-      'Redirect URI: http://SEU-IP/api/social/tiktok/callback',
+      'Redirect URI: https://videoforge.tech/api/social/tiktok/callback',
       'Copie Client Key e Client Secret',
-      'Cole os campos em Configurações → Redes Sociais',
+      'Cole os campos em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Grátis. Mas em sandbox: só usuários cadastrados no app conseguem postar.',
   },
@@ -303,8 +303,8 @@ const APIS = [
       'Vá em Configurações → Básico',
       'Copie App ID e App Secret',
       'Em "Login do Facebook" configure Redirect URI:',
-      '   → http://SEU-IP/api/social/facebook/callback',
-      'Cole os campos em Configurações → Redes Sociais',
+      '   → https://videoforge.tech/api/social/facebook/callback',
+      'Cole os campos em ⚙️ Minha Conta → Minhas API Keys',
     ],
     limites: 'Grátis. Requer revisão do app para publicar para todos (em dev: só admins do app).',
   },
@@ -555,6 +555,19 @@ export default function DocsTab() {
         <p style={{ color: '#6b7280', margin: '0 0 16px', fontSize: '14px' }}>
           Guia completo para configurar cada integração do VideoForge.
         </p>
+
+        {/* Destaque Minha Conta */}
+        <div style={{
+          background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '10px',
+          padding: '14px 18px', marginBottom: '16px',
+        }}>
+          <strong style={{ fontSize: '14px', color: '#4338ca' }}>💡 Onde configurar suas chaves?</strong>
+          <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#4338ca', lineHeight: 1.6 }}>
+            Clique em <strong>⚙️ Minha Conta</strong> na barra superior para acessar o painel de configuração pessoal.
+            Lá você pode adicionar suas próprias API keys e conectar suas redes sociais.
+            Suas chaves são privadas e usadas apenas nos seus vídeos.
+          </p>
+        </div>
 
         {/* Resumo badges */}
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '0' }}>

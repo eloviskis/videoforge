@@ -63,7 +63,7 @@ export default function LandingPage({ onGoLogin }) {
 
   const faqs = [
     { q: 'Preciso saber programar?', a: 'Não! A interface é 100% visual. Basta digitar o tema e clicar em gerar.' },
-    { q: 'Quais APIs preciso configurar?', a: 'No mínimo: Gemini (grátis) e Pexels (grátis). Veja a aba Tutoriais no painel.' },
+    { q: 'Quais APIs preciso configurar?', a: 'No mínimo: Gemini (grátis) e Pexels (grátis). Após o login, clique em ⚙️ Minha Conta para configurar suas chaves.' },
     { q: 'Funciona para qualquer nicho?', a: 'Sim! Curiosidades, notícias, motivacional, dark, educacional, gaming e qualquer outro.' },
     { q: 'Como funciona o pagamento?', a: 'Via Hotmart (boleto, PIX, cartão). Ao pagar, sua conta é criada automaticamente.' },
     { q: 'Posso cancelar a qualquer momento?', a: 'Sim. Cancele na Hotmart e sua conta é desativada no fim do período pago.' },
@@ -312,7 +312,7 @@ export default function LandingPage({ onGoLogin }) {
 
             <p style={{ margin: '16px 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
               💡 <strong>Recomendação:</strong> Comece com Stock Images + Gemini + Edge TTS (tudo grátis!). 
-              Quando quiser vídeos com IA generativa, configure os tokens do provedor desejado na aba Tutoriais.
+              Quando quiser vídeos com IA generativa, configure os tokens do provedor desejado em ⚙️ Minha Conta.
               O VideoForge <strong>não cobra</strong> pelos tokens — você usa suas próprias chaves de API.
             </p>
           </div>
