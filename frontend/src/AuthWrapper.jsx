@@ -3,6 +3,7 @@ import App from './App.jsx'
 import LoginPage from './LoginPage.jsx'
 import LandingPage from './LandingPage.jsx'
 import AdminPanel from './AdminPanel.jsx'
+import MinhaConta from './MinhaConta.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -92,6 +93,10 @@ export default function AuthWrapper() {
     return <AdminPanel onBack={() => setPage('app')} />
   }
 
+  if (page === 'settings') {
+    return <MinhaConta onBack={() => setPage('app')} user={user} />
+  }
+
   /* page === 'app' */
   return (
     <div>
@@ -126,6 +131,18 @@ export default function AuthWrapper() {
               }}
             >
               📥 Download App
+            </button>
+
+            {/* Minha Conta button */}
+            <button
+              onClick={() => setPage('settings')}
+              style={{
+                padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(99,102,241,0.3)',
+                background: 'rgba(99,102,241,0.1)', color: '#a5b4fc', cursor: 'pointer', fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              ⚙️ Minha Conta
             </button>
 
             {/* Admin button (se is_admin) */}

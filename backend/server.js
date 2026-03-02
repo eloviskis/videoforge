@@ -25,6 +25,7 @@ import { gerarRoteiroDark, HISTORIAS_DARK } from './roteiro-offline-dark.js';
 import { authMiddleware, loginUsuario, criarUsuario, buscarUsuarioPorEmail, hashSenha, gerarToken } from './auth.js';
 import { registrarRotasHotmart } from './hotmart.js';
 import { registrarRotasAdmin } from './admin.js';
+import { registrarRotasUserSettings } from './user-settings.js';
 
 const execAsync = promisify(exec);
 
@@ -203,6 +204,9 @@ registrarRotasHotmart(app);
 
 // Admin routes (verificação de admin é interna)
 registrarRotasAdmin(app);
+
+// User settings routes (API keys + social per user)
+registrarRotasUserSettings(app);
 
 // Auth middleware (protege rotas /api/* exceto as públicas)
 if (AUTH_ENABLED) {
