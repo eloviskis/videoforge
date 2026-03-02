@@ -169,7 +169,7 @@ export function registrarRotasSocialOAuth(app) {
     const { platform } = req.params;
     const def = PLATFORMS[platform];
     if (!def) return res.status(400).json({ error: 'Plataforma não suportada' });
-    if (!def.configured()) return res.status(400).json({ error: `Para conectar ${def.label}, o administrador precisa configurar as credenciais OAuth na aba 🔑 API Keys do Painel Admin.` });
+    if (!def.configured()) return res.status(400).json({ error: `A conexão com ${def.label} ainda não está disponível. Estamos trabalhando para ativá-la em breve!` });
 
     const state = randomBytes(24).toString('hex');
     const codeVerifier = randomBytes(48).toString('base64url');

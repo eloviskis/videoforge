@@ -372,7 +372,7 @@ export default function MinhaConta({ onBack, user }) {
                     }}>
                       🔌 Desconectar
                     </button>
-                  ) : (
+                  ) : social.available ? (
                     <button
                       onClick={() => connectSocial(social.platform)}
                       disabled={socialLoading === social.platform}
@@ -391,6 +391,15 @@ export default function MinhaConta({ onBack, user }) {
                     >
                       {socialLoading === social.platform ? '⏳ Abrindo...' : `🔗 Conectar ${social.label}`}
                     </button>
+                  ) : (
+                    <div style={{
+                      width: '100%', padding: '10px', textAlign: 'center',
+                      borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                      background: 'rgba(255,255,255,0.03)', color: '#64748b',
+                      border: '1px dashed rgba(255,255,255,0.08)',
+                    }}>
+                      🔜 Em breve
+                    </div>
                   )}
                 </div>
               </div>
