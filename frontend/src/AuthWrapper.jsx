@@ -6,6 +6,7 @@ import LandingPage from './LandingPage.jsx'
 import AdminPanel from './AdminPanel.jsx'
 import MinhaConta from './MinhaConta.jsx'
 import FeedbackWall from './FeedbackWall.jsx'
+import ThankYouPage from './ThankYouPage.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -22,6 +23,13 @@ export default function AuthWrapper() {
 
   /* ── ao montar, verifica se já tem token salvo ── */
   useEffect(() => {
+    // Detectar página de obrigado (?obrigado ou /obrigado)
+    const params = new URLSearchParams(window.location.search)
+    if (params.has('obrigado') || window.location.pathname.includes('/obrigado')) {
+      setPage('obrigado')
+      return
+    }
+
     const saved = localStorage.getItem('vf_token')
     if (!saved) { setPage('landing'); return }
 
@@ -101,6 +109,10 @@ export default function AuthWrapper() {
         </div>
       </div>
     )
+  }
+
+  if (page === 'obrigado') {
+    return <ThankYouPage onGoLogin={() => { window.history.replaceState({}, '', '/'); setPage('login') }} />
   }
 
   if (page === 'landing') {
