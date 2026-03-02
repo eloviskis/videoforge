@@ -103,7 +103,7 @@ export default function MinhaConta({ onBack, user }) {
     tag: (c) => ({ display: 'inline-block', padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 600, background: c, color: '#fff' }),
   }
 
-  const planoColors = { trial: '#64748b', mensal: '#3b82f6', anual: '#6366f1', vitalicio: '#8b5cf6' }
+  const planoColors = { trial: '#64748b', mensal: '#3b82f6', anual: '#8b5cf6', vitalicio: '#a855f7' }
   const planoNames = { trial: 'Trial', mensal: 'Mensal', anual: 'Anual', vitalicio: 'Vitalício' }
   const changedCount = Object.keys(apiEdits).length
 
@@ -113,7 +113,7 @@ export default function MinhaConta({ onBack, user }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button onClick={onBack} style={{ ...sty.btn, background: 'rgba(255,255,255,0.08)', color: '#94a3b8' }}>← Voltar</button>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#6366f1,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, background: 'linear-gradient(135deg,#8b5cf6,#c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             ⚙️ Minha Conta
           </h1>
         </div>
@@ -139,7 +139,7 @@ export default function MinhaConta({ onBack, user }) {
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             ...sty.btn,
-            background: tab === t.id ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)',
+            background: tab === t.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'rgba(255,255,255,0.06)',
             color: tab === t.id ? '#fff' : '#94a3b8',
             padding: '10px 20px', fontSize: '14px',
           }}>{t.label}</button>
@@ -150,7 +150,7 @@ export default function MinhaConta({ onBack, user }) {
       {tab === 'apikeys' && (
         <div>
           {/* Intro card */}
-          <div style={{ ...sty.card, borderColor: 'rgba(99,102,241,0.15)', background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.04))' }}>
+          <div style={{ ...sty.card, borderColor: 'rgba(139,92,246,0.15)', background: 'linear-gradient(135deg, rgba(139,92,246,0.06), rgba(168,85,247,0.04))' }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>🔑 Configure suas chaves de API</h3>
             <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0, lineHeight: 1.6 }}>
               Adicione suas próprias chaves para usar os serviços de IA. As chaves marcadas como <span style={{ color: '#22c55e', fontWeight: 600 }}>GRÁTIS</span> são de serviços sem custo.
@@ -192,8 +192,8 @@ export default function MinhaConta({ onBack, user }) {
                     return (
                       <div key={key.key} style={{
                         padding: '14px 16px', borderRadius: '12px',
-                        background: hasEdit ? 'rgba(99,102,241,0.06)' : key.configurada ? 'rgba(34,197,94,0.04)' : key.globalDisponivel ? 'rgba(59,130,246,0.04)' : 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${hasEdit ? 'rgba(99,102,241,0.25)' : key.configurada ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)'}`,
+                        background: hasEdit ? 'rgba(139,92,246,0.06)' : key.configurada ? 'rgba(34,197,94,0.04)' : key.globalDisponivel ? 'rgba(59,130,246,0.04)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${hasEdit ? 'rgba(139,92,246,0.25)' : key.configurada ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.05)'}`,
                         transition: 'all 0.2s',
                       }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -244,7 +244,7 @@ export default function MinhaConta({ onBack, user }) {
                             </div>
                             {/* Hint link */}
                             {key.hint && !key.configurada && !key.globalDisponivel && (
-                              <a href={key.hint} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6366f1', textDecoration: 'none', marginTop: '6px' }}>
+                              <a href={key.hint} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#8b5cf6', textDecoration: 'none', marginTop: '6px' }}>
                                 🔗 Criar conta / obter chave →
                               </a>
                             )}
@@ -262,7 +262,7 @@ export default function MinhaConta({ onBack, user }) {
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
             <button onClick={saveApiKeys} disabled={apiSaving || !changedCount} style={{
               ...sty.btn,
-              background: changedCount > 0 ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)',
+              background: changedCount > 0 ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'rgba(255,255,255,0.06)',
               color: changedCount > 0 ? '#fff' : '#475569',
               padding: '12px 32px', fontSize: '15px', opacity: apiSaving ? 0.6 : 1,
             }}>

@@ -274,7 +274,7 @@ export default function AdminPanel({ onBack }) {
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             ...sty.btn,
-            background: tab === t.id ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)',
+            background: tab === t.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'rgba(255,255,255,0.06)',
             color: tab === t.id ? '#fff' : '#94a3b8',
           }}>{t.label}</button>
         ))}
@@ -286,7 +286,7 @@ export default function AdminPanel({ onBack }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             <div style={sty.card}>
               <div style={{ color: '#64748b', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>Total Usuários</div>
-              <div style={{ fontSize: '36px', fontWeight: 800, color: '#6366f1' }}>{stats.totalUsuarios}</div>
+              <div style={{ fontSize: '36px', fontWeight: 800, color: '#8b5cf6' }}>{stats.totalUsuarios}</div>
             </div>
             <div style={sty.card}>
               <div style={{ color: '#64748b', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>Ativos</div>
@@ -295,7 +295,7 @@ export default function AdminPanel({ onBack }) {
             {stats.porPlano?.map(p => (
               <div key={p.plano} style={sty.card}>
                 <div style={{ color: '#64748b', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>{p.plano}</div>
-                <div style={{ fontSize: '36px', fontWeight: 800, color: '#a5b4fc' }}>{p.total}</div>
+                <div style={{ fontSize: '36px', fontWeight: 800, color: '#c4b5fd' }}>{p.total}</div>
               </div>
             ))}
           </div>
@@ -314,7 +314,7 @@ export default function AdminPanel({ onBack }) {
                 {stats.recentes?.map(u => (
                   <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     <td style={{ padding: '8px' }}>{u.email}</td>
-                    <td style={{ padding: '8px' }}><span style={sty.tag(u.plano === 'vitalicio' ? '#8b5cf6' : u.plano === 'anual' ? '#6366f1' : u.plano === 'mensal' ? '#3b82f6' : '#64748b')}>{u.plano}</span></td>
+                    <td style={{ padding: '8px' }}><span style={sty.tag(u.plano === 'vitalicio' ? '#a855f7' : u.plano === 'anual' ? '#8b5cf6' : u.plano === 'mensal' ? '#3b82f6' : '#64748b')}>{u.plano}</span></td>
                     <td style={{ padding: '8px', color: '#64748b' }}>{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
                   </tr>
                 ))}
@@ -355,7 +355,7 @@ export default function AdminPanel({ onBack }) {
                           {['trial', 'mensal', 'anual', 'vitalicio'].map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
                       ) : (
-                        <span style={sty.tag(u.plano === 'vitalicio' ? '#8b5cf6' : u.plano === 'anual' ? '#6366f1' : u.plano === 'mensal' ? '#3b82f6' : '#64748b')}>{u.plano}</span>
+                        <span style={sty.tag(u.plano === 'vitalicio' ? '#a855f7' : u.plano === 'anual' ? '#8b5cf6' : u.plano === 'mensal' ? '#3b82f6' : '#64748b')}>{u.plano}</span>
                       )}
                     </td>
                     <td style={{ padding: '10px 8px' }}>
@@ -376,7 +376,7 @@ export default function AdminPanel({ onBack }) {
                     <td style={{ padding: '10px 8px' }}>
                       <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                         <button onClick={() => setEditUser(editUser === u.id ? null : u.id)}
-                          style={{ ...sty.btn, background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '4px 10px', fontSize: '11px' }}>
+                          style={{ ...sty.btn, background: 'rgba(139,92,246,0.15)', color: '#c4b5fd', padding: '4px 10px', fontSize: '11px' }}>
                           {editUser === u.id ? 'Fechar' : '✏️'}
                         </button>
                         <button onClick={() => updateUser(u.id, { ativo: !u.ativo })}
@@ -450,7 +450,7 @@ export default function AdminPanel({ onBack }) {
           ))}
 
           <button onClick={saveSettings} disabled={saving} style={{
-            ...sty.btn, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff',
+            ...sty.btn, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff',
             padding: '12px 32px', fontSize: '15px', opacity: saving ? 0.6 : 1,
           }}>
             {saving ? 'Salvando...' : '💾 Salvar Configurações'}
@@ -461,7 +461,7 @@ export default function AdminPanel({ onBack }) {
       {/* ═══ API KEYS ═══ */}
       {tab === 'apikeys' && (
         <div>
-          <div style={{ ...sty.card, borderColor: 'rgba(99,102,241,0.15)' }}>
+          <div style={{ ...sty.card, borderColor: 'rgba(139,92,246,0.15)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>🔑 Chaves de API</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -497,7 +497,7 @@ export default function AdminPanel({ onBack }) {
                     const hasEdit = apiKeyEdits[key.env] !== undefined
                     const showPw = apiKeyShowValues[key.env]
                     return (
-                      <div key={key.env} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '12px', borderRadius: '10px', background: key.configurada ? 'rgba(34,197,94,0.04)' : 'rgba(255,255,255,0.02)', border: `1px solid ${hasEdit ? 'rgba(99,102,241,0.3)' : key.configurada ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)'}` }}>
+                      <div key={key.env} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '12px', borderRadius: '10px', background: key.configurada ? 'rgba(34,197,94,0.04)' : 'rgba(255,255,255,0.02)', border: `1px solid ${hasEdit ? 'rgba(139,92,246,0.3)' : key.configurada ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)'}` }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', marginTop: '6px', flexShrink: 0, background: key.configurada ? '#22c55e' : '#475569' }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
@@ -508,7 +508,7 @@ export default function AdminPanel({ onBack }) {
                               </span>
                             )}
                             {key.link && (
-                              <a href={key.link} target="_blank" rel="noreferrer" style={{ fontSize: '10px', color: '#6366f1', textDecoration: 'none' }}>↗ Obter</a>
+                              <a href={key.link} target="_blank" rel="noreferrer" style={{ fontSize: '10px', color: '#8b5cf6', textDecoration: 'none' }}>↗ Obter</a>
                             )}
                           </div>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -536,7 +536,7 @@ export default function AdminPanel({ onBack }) {
 
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <button onClick={saveApiKeys} disabled={apiKeySaving || Object.keys(apiKeyEdits).length === 0} style={{
-              ...sty.btn, background: Object.keys(apiKeyEdits).length > 0 ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)', color: Object.keys(apiKeyEdits).length > 0 ? '#fff' : '#475569',
+              ...sty.btn, background: Object.keys(apiKeyEdits).length > 0 ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : 'rgba(255,255,255,0.06)', color: Object.keys(apiKeyEdits).length > 0 ? '#fff' : '#475569',
               padding: '12px 32px', fontSize: '15px', opacity: apiKeySaving ? 0.6 : 1,
             }}>
               {apiKeySaving ? 'Salvando...' : `💾 Salvar ${Object.keys(apiKeyEdits).length > 0 ? `(${Object.keys(apiKeyEdits).length} alteração${Object.keys(apiKeyEdits).length > 1 ? 'ões' : ''})` : 'Keys'}`}
@@ -591,10 +591,10 @@ export default function AdminPanel({ onBack }) {
               Copie esta URL e cole em <strong>Hotmart → Ferramentas → Webhooks → Novo Webhook</strong>
             </p>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <code style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#a5b4fc', flex: 1, wordBreak: 'break-all', fontFamily: "'JetBrains Mono', monospace" }}>
+              <code style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#c4b5fd', flex: 1, wordBreak: 'break-all', fontFamily: "'JetBrains Mono', monospace" }}>
                 {hotmartStatus?.webhook_url || 'Carregando...'}
               </code>
-              <button onClick={() => copyToClipboard(hotmartStatus?.webhook_url || '')} style={{ ...sty.btn, background: hotmartCopied ? '#22c55e' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', padding: '10px 16px', whiteSpace: 'nowrap' }}>
+              <button onClick={() => copyToClipboard(hotmartStatus?.webhook_url || '')} style={{ ...sty.btn, background: hotmartCopied ? '#22c55e' : 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', padding: '10px 16px', whiteSpace: 'nowrap' }}>
                 {hotmartCopied ? '✅ Copiado!' : '📋 Copiar'}
               </button>
             </div>
@@ -634,7 +634,7 @@ export default function AdminPanel({ onBack }) {
               </button>
             </div>
             <p style={{ color: '#64748b', fontSize: '11px', marginTop: '6px' }}>
-              ⚠️ O token é salvo em runtime. Para persistir entre restarts, adicione <code style={{ color: '#a5b4fc' }}>HOTMART_TOKEN=seu_token</code> no .env.production
+              ⚠️ O token é salvo em runtime. Para persistir entre restarts, adicione <code style={{ color: '#c4b5fd' }}>HOTMART_TOKEN=seu_token</code> no .env.production
             </p>
           </div>
 
@@ -647,7 +647,7 @@ export default function AdminPanel({ onBack }) {
             <div style={{ display: 'grid', gap: '12px' }}>
               {[
                 { key: 'hotmart_checkout_mensal', label: '💳 Checkout Mensal', color: '#3b82f6' },
-                { key: 'hotmart_checkout_anual', label: '⭐ Checkout Anual', color: '#6366f1' },
+                { key: 'hotmart_checkout_anual', label: '⭐ Checkout Anual', color: '#8b5cf6' },
                 { key: 'hotmart_checkout_vitalicio', label: '👑 Checkout Vitalício', color: '#8b5cf6' },
               ].map(plan => (
                 <div key={plan.key}>
@@ -682,7 +682,7 @@ export default function AdminPanel({ onBack }) {
           <div style={sty.card}>
             <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>📧 Template de Email de Boas-Vindas</h3>
             <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '8px' }}>
-              Modelo de email enviado ao comprador. Use as variáveis: <code style={{ color: '#a5b4fc' }}>{'{URL}'}</code>, <code style={{ color: '#a5b4fc' }}>{'{EMAIL}'}</code>, <code style={{ color: '#a5b4fc' }}>{'{SENHA}'}</code>
+              Modelo de email enviado ao comprador. Use as variáveis: <code style={{ color: '#c4b5fd' }}>{'{URL}'}</code>, <code style={{ color: '#c4b5fd' }}>{'{EMAIL}'}</code>, <code style={{ color: '#c4b5fd' }}>{'{SENHA}'}</code>
             </p>
             <textarea
               value={editSettings['hotmart_email_boas_vindas'] || ''}
@@ -697,7 +697,7 @@ export default function AdminPanel({ onBack }) {
                 .then(r => r.json()).then(d => { if (d.ok) setMsg('📧 Template salvo!'); else setMsg('Erro') })
                 .catch(e => setMsg('Erro: ' + e.message))
               setTimeout(() => setMsg(''), 3000)
-            }} style={{ ...sty.btn, background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', marginTop: '8px' }}>
+            }} style={{ ...sty.btn, background: 'rgba(139,92,246,0.2)', color: '#c4b5fd', marginTop: '8px' }}>
               💾 Salvar Template
             </button>
           </div>
@@ -753,7 +753,7 @@ export default function AdminPanel({ onBack }) {
                         return (
                           <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                             <td style={{ padding: '8px 6px' }}>
-                              <span style={sty.tag(log.evento?.includes('APPROVED') || log.evento?.includes('COMPLETE') ? '#22c55e' : log.evento?.includes('CANCEL') || log.evento?.includes('REFUND') || log.evento?.includes('CHARGEBACK') ? '#ef4444' : '#6366f1')}>
+                              <span style={sty.tag(log.evento?.includes('APPROVED') || log.evento?.includes('COMPLETE') ? '#22c55e' : log.evento?.includes('CANCEL') || log.evento?.includes('REFUND') || log.evento?.includes('CHARGEBACK') ? '#ef4444' : '#8b5cf6')}>
                                 {log.evento?.replace('PURCHASE_', '').replace('SUBSCRIPTION_', 'SUB_') || '—'}
                               </span>
                             </td>
@@ -802,7 +802,7 @@ export default function AdminPanel({ onBack }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
                 {hotmartStatus.event_stats_30d.map((s, i) => (
                   <div key={i} style={{ padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', textAlign: 'center' }}>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: s.status === 'user_created' ? '#22c55e' : s.status === 'deactivated' ? '#ef4444' : '#a5b4fc' }}>{s.total}</div>
+                    <div style={{ fontSize: '24px', fontWeight: 800, color: s.status === 'user_created' ? '#22c55e' : s.status === 'deactivated' ? '#ef4444' : '#c4b5fd' }}>{s.total}</div>
                     <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', textTransform: 'uppercase' }}>{s.evento?.replace('PURCHASE_', '').replace('SUBSCRIPTION_', '')}</div>
                     <div style={{ fontSize: '10px', color: '#475569' }}>{s.status}</div>
                   </div>

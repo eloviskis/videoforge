@@ -840,12 +840,12 @@ function App() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: '#f0f0f0', borderRadius: '10px', padding: '4px' }}>
           <button type="button" onClick={() => setModoRoteiro('ia')} style={{
             flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88em',
-            background: modoRoteiro === 'ia' ? '#6366f1' : 'transparent',
+            background: modoRoteiro === 'ia' ? '#8b5cf6' : 'transparent',
             color: modoRoteiro === 'ia' ? '#fff' : '#555', transition: 'all 0.2s'
           }}>🤖 IA cria o roteiro</button>
           <button type="button" onClick={() => setModoRoteiro('manual')} style={{
             flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88em',
-            background: modoRoteiro === 'manual' ? '#6366f1' : 'transparent',
+            background: modoRoteiro === 'manual' ? '#8b5cf6' : 'transparent',
             color: modoRoteiro === 'manual' ? '#fff' : '#555', transition: 'all 0.2s'
           }}>✏️ Tenho meu roteiro</button>
         </div>
@@ -1686,14 +1686,14 @@ function App() {
     {monitorVideoId && monitorVideo && (
       <div style={{
         position: 'fixed', bottom: '20px', right: '20px', width: monitorMinimized ? '280px' : '380px',
-        background: '#1a1a2e', border: '1px solid #6366f1', borderRadius: '12px',
-        boxShadow: '0 8px 32px rgba(99,102,241,0.35)', zIndex: 9999, color: '#e2e8f0',
+        background: '#1a1a2e', border: '1px solid #8b5cf6', borderRadius: '12px',
+        boxShadow: '0 8px 32px rgba(139,92,246,0.35)', zIndex: 9999, color: '#e2e8f0',
         fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', transition: 'all 0.3s'
       }}>
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 14px', background: '#16213e', borderBottom: '1px solid #6366f1',
+          padding: '10px 14px', background: '#16213e', borderBottom: '1px solid #8b5cf6',
           cursor: 'pointer'
         }} onClick={() => setMonitorMinimized(m => !m)}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflow: 'hidden' }}>
@@ -1732,7 +1732,7 @@ function App() {
                     ? '#ef4444'
                     : ['pronto','concluido','publicado'].includes(monitorVideo.status)
                     ? '#22c55e'
-                    : 'linear-gradient(90deg, #6366f1, #a855f7)',
+                    : 'linear-gradient(90deg, #8b5cf6, #a855f7)',
                   borderRadius: '6px', transition: 'width 0.5s ease'
                 }} />
               </div>
@@ -1758,7 +1758,7 @@ function App() {
                     opacity: isLast ? 1 : 0.65,
                     fontWeight: isLast ? 'bold' : 'normal',
                     color: isLast ? '#e2e8f0' : '#94a3b8',
-                    borderLeft: isLast ? '2px solid #6366f1' : '2px solid #334155',
+                    borderLeft: isLast ? '2px solid #8b5cf6' : '2px solid #334155',
                     paddingLeft: '8px', paddingBottom: '2px'
                   }}>
                     <span style={{ fontSize: '10px', color: '#64748b', whiteSpace: 'nowrap', marginTop: '2px' }}>
@@ -1835,7 +1835,7 @@ function App() {
                 }}
                 disabled={corteAnalyzing || !corteUrl.trim()}
                 style={{
-                  padding: '12px 24px', background: corteAnalyzing ? '#9ca3af' : '#6366f1',
+                  padding: '12px 24px', background: corteAnalyzing ? '#9ca3af' : '#8b5cf6',
                   color: 'white', border: 'none', borderRadius: '8px',
                   fontWeight: 'bold', cursor: corteAnalyzing ? 'not-allowed' : 'pointer', fontSize: '15px'
                 }}

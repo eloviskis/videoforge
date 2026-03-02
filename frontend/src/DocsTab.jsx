@@ -397,7 +397,7 @@ function ApiCard({ api }) {
             rel="noopener noreferrer"
             style={{
               display: 'inline-block', padding: '8px 16px',
-              background: '#6366f1', color: '#fff', borderRadius: '8px',
+              background: '#8b5cf6', color: '#fff', borderRadius: '8px',
               textDecoration: 'none', fontSize: '13px', fontWeight: 600,
             }}
           >
@@ -519,7 +519,7 @@ function YoutubeCliAuth() {
             ❌ {msg}
           </div>
           <button onClick={() => { setEtapa(0); setAuthUrl('') }}
-            style={{ alignSelf: 'flex-start', padding: '7px 14px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>
+            style={{ alignSelf: 'flex-start', padding: '7px 14px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>
             Tentar novamente
           </button>
         </div>
@@ -635,7 +635,7 @@ export default function DocsTab() {
             style={{
               padding: '7px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer',
               fontSize: '12px', fontWeight: 600,
-              background: catAtiva === c ? '#6366f1' : '#f3f4f6',
+              background: catAtiva === c ? '#8b5cf6' : '#f3f4f6',
               color: catAtiva === c ? '#fff' : '#374151',
             }}>
             {c}

@@ -81,8 +81,8 @@ export default function LandingPage({ onGoLogin }) {
         padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '26px' }}>🎬</span>
-          <strong style={{ fontSize: '20px', background: 'linear-gradient(135deg,#6366f1,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <img src="/logo.png" alt="VideoForge" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+          <strong style={{ fontSize: '20px', background: 'linear-gradient(135deg,#8b5cf6,#c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             VideoForge
           </strong>
         </div>
@@ -90,8 +90,8 @@ export default function LandingPage({ onGoLogin }) {
           <a href="#precos" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>Preços</a>
           <a href="#faq" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>FAQ</a>
           <button onClick={onGoLogin} style={{
-            padding: '8px 20px', borderRadius: '8px', border: '1px solid #6366f1',
-            background: 'transparent', color: '#a5b4fc', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
+            padding: '8px 20px', borderRadius: '8px', border: '1px solid #8b5cf6',
+            background: 'transparent', color: '#c4b5fd', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
           }}>Entrar</button>
         </div>
       </nav>
@@ -100,20 +100,28 @@ export default function LandingPage({ onGoLogin }) {
       <section style={{
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
         textAlign: 'center', padding: '120px 24px 80px',
-        background: 'radial-gradient(ellipse at center top, rgba(99,102,241,0.15), transparent 60%)',
+        background: 'radial-gradient(ellipse at center top, rgba(139,92,246,0.18), transparent 60%)',
       }}>
         <div style={{ maxWidth: '800px' }}>
+          {/* Logo principal */}
+          <img src="/logo.png" alt="VideoForge" style={{
+            width: '140px', height: '140px', borderRadius: '28px',
+            marginBottom: '28px',
+            filter: 'drop-shadow(0 0 40px rgba(139,92,246,0.5)) drop-shadow(0 0 80px rgba(168,85,247,0.3))',
+            animation: 'float 3s ease-in-out infinite',
+          }} />
+          <style>{`@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}`}</style>
           <div style={{
             display: 'inline-block', padding: '6px 16px', borderRadius: '99px', fontSize: '13px',
-            background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)',
-            color: '#a5b4fc', marginBottom: '24px', fontWeight: 500,
+            background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)',
+            color: '#c4b5fd', marginBottom: '24px', fontWeight: 500,
           }}>
             ⚡ Automatize seu canal de vídeos com IA
           </div>
           <h1 style={{
             fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 800, lineHeight: 1.1,
             margin: '0 0 20px',
-            background: 'linear-gradient(135deg, #fff, #c7d2fe, #a78bfa)',
+            background: 'linear-gradient(135deg, #fff, #ddd6fe, #c084fc)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           }}>
             Crie vídeos prontos para o YouTube em minutos
@@ -125,9 +133,9 @@ export default function LandingPage({ onGoLogin }) {
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href="#precos" style={{
               padding: '14px 32px', borderRadius: '12px', textDecoration: 'none',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
+              background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
               fontWeight: 700, fontSize: '16px',
-              boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+              boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
               transition: 'transform 0.2s',
             }}>
               Começar agora →
@@ -150,7 +158,7 @@ export default function LandingPage({ onGoLogin }) {
               { n: '0', label: 'Código necessário' },
             ].map(s => (
               <div key={s.label} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '32px', fontWeight: 800, color: '#a5b4fc' }}>{s.n}</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: '#c4b5fd' }}>{s.n}</div>
                 <div style={{ fontSize: '13px', color: '#64748b' }}>{s.label}</div>
               </div>
             ))}
@@ -197,13 +205,13 @@ export default function LandingPage({ onGoLogin }) {
               <div key={s.step} style={{ flex: '1', minWidth: '220px', maxWidth: '280px' }}>
                 <div style={{
                   width: '64px', height: '64px', borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '28px', margin: '0 auto 16px',
-                  boxShadow: '0 4px 20px rgba(99,102,241,0.3)',
+                  boxShadow: '0 4px 20px rgba(139,92,246,0.35)',
                 }}>{s.icon}</div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 8px' }}>
-                  <span style={{ color: '#6366f1' }}>{s.step}.</span> {s.title}
+                  <span style={{ color: '#a855f7' }}>{s.step}.</span> {s.title}
                 </h3>
                 <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>{s.desc}</p>
               </div>
@@ -223,15 +231,15 @@ export default function LandingPage({ onGoLogin }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px', alignItems: 'start' }}>
           {planos.map(p => (
             <div key={p.nome} style={{
-              background: p.destaque ? 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.08))' : 'rgba(255,255,255,0.03)',
-              border: p.destaque ? '2px solid #6366f1' : '1px solid rgba(255,255,255,0.06)',
+              background: p.destaque ? 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(168,85,247,0.08))' : 'rgba(255,255,255,0.03)',
+              border: p.destaque ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.06)',
               borderRadius: '16px', padding: '32px',
               position: 'relative', overflow: 'hidden',
             }}>
               {p.destaque && (
                 <div style={{
                   position: 'absolute', top: '12px', right: '-28px',
-                  background: '#6366f1', color: '#fff', fontSize: '11px', fontWeight: 700,
+                  background: '#8b5cf6', color: '#fff', fontSize: '11px', fontWeight: 700,
                   padding: '4px 32px', transform: 'rotate(45deg)',
                 }}>POPULAR</div>
               )}
@@ -243,7 +251,7 @@ export default function LandingPage({ onGoLogin }) {
               <ul style={{ listStyle: 'none', padding: 0, margin: '20px 0' }}>
                 {p.items.map(item => (
                   <li key={item} style={{ fontSize: '14px', color: '#94a3b8', padding: '6px 0', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ color: '#6366f1' }}>✓</span> {item}
+                    <span style={{ color: '#a855f7' }}>✓</span> {item}
                   </li>
                 ))}
               </ul>
@@ -251,9 +259,9 @@ export default function LandingPage({ onGoLogin }) {
                 <a href={p.link} target="_blank" rel="noopener noreferrer" style={{
                   display: 'block', textAlign: 'center', padding: '13px',
                   borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '15px',
-                  background: p.destaque ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'rgba(255,255,255,0.08)',
+                  background: p.destaque ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'rgba(255,255,255,0.08)',
                   color: '#fff', border: p.destaque ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: p.destaque ? '0 4px 15px rgba(99,102,241,0.4)' : 'none',
+                  boxShadow: p.destaque ? '0 4px 15px rgba(139,92,246,0.5)' : 'none',
                 }}>{p.cta}</a>
               ) : (
                 <button onClick={onGoLogin} style={{
@@ -336,7 +344,7 @@ export default function LandingPage({ onGoLogin }) {
                   listStyle: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 }}>
                   {f.q}
-                  <span style={{ color: '#6366f1', fontSize: '18px', flexShrink: 0 }}>+</span>
+                  <span style={{ color: '#a855f7', fontSize: '18px', flexShrink: 0 }}>+</span>
                 </summary>
                 <p style={{ fontSize: '14px', color: '#94a3b8', marginTop: '12px', lineHeight: 1.6, margin: '12px 0 0' }}>
                   {f.a}
@@ -350,8 +358,9 @@ export default function LandingPage({ onGoLogin }) {
       {/* ═══ CTA FINAL ═══ */}
       <section style={{
         padding: '80px 24px', textAlign: 'center',
-        background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.1), transparent 60%)',
+        background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.12), transparent 60%)',
       }}>
+        <img src="/logo.png" alt="" style={{ width: '64px', height: '64px', borderRadius: '14px', marginBottom: '20px', filter: 'drop-shadow(0 0 20px rgba(139,92,246,0.4))' }} />
         <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '16px' }}>
           Pronto para automatizar seus vídeos?
         </h2>
@@ -360,9 +369,9 @@ export default function LandingPage({ onGoLogin }) {
         </p>
         <button onClick={onGoLogin} style={{
           padding: '14px 36px', borderRadius: '12px', border: 'none',
-          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
+          background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
           fontWeight: 700, fontSize: '16px', cursor: 'pointer',
-          boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+          boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
         }}>
           Criar conta grátis →
         </button>

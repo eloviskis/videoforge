@@ -65,7 +65,7 @@ export default function AuthWrapper() {
     return (
       <div style={{
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: '#0a0a1a', color: '#6366f1', fontSize: '18px', fontFamily: 'Inter, sans-serif'
+        background: '#0a0a1a', color: '#8b5cf6', fontSize: '18px', fontFamily: 'Inter, sans-serif'
       }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px', animation: 'spin 1s linear infinite' }}>🎬</div>
@@ -112,7 +112,7 @@ export default function AuthWrapper() {
             <span>👤 {user.nome || user.email}</span>
             <span style={{
               padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 600,
-              background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', textTransform: 'uppercase',
+              background: 'rgba(139,92,246,0.15)', color: '#c4b5fd', textTransform: 'uppercase',
             }}>
               {user.plano || 'trial'}
             </span>
@@ -137,8 +137,8 @@ export default function AuthWrapper() {
             <button
               onClick={() => setPage('settings')}
               style={{
-                padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(99,102,241,0.3)',
-                background: 'rgba(99,102,241,0.1)', color: '#a5b4fc', cursor: 'pointer', fontSize: '12px',
+                padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(139,92,246,0.3)',
+                background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', cursor: 'pointer', fontSize: '12px',
                 fontWeight: 600,
               }}
             >
@@ -185,7 +185,7 @@ export default function AuthWrapper() {
             </div>
 
             <div style={{
-              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+              background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
               borderRadius: '12px', padding: '20px', marginBottom: '16px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
@@ -222,9 +222,9 @@ export default function AuthWrapper() {
                   }}
                   style={{
                     padding: '10px 24px', borderRadius: '10px', textDecoration: 'none',
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
+                    background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
                     fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap',
-                    boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
+                    boxShadow: '0 4px 15px rgba(139,92,246,0.3)',
                   }}
                 >
                   ⬇️ Baixar .exe

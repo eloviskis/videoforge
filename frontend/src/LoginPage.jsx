@@ -60,13 +60,17 @@ export default function LoginPage({ onLogin, onGoLanding }) {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <img src="/logo.png" alt="VideoForge" style={{
+            width: '80px', height: '80px', borderRadius: '18px', marginBottom: '12px',
+            filter: 'drop-shadow(0 0 25px rgba(139,92,246,0.45))',
+          }} />
           <h1 style={{
             fontSize: '36px', fontWeight: 800, color: '#fff',
             margin: '0 0 6px',
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa)',
+            background: 'linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           }}>
-            🎬 VideoForge
+            VideoForge
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
             Crie vídeos com IA automaticamente
@@ -89,7 +93,7 @@ export default function LoginPage({ onLogin, onGoLanding }) {
               style={{
                 flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
                 fontWeight: 600, fontSize: '14px',
-                background: modo === 'login' ? '#6366f1' : 'transparent',
+                background: modo === 'login' ? '#8b5cf6' : 'transparent',
                 color: modo === 'login' ? '#fff' : '#94a3b8',
                 transition: 'all 0.2s',
               }}
@@ -99,7 +103,7 @@ export default function LoginPage({ onLogin, onGoLanding }) {
               style={{
                 flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
                 fontWeight: 600, fontSize: '14px',
-                background: modo === 'register' ? '#6366f1' : 'transparent',
+                background: modo === 'register' ? '#8b5cf6' : 'transparent',
                 color: modo === 'register' ? '#fff' : '#94a3b8',
                 transition: 'all 0.2s',
               }}
@@ -171,11 +175,11 @@ export default function LoginPage({ onLogin, onGoLanding }) {
               type="submit" disabled={loading}
               style={{
                 width: '100%', padding: '13px', borderRadius: '10px', border: 'none',
-                background: loading ? '#4b5563' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                background: loading ? '#4b5563' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
                 color: '#fff', fontWeight: 700, fontSize: '15px',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
-                boxShadow: loading ? 'none' : '0 4px 15px rgba(99,102,241,0.4)',
+                boxShadow: loading ? 'none' : '0 4px 15px rgba(139,92,246,0.5)',
               }}
             >
               {loading ? '⏳ Aguarde...' : (modo === 'login' ? 'Entrar' : 'Criar conta')}
@@ -188,7 +192,7 @@ export default function LoginPage({ onLogin, onGoLanding }) {
           <button
             onClick={onGoLanding}
             style={{
-              background: 'none', border: 'none', color: '#818cf8',
+              background: 'none', border: 'none', color: '#c4b5fd',
               cursor: 'pointer', fontSize: '13px', textDecoration: 'underline',
             }}
           >
