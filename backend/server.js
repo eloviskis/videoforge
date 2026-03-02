@@ -5307,6 +5307,10 @@ out_dir = sys.argv[2]
 result_path = sys.argv[3]
 os.makedirs(out_dir, exist_ok=True)
 
+# Cookies file (se existir)
+cookies_file = '/media/cookies.txt'
+has_cookies = os.path.isfile(cookies_file)
+
 ydl_opts = {
     'format': 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best[height<=1080]',
     'outtmpl': os.path.join(out_dir, 'original.%(ext)s'),
@@ -5315,7 +5319,14 @@ ydl_opts = {
     'no_warnings': True,
     'noprogress': True,
     'logtostderr': True,
+    'extractor_args': {'youtube': {'player_client': ['web', 'mweb']}},
+    'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+    },
 }
+if has_cookies:
+    ydl_opts['cookiefile'] = cookies_file
 
 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
     info = ydl.extract_info(url, download=True)
