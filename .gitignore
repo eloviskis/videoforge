@@ -10,6 +10,7 @@ media/
 *.jpg
 *.jpeg
 *.png
+!frontend/public/logo.png
 
 # Credenciais
 client_secret.json
