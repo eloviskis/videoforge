@@ -30,10 +30,28 @@ async function adminMiddleware(req, res, next) {
 // ========================================
 export function registrarRotasAdmin(app) {
 
-  // ── Carregar API keys do DB para process.env (fallback) ──
+  // ── Sincronizar API keys entre process.env ↔ DB ──
   (async () => {
     try {
+      // Lista de env vars conhecidas para auto-seed
+      const KNOWN_KEYS = [
+        'GEMINI_API_KEY','OPENAI_API_KEY','OPENROUTER_API_KEY','REPLICATE_API_TOKEN','HUGGINGFACE_API_TOKEN',
+        'KLING_ACCESS_KEY_ID','KLING_ACCESS_KEY_SECRET','DID_API_KEY','DID_PRESENTER_URL',
+        'ELEVENLABS_API_KEY','ELEVENLABS_VOICE_ID',
+        'PEXELS_API_KEY','PIXABAY_API_KEY',
+        'YOUTUBE_CLIENT_ID','YOUTUBE_CLIENT_SECRET','YOUTUBE_REDIRECT_URI',
+        'TWITTER_CLIENT_ID','TWITTER_CLIENT_SECRET','TWITTER_BEARER_TOKEN','TWITTER_REDIRECT_URI',
+        'FACEBOOK_APP_ID','FACEBOOK_APP_SECRET','FACEBOOK_REDIRECT_URI',
+        'LINKEDIN_CLIENT_ID','LINKEDIN_CLIENT_SECRET','LINKEDIN_REDIRECT_URI',
+        'TIKTOK_CLIENT_KEY','TIKTOK_CLIENT_SECRET','TIKTOK_REDIRECT_URI',
+        'HOTMART_TOKEN','JWT_SECRET','N8N_URL',
+      ];
+
       const { rows } = await pool.query("SELECT chave, valor FROM app_settings WHERE chave LIKE 'apikey_%'");
+      const dbMap = {};
+      for (const r of rows) dbMap[r.chave] = r.valor;
+
+      // 1) DB → process.env (fallback — manter comportamento existente)
       let loaded = 0;
       for (const r of rows) {
         const envName = r.chave.replace('apikey_', '');
@@ -42,8 +60,24 @@ export function registrarRotasAdmin(app) {
           loaded++;
         }
       }
-      if (loaded > 0) console.log(`🔑 ${loaded} API key(s) carregadas do banco`);
-    } catch { /* tabela pode não existir ainda */ }
+      if (loaded > 0) console.log(`🔑 ${loaded} API key(s) carregadas do banco → env`);
+
+      // 2) process.env → DB (auto-seed: grava keys do env que ainda não estão no DB)
+      let seeded = 0;
+      for (const envName of KNOWN_KEYS) {
+        const val = process.env[envName];
+        const dbKey = `apikey_${envName}`;
+        if (val && !dbMap[dbKey]) {
+          await pool.query(
+            `INSERT INTO app_settings (chave, valor, descricao) VALUES ($1, $2, $3)
+             ON CONFLICT (chave) DO UPDATE SET valor = $2, updated_at = NOW()`,
+            [dbKey, val, `Auto-seed from env: ${envName}`]
+          );
+          seeded++;
+        }
+      }
+      if (seeded > 0) console.log(`🔑 ${seeded} API key(s) importadas do env → banco`);
+    } catch (err) { console.warn('⚠️ Sync API keys:', err.message); }
   })();
 
   // ── SETTINGS: listar ──
