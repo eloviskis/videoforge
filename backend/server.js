@@ -27,6 +27,7 @@ import { registrarRotasHotmart } from './hotmart.js';
 import { registrarRotasAdmin } from './admin.js';
 import { registrarRotasUserSettings } from './user-settings.js';
 import { registrarRotasSocialOAuth } from './social-oauth.js';
+import { registrarRotasFeedback } from './feedback.js';
 
 const execAsync = promisify(exec);
 
@@ -211,6 +212,9 @@ registrarRotasUserSettings(app);
 
 // OAuth social simplificado (click-to-connect per user)
 registrarRotasSocialOAuth(app);
+
+// Feedback / Muro de sugestões
+registrarRotasFeedback(app);
 
 // Auth middleware (protege rotas /api/* exceto as públicas)
 if (AUTH_ENABLED) {

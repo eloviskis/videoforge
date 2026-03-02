@@ -38,6 +38,12 @@ export default function AdminPanel({ onBack }) {
   const [apiKeyEdits, setApiKeyEdits] = useState({})
   const [apiKeySaving, setApiKeySaving] = useState(false)
   const [apiKeyShowValues, setApiKeyShowValues] = useState({})
+  // Feedback states
+  const [allFeedbacks, setAllFeedbacks] = useState([])
+  const [fbStats, setFbStats] = useState(null)
+  const [fbFilter, setFbFilter] = useState('todos')
+  const [fbReply, setFbReply] = useState({})
+  const [fbReplying, setFbReplying] = useState(null)
 
   useEffect(() => { loadStats() }, [])
   useEffect(() => { if (tab === 'users') loadUsers() }, [tab])
@@ -45,6 +51,7 @@ export default function AdminPanel({ onBack }) {
   useEffect(() => { if (tab === 'hotmart') { loadHotmartStatus(); loadHotmartLogs(0); loadSettings() } }, [tab])
   useEffect(() => { if (tab === 'planos') loadPlanos() }, [tab])
   useEffect(() => { if (tab === 'apikeys') loadApiKeys() }, [tab])
+  useEffect(() => { if (tab === 'feedback') loadAllFeedbacks() }, [tab])
 
   async function loadStats() {
     try {
@@ -269,6 +276,47 @@ export default function AdminPanel({ onBack }) {
     system: { icon: '⚙️', label: 'Sistema' },
   }
 
+  // ── Feedback functions ──
+  async function loadAllFeedbacks() {
+    try {
+      const [fbRes, statsRes] = await Promise.all([
+        fetch(`${API_URL}/admin/feedback`, { headers: hdr() }),
+        fetch(`${API_URL}/admin/feedback/stats`, { headers: hdr() }),
+      ])
+      if (fbRes.ok) setAllFeedbacks(await fbRes.json())
+      if (statsRes.ok) setFbStats(await statsRes.json())
+    } catch (e) { setMsg('Erro: ' + e.message) }
+  }
+
+  async function handleUpdateFeedback(id, resposta, status) {
+    setFbReplying(id)
+    try {
+      const body = {}
+      if (resposta) body.resposta = resposta
+      if (status) body.status = status
+      const r = await fetch(`${API_URL}/admin/feedback/${id}`, {
+        method: 'PATCH', headers: hdr(), body: JSON.stringify(body)
+      })
+      if (r.ok) {
+        setMsg('✅ Feedback atualizado')
+        setFbReply({ ...fbReply, [id]: '' })
+        loadAllFeedbacks()
+      } else { const d = await r.json(); setMsg('Erro: ' + d.error) }
+    } catch (e) { setMsg('Erro: ' + e.message) }
+    setFbReplying(null)
+    setTimeout(() => setMsg(''), 3000)
+  }
+
+  async function handleDeleteFeedback(id) {
+    if (!confirm('Excluir este feedback?')) return
+    try {
+      const r = await fetch(`${API_URL}/admin/feedback/${id}`, { method: 'DELETE', headers: hdr() })
+      if (r.ok) { setMsg('✅ Feedback excluído'); loadAllFeedbacks() }
+      else { const d = await r.json(); setMsg('Erro: ' + d.error) }
+    } catch (e) { setMsg('Erro: ' + e.message) }
+    setTimeout(() => setMsg(''), 3000)
+  }
+
   const sty = {
     bg: { minHeight: '100vh', background: '#0a0a1a', color: '#e2e8f0', fontFamily: "'Inter',sans-serif", padding: '20px' },
     card: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', padding: '24px', marginBottom: '16px' },
@@ -308,6 +356,7 @@ export default function AdminPanel({ onBack }) {
           { id: 'settings', label: '⚙️ Configurações' },
           { id: 'apikeys', label: '🔑 API Keys' },
           { id: 'hotmart', label: '🔥 Hotmart' },
+          { id: 'feedback', label: '💬 Feedbacks' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             ...sty.btn,
@@ -1038,6 +1087,146 @@ export default function AdminPanel({ onBack }) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ FEEDBACKS ═══ */}
+      {tab === 'feedback' && (
+        <div>
+          {/* Stats */}
+          {fbStats && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+              {[
+                { label: 'Total', value: fbStats.total, color: '#c4b5fd' },
+                { label: 'Pendentes', value: fbStats.pendentes, color: '#fbbf24' },
+                { label: 'Respondidos', value: fbStats.respondidos, color: '#34d399' },
+                { label: 'Implementados', value: fbStats.implementados, color: '#22c55e' },
+                { label: 'Sugestões', value: fbStats.sugestoes, color: '#a78bfa' },
+                { label: 'Bugs', value: fbStats.bugs, color: '#f87171' },
+              ].map((s, i) => (
+                <div key={i} style={sty.card}>
+                  <div style={{ color: '#64748b', fontSize: '11px', textTransform: 'uppercase', marginBottom: '6px' }}>{s.label}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 800, color: s.color }}>{s.value || 0}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Filtros */}
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'todos', label: '📋 Todos' },
+              { id: 'pendente', label: '⏳ Pendentes' },
+              { id: 'visto', label: '👁️ Vistos' },
+              { id: 'respondido', label: '💬 Respondidos' },
+              { id: 'implementado', label: '✅ Implementados' },
+              { id: 'rejeitado', label: '❌ Rejeitados' },
+            ].map(f => (
+              <button key={f.id} onClick={() => setFbFilter(f.id)} style={{
+                ...sty.btn,
+                background: fbFilter === f.id ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.05)',
+                color: fbFilter === f.id ? '#c4b5fd' : '#64748b',
+                padding: '5px 12px', fontSize: '12px',
+              }}>{f.label}</button>
+            ))}
+          </div>
+
+          {/* Lista */}
+          {(fbFilter === 'todos' ? allFeedbacks : allFeedbacks.filter(f => f.status === fbFilter)).length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>💬</div>
+              <div style={{ fontSize: '14px' }}>Nenhum feedback {fbFilter !== 'todos' ? 'com esse filtro' : 'recebido ainda'}</div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {(fbFilter === 'todos' ? allFeedbacks : allFeedbacks.filter(f => f.status === fbFilter)).map(fb => {
+                const tipoColors = { sugestao: '#a78bfa', bug: '#f87171', elogio: '#fbbf24', outro: '#94a3b8' }
+                const tipoLabels = { sugestao: '💡 Sugestão', bug: '🐛 Bug', elogio: '⭐ Elogio', outro: '📝 Outro' }
+                const statusColors = { pendente: '#94a3b8', visto: '#60a5fa', respondido: '#34d399', implementado: '#22c55e', rejeitado: '#ef4444' }
+                const statusLabels = { pendente: '⏳ Pendente', visto: '👁️ Visto', respondido: '💬 Respondido', implementado: '✅ Implementado', rejeitado: '❌ Rejeitado' }
+                return (
+                  <div key={fb.id} style={{
+                    ...sty.card,
+                    borderLeft: `4px solid ${tipoColors[fb.tipo] || '#94a3b8'}`,
+                  }}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, background: `${tipoColors[fb.tipo]}20`, color: tipoColors[fb.tipo] }}>
+                        {tipoLabels[fb.tipo] || fb.tipo}
+                      </span>
+                      <span style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, background: `${statusColors[fb.status]}20`, color: statusColors[fb.status] }}>
+                        {statusLabels[fb.status] || fb.status}
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#8b5cf6', fontWeight: 600 }}>
+                        👤 {fb.user_nome || fb.user_email}
+                      </span>
+                      <span style={{ flex: 1 }} />
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>
+                        {new Date(fb.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                      <button onClick={() => handleDeleteFeedback(fb.id)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '13px' }} title="Excluir">🗑️</button>
+                    </div>
+
+                    <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 700, color: '#e2e8f0' }}>{fb.titulo}</h4>
+                    <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#94a3b8', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{fb.mensagem}</p>
+
+                    {/* Resposta existente */}
+                    {fb.resposta_admin && (
+                      <div style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '10px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#a78bfa', marginBottom: '4px' }}>🛡️ Sua resposta:</div>
+                        <p style={{ margin: 0, fontSize: '13px', color: '#c4b5fd', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{fb.resposta_admin}</p>
+                      </div>
+                    )}
+
+                    {/* Responder / Atualizar status */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: '200px' }}>
+                        <textarea
+                          placeholder="Escreva uma resposta..."
+                          value={fbReply[fb.id] || ''}
+                          onChange={e => setFbReply({ ...fbReply, [fb.id]: e.target.value })}
+                          rows={2}
+                          style={{
+                            width: '100%', padding: '8px 12px', borderRadius: '8px',
+                            border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)',
+                            color: '#e2e8f0', fontSize: '12px', resize: 'vertical',
+                            fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+                      <select
+                        value={fb.status}
+                        onChange={e => handleUpdateFeedback(fb.id, null, e.target.value)}
+                        style={{
+                          padding: '8px 10px', borderRadius: '8px',
+                          border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(0,0,0,0.3)',
+                          color: '#e2e8f0', fontSize: '12px', cursor: 'pointer',
+                        }}
+                      >
+                        <option value="pendente">⏳ Pendente</option>
+                        <option value="visto">👁️ Visto</option>
+                        <option value="respondido">💬 Respondido</option>
+                        <option value="implementado">✅ Implementado</option>
+                        <option value="rejeitado">❌ Rejeitado</option>
+                      </select>
+                      <button
+                        onClick={() => handleUpdateFeedback(fb.id, fbReply[fb.id], 'respondido')}
+                        disabled={!fbReply[fb.id]?.trim() || fbReplying === fb.id}
+                        style={{
+                          ...sty.btn,
+                          background: 'linear-gradient(135deg,#7c3aed,#a855f7)',
+                          color: '#fff', opacity: (!fbReply[fb.id]?.trim() || fbReplying === fb.id) ? 0.5 : 1,
+                          cursor: (!fbReply[fb.id]?.trim() || fbReplying === fb.id) ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        {fbReplying === fb.id ? '⏳' : '📨 Responder'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>

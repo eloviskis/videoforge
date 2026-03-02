@@ -5,6 +5,7 @@ import LoginPage from './LoginPage.jsx'
 import LandingPage from './LandingPage.jsx'
 import AdminPanel from './AdminPanel.jsx'
 import MinhaConta from './MinhaConta.jsx'
+import FeedbackWall from './FeedbackWall.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -123,6 +124,10 @@ export default function AuthWrapper() {
     return <MinhaConta onBack={() => setPage('app')} user={user} />
   }
 
+  if (page === 'feedback') {
+    return <FeedbackWall onBack={() => setPage('app')} user={user} />
+  }
+
   /* page === 'app' */
   return (
     <div>
@@ -157,6 +162,18 @@ export default function AuthWrapper() {
               }}
             >
               📥 Download App
+            </button>
+
+            {/* Feedback button */}
+            <button
+              onClick={() => setPage('feedback')}
+              style={{
+                padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(168,85,247,0.3)',
+                background: 'rgba(168,85,247,0.1)', color: '#d8b4fe', cursor: 'pointer', fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              💬 Sugestões
             </button>
 
             {/* Minha Conta button */}
