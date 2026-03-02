@@ -36,34 +36,26 @@ export default function LandingPage({ onGoLogin }) {
       periodo: '7 dias',
       destaque: false,
       items: [`${precos.limite_trial || 5} vídeos/mês`, 'Roteiro com IA (Gemini — grátis)', 'Narração automática (Edge TTS — grátis)', 'Renderização 1080p', 'Upload YouTube'],
-      cta: 'Começar grátis',
+      cta: 'Testar grátis',
       link: null,
     },
     {
-      nome: 'Mensal',
-      preco: `R$ ${precos.preco_mensal || '47'}`,
-      periodo: '/mês',
-      destaque: true,
-      items: [`${precos.limite_mensal || 50} vídeos/mês`, 'Tudo do Trial', 'Notícias automáticas', 'Cortes de vídeo', 'Multi-plataforma', 'Download app Windows', 'Suporte prioritário'],
-      cta: 'Assinar agora',
-      link: precos.hotmart_checkout_mensal || null,
-    },
-    {
-      nome: 'Anual',
-      preco: `R$ ${precos.preco_anual || '397'}`,
-      periodo: `/ano (R$ ${Math.round((parseInt(precos.preco_anual) || 397) / 12)}/mês)`,
-      destaque: false,
-      items: [`${precos.limite_anual || 100} vídeos/mês`, 'Tudo do Mensal', '30% de economia', 'Atualizações antecipadas'],
-      cta: 'Assinar anual',
-      link: precos.hotmart_checkout_anual || null,
-    },
-    {
-      nome: 'Vitalício',
-      preco: `R$ ${precos.preco_vitalicio || '997'}`,
+      nome: 'Acesso Vitalício',
+      preco: `R$ ${precos.preco_vitalicio || '59'}`,
       periodo: 'pagamento único',
-      destaque: false,
-      items: [`${precos.limite_vitalicio || 9999} vídeos/mês`, 'Tudo do Anual', 'Acesso para sempre', 'Sem mensalidade', 'Atualizações vitalícias'],
-      cta: 'Comprar vitalício',
+      destaque: true,
+      items: [
+        'Vídeos ilimitados',
+        'Roteiro automático com IA',
+        'Narração Edge TTS (grátis)',
+        'Notícias automáticas',
+        'Cortes de vídeo',
+        'Multi-plataforma (YouTube, TikTok, Twitter…)',
+        'Download app Windows',
+        'Atualizações vitalícias',
+        'Suporte prioritário',
+      ],
+      cta: '🔥 Comprar agora — R$ 59',
       link: precos.hotmart_checkout_vitalicio || null,
       badge: '👑',
     },
@@ -73,8 +65,8 @@ export default function LandingPage({ onGoLogin }) {
     { q: 'Preciso saber programar?', a: 'Não! A interface é 100% visual. Basta digitar o tema e clicar em gerar.' },
     { q: 'Quais APIs preciso configurar?', a: 'No mínimo: Gemini (grátis) e Pexels (grátis). Após o login, clique em ⚙️ Minha Conta para configurar suas chaves.' },
     { q: 'Funciona para qualquer nicho?', a: 'Sim! Curiosidades, notícias, motivacional, dark, educacional, gaming e qualquer outro.' },
-    { q: 'Como funciona o pagamento?', a: 'Via Hotmart (boleto, PIX, cartão). Ao pagar, sua conta é criada automaticamente.' },
-    { q: 'Posso cancelar a qualquer momento?', a: 'Sim. Cancele na Hotmart e sua conta é desativada no fim do período pago.' },
+    { q: 'Como funciona o pagamento?', a: 'Pagamento único de R$ 59 via Hotmart (boleto, PIX, cartão). Após o pagamento, sua conta é ativada automaticamente com acesso vitalício.' },
+    { q: 'Os tokens de IA estão inclusos?', a: 'Não. Os R$ 59 são pelo acesso à plataforma. Os tokens de IA (Replicate, Kling, ElevenLabs, etc.) São consumidos das suas próprias contas nesses provedores. Porém, os modos Stock Images e Stick Animation são 100% gratuitos!' },
     { q: 'E se eu já tiver meu próprio servidor?', a: 'O VideoForge roda em qualquer VPS Linux com Docker. Você tem controle total.' },
   ]
 
@@ -233,12 +225,12 @@ export default function LandingPage({ onGoLogin }) {
       {/* ═══ PREÇOS ═══ */}
       <section id="precos" style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto' }}>
         <h2 style={{ textAlign: 'center', fontSize: '36px', fontWeight: 800, marginBottom: '12px' }}>
-          Planos e preços
+          Preço único, acesso vitalício
         </h2>
         <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '48px', fontSize: '16px' }}>
-          Comece grátis. Escale quando quiser.
+          Pague uma vez, use para sempre. Sem mensalidade.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '20px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px', alignItems: 'start', maxWidth: '750px', margin: '0 auto' }}>
           {planos.map(p => (
             <div key={p.nome} style={{
               background: p.badge === '👑'
@@ -306,10 +298,17 @@ export default function LandingPage({ onGoLogin }) {
             border: '1px solid rgba(245,158,11,0.2)', borderRadius: '16px', padding: '32px',
           }}>
             <h3 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 16px', color: '#fcd34d' }}>
-              ⚠️ Sobre custos de Tokens de IA
+              ⚠️ Importante: Tokens de IA são por sua conta
             </h3>
-            <p style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: 1.8, margin: '0 0 20px' }}>
-              {avisoTokens || 'Alguns modos de geração de vídeo consomem tokens de IA pagos. O custo depende do provedor e da duração. Modos gratuitos usam apenas APIs como Gemini e Pexels.'}
+            <p style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: 1.8, margin: '0 0 12px' }}>
+              O VideoForge é a <strong style={{ color: '#e2e8f0' }}>ferramenta de automação</strong> — os R$ 59 garantem acesso vitalício a toda a plataforma.
+            </p>
+            <p style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: 1.8, margin: '0 0 12px' }}>
+              Porém, <strong style={{ color: '#fcd34d' }}>os créditos de IA (geração de vídeo, vozes premium, etc.) são consumidos das suas próprias contas</strong> nos provedores como Replicate, Kling, ElevenLabs, OpenAI, etc.
+              Você cria sua conta gratuita em cada provedor e usa os créditos deles.
+            </p>
+            <p style={{ fontSize: '15px', color: '#86efac', lineHeight: 1.8, margin: '0 0 20px', fontWeight: 600 }}>
+              ✅ Boa notícia: os modos Stock Images e Stick Animation são 100% gratuitos — você pode gerar vídeos sem gastar nada com IA!
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
