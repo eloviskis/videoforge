@@ -27,11 +27,18 @@ export default function AdminPanel({ onBack }) {
   const [hotmartToken, setHotmartToken] = useState('')
   const [hotmartSaving, setHotmartSaving] = useState(false)
   const [hotmartCopied, setHotmartCopied] = useState(false)
+  // API Keys states
+  const [apiKeys, setApiKeys] = useState([])
+  const [apiKeyGrupos, setApiKeyGrupos] = useState({})
+  const [apiKeyEdits, setApiKeyEdits] = useState({})
+  const [apiKeySaving, setApiKeySaving] = useState(false)
+  const [apiKeyShowValues, setApiKeyShowValues] = useState({})
 
   useEffect(() => { loadStats() }, [])
   useEffect(() => { if (tab === 'users') loadUsers() }, [tab])
   useEffect(() => { if (tab === 'settings') loadSettings() }, [tab])
   useEffect(() => { if (tab === 'hotmart') { loadHotmartStatus(); loadHotmartLogs(0); loadSettings() } }, [tab])
+  useEffect(() => { if (tab === 'apikeys') loadApiKeys() }, [tab])
 
   async function loadStats() {
     try {
@@ -183,6 +190,47 @@ export default function AdminPanel({ onBack }) {
     setTimeout(() => setHotmartCopied(false), 2000)
   }
 
+  // ── API Keys functions ──
+  async function loadApiKeys() {
+    try {
+      const r = await fetch(`${API_URL}/admin/apikeys`, { headers: hdr() })
+      const data = await r.json()
+      setApiKeys(data.keys || [])
+      setApiKeyGrupos(data.grupos || {})
+      setApiKeyEdits({})
+    } catch (e) { setMsg('Erro: ' + e.message) }
+  }
+
+  async function saveApiKeys() {
+    const changedKeys = Object.entries(apiKeyEdits).filter(([_, v]) => v !== undefined && v !== null)
+    if (changedKeys.length === 0) { setMsg('Nenhuma alteração'); return }
+    setApiKeySaving(true)
+    try {
+      const keys = {}
+      changedKeys.forEach(([k, v]) => keys[k] = v)
+      const r = await fetch(`${API_URL}/admin/apikeys`, {
+        method: 'PUT', headers: hdr(), body: JSON.stringify({ keys })
+      })
+      const data = await r.json()
+      if (data.ok) {
+        setMsg(`🔑 ${data.updated} chave(s) salva(s)!`)
+        setApiKeyEdits({})
+        loadApiKeys()
+      } else setMsg('Erro: ' + (data.error || 'desconhecido'))
+    } catch (e) { setMsg('Erro: ' + e.message) }
+    setApiKeySaving(false)
+    setTimeout(() => setMsg(''), 4000)
+  }
+
+  const GRUPO_LABELS = {
+    ia: { icon: '🤖', label: 'IA / LLM' },
+    video: { icon: '🎬', label: 'Geração de Vídeo' },
+    tts: { icon: '🗣️', label: 'Text-to-Speech' },
+    media: { icon: '🖼️', label: 'Banco de Mídia' },
+    social: { icon: '📱', label: 'Redes Sociais' },
+    system: { icon: '⚙️', label: 'Sistema' },
+  }
+
   const sty = {
     bg: { minHeight: '100vh', background: '#0a0a1a', color: '#e2e8f0', fontFamily: "'Inter',sans-serif", padding: '20px' },
     card: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', padding: '24px', marginBottom: '16px' },
@@ -221,6 +269,7 @@ export default function AdminPanel({ onBack }) {
           { id: 'stats', label: '📊 Dashboard' },
           { id: 'users', label: '👥 Usuários' },
           { id: 'settings', label: '⚙️ Configurações' },
+          { id: 'apikeys', label: '🔑 API Keys' },
           { id: 'hotmart', label: '🔥 Hotmart' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
@@ -406,6 +455,98 @@ export default function AdminPanel({ onBack }) {
           }}>
             {saving ? 'Salvando...' : '💾 Salvar Configurações'}
           </button>
+        </div>
+      )}
+
+      {/* ═══ API KEYS ═══ */}
+      {tab === 'apikeys' && (
+        <div>
+          <div style={{ ...sty.card, borderColor: 'rgba(99,102,241,0.15)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>🔑 Chaves de API</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  {apiKeys.filter(k => k.configurada).length}/{apiKeys.length} configuradas
+                </span>
+                <div style={{ width: '80px', height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.06)' }}>
+                  <div style={{ width: `${(apiKeys.filter(k => k.configurada).length / Math.max(apiKeys.length, 1)) * 100}%`, height: '100%', borderRadius: '3px', background: 'linear-gradient(90deg,#22c55e,#16a34a)' }} />
+                </div>
+              </div>
+            </div>
+            <p style={{ color: '#94a3b8', fontSize: '12px', margin: 0 }}>
+              Configure as chaves aqui e elas serão aplicadas imediatamente. Também ficam salvas no banco para persistir entre restarts.
+            </p>
+          </div>
+
+          {Object.entries(GRUPO_LABELS).map(([grupoId, grupoInfo]) => {
+            const grupoKeys = apiKeyGrupos[grupoId] || []
+            if (grupoKeys.length === 0) return null
+            const configCount = grupoKeys.filter(k => k.configurada).length
+            return (
+              <div key={grupoId} style={sty.card}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>
+                    {grupoInfo.icon} {grupoInfo.label}
+                  </h3>
+                  <span style={sty.tag(configCount === grupoKeys.length ? '#22c55e' : configCount > 0 ? '#f59e0b' : '#64748b')}>
+                    {configCount}/{grupoKeys.length}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {grupoKeys.map(key => {
+                    const hasEdit = apiKeyEdits[key.env] !== undefined
+                    const showPw = apiKeyShowValues[key.env]
+                    return (
+                      <div key={key.env} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', padding: '12px', borderRadius: '10px', background: key.configurada ? 'rgba(34,197,94,0.04)' : 'rgba(255,255,255,0.02)', border: `1px solid ${hasEdit ? 'rgba(99,102,241,0.3)' : key.configurada ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)'}` }}>
+                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', marginTop: '6px', flexShrink: 0, background: key.configurada ? '#22c55e' : '#475569' }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <span style={{ fontWeight: 600, fontSize: '13px' }}>{key.label}</span>
+                            {key.configurada && (
+                              <span style={{ fontSize: '10px', color: '#64748b', fontFamily: 'monospace', background: 'rgba(255,255,255,0.05)', padding: '1px 6px', borderRadius: '4px' }}>
+                                {key.fonte === 'env' ? '📄 .env' : '🗄️ DB'} · {key.preview}
+                              </span>
+                            )}
+                            {key.link && (
+                              <a href={key.link} target="_blank" rel="noreferrer" style={{ fontSize: '10px', color: '#6366f1', textDecoration: 'none' }}>↗ Obter</a>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            <input
+                              type={showPw ? 'text' : 'password'}
+                              value={hasEdit ? apiKeyEdits[key.env] : ''}
+                              onChange={e => setApiKeyEdits(p => ({ ...p, [key.env]: e.target.value }))}
+                              placeholder={key.configurada ? 'Manter atual (deixe vazio)' : 'Cole a chave aqui...'}
+                              style={{ ...sty.input, fontSize: '12px', fontFamily: 'monospace' }}
+                            />
+                            <button onClick={() => setApiKeyShowValues(p => ({ ...p, [key.env]: !p[key.env] }))}
+                              style={{ ...sty.btn, background: 'rgba(255,255,255,0.06)', color: '#94a3b8', padding: '6px 10px', fontSize: '12px', flexShrink: 0 }}>
+                              {showPw ? '🙈' : '👁️'}
+                            </button>
+                          </div>
+                          <div style={{ fontSize: '10px', color: '#475569', marginTop: '3px', fontFamily: 'monospace' }}>{key.env}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button onClick={saveApiKeys} disabled={apiKeySaving || Object.keys(apiKeyEdits).length === 0} style={{
+              ...sty.btn, background: Object.keys(apiKeyEdits).length > 0 ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)', color: Object.keys(apiKeyEdits).length > 0 ? '#fff' : '#475569',
+              padding: '12px 32px', fontSize: '15px', opacity: apiKeySaving ? 0.6 : 1,
+            }}>
+              {apiKeySaving ? 'Salvando...' : `💾 Salvar ${Object.keys(apiKeyEdits).length > 0 ? `(${Object.keys(apiKeyEdits).length} alteração${Object.keys(apiKeyEdits).length > 1 ? 'ões' : ''})` : 'Keys'}`}
+            </button>
+            {Object.keys(apiKeyEdits).length > 0 && (
+              <button onClick={() => setApiKeyEdits({})} style={{ ...sty.btn, background: 'rgba(255,255,255,0.06)', color: '#94a3b8' }}>
+                Cancelar
+              </button>
+            )}
+          </div>
         </div>
       )}
 

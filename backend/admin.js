@@ -30,6 +30,22 @@ async function adminMiddleware(req, res, next) {
 // ========================================
 export function registrarRotasAdmin(app) {
 
+  // ── Carregar API keys do DB para process.env (fallback) ──
+  (async () => {
+    try {
+      const { rows } = await pool.query("SELECT chave, valor FROM app_settings WHERE chave LIKE 'apikey_%'");
+      let loaded = 0;
+      for (const r of rows) {
+        const envName = r.chave.replace('apikey_', '');
+        if (!process.env[envName] && r.valor) {
+          process.env[envName] = r.valor;
+          loaded++;
+        }
+      }
+      if (loaded > 0) console.log(`🔑 ${loaded} API key(s) carregadas do banco`);
+    } catch { /* tabela pode não existir ainda */ }
+  })();
+
   // ── SETTINGS: listar ──
   app.get('/api/admin/settings', adminMiddleware, async (req, res) => {
     try {
@@ -239,6 +255,126 @@ export function registrarRotasAdmin(app) {
       res.json(map);
     } catch (e) {
       res.json({});
+    }
+  });
+
+  // ══════════════════════════════════════════
+  // API KEYS MANAGEMENT
+  // ══════════════════════════════════════════
+
+  const API_KEY_DEFS = [
+    // IA / LLM
+    { env: 'GEMINI_API_KEY',          grupo: 'ia',     label: 'Gemini API Key',          link: 'https://aistudio.google.com/apikey' },
+    { env: 'OPENAI_API_KEY',          grupo: 'ia',     label: 'OpenAI API Key',          link: 'https://platform.openai.com/api-keys' },
+    { env: 'OPENROUTER_API_KEY',      grupo: 'ia',     label: 'OpenRouter API Key',      link: 'https://openrouter.ai/keys' },
+    { env: 'REPLICATE_API_TOKEN',     grupo: 'ia',     label: 'Replicate API Token',     link: 'https://replicate.com/account/api-tokens' },
+    { env: 'HUGGINGFACE_API_TOKEN',   grupo: 'ia',     label: 'HuggingFace Token',       link: 'https://huggingface.co/settings/tokens' },
+    // Vídeo
+    { env: 'KLING_ACCESS_KEY_ID',     grupo: 'video',  label: 'Kling Access Key ID',     link: 'https://platform.klingai.com' },
+    { env: 'KLING_ACCESS_KEY_SECRET', grupo: 'video',  label: 'Kling Access Key Secret', link: 'https://platform.klingai.com' },
+    { env: 'DID_API_KEY',             grupo: 'video',  label: 'D-ID API Key',            link: 'https://studio.d-id.com/' },
+    { env: 'DID_PRESENTER_URL',       grupo: 'video',  label: 'D-ID Presenter URL',      link: '' },
+    // TTS
+    { env: 'ELEVENLABS_API_KEY',      grupo: 'tts',    label: 'ElevenLabs API Key',      link: 'https://elevenlabs.io/subscription' },
+    { env: 'ELEVENLABS_VOICE_ID',     grupo: 'tts',    label: 'ElevenLabs Voice ID',     link: '' },
+    // Mídia
+    { env: 'PEXELS_API_KEY',          grupo: 'media',  label: 'Pexels API Key',          link: 'https://www.pexels.com/api/' },
+    { env: 'PIXABAY_API_KEY',         grupo: 'media',  label: 'Pixabay API Key',         link: 'https://pixabay.com/api/docs/' },
+    // Social / YouTube
+    { env: 'YOUTUBE_CLIENT_ID',       grupo: 'social', label: 'YouTube Client ID',       link: 'https://console.cloud.google.com/apis/credentials' },
+    { env: 'YOUTUBE_CLIENT_SECRET',   grupo: 'social', label: 'YouTube Client Secret',   link: '' },
+    { env: 'YOUTUBE_REDIRECT_URI',    grupo: 'social', label: 'YouTube Redirect URI',    link: '' },
+    { env: 'TWITTER_CLIENT_ID',       grupo: 'social', label: 'Twitter Client ID',       link: 'https://developer.twitter.com/en/portal/dashboard' },
+    { env: 'TWITTER_CLIENT_SECRET',   grupo: 'social', label: 'Twitter Client Secret',   link: '' },
+    { env: 'TWITTER_BEARER_TOKEN',    grupo: 'social', label: 'Twitter Bearer Token',    link: '' },
+    { env: 'TWITTER_REDIRECT_URI',    grupo: 'social', label: 'Twitter Redirect URI',    link: '' },
+    { env: 'FACEBOOK_APP_ID',         grupo: 'social', label: 'Facebook App ID',         link: 'https://developers.facebook.com/apps/' },
+    { env: 'FACEBOOK_APP_SECRET',     grupo: 'social', label: 'Facebook App Secret',     link: '' },
+    { env: 'FACEBOOK_REDIRECT_URI',   grupo: 'social', label: 'Facebook Redirect URI',   link: '' },
+    { env: 'LINKEDIN_CLIENT_ID',      grupo: 'social', label: 'LinkedIn Client ID',      link: 'https://www.linkedin.com/developers/apps' },
+    { env: 'LINKEDIN_CLIENT_SECRET',  grupo: 'social', label: 'LinkedIn Client Secret',  link: '' },
+    { env: 'LINKEDIN_REDIRECT_URI',   grupo: 'social', label: 'LinkedIn Redirect URI',   link: '' },
+    { env: 'TIKTOK_CLIENT_KEY',       grupo: 'social', label: 'TikTok Client Key',       link: 'https://developers.tiktok.com/' },
+    { env: 'TIKTOK_CLIENT_SECRET',    grupo: 'social', label: 'TikTok Client Secret',    link: '' },
+    { env: 'TIKTOK_REDIRECT_URI',     grupo: 'social', label: 'TikTok Redirect URI',     link: '' },
+    // Sistema
+    { env: 'HOTMART_TOKEN',           grupo: 'system', label: 'Hotmart Hottok',           link: '' },
+    { env: 'JWT_SECRET',              grupo: 'system', label: 'JWT Secret',               link: '' },
+    { env: 'N8N_URL',                 grupo: 'system', label: 'N8N URL',                  link: '' },
+  ];
+
+  // GET: retorna status de todas as API keys (configurada ou não, preview)
+  app.get('/api/admin/apikeys', adminMiddleware, async (req, res) => {
+    try {
+      // Buscar valores salvos no app_settings
+      const { rows: savedRows } = await pool.query(
+        "SELECT chave, valor FROM app_settings WHERE chave LIKE 'apikey_%'"
+      );
+      const savedMap = {};
+      savedRows.forEach(r => savedMap[r.chave] = r.valor);
+
+      const keys = API_KEY_DEFS.map(def => {
+        const savedKey = `apikey_${def.env}`;
+        const envVal = process.env[def.env] || '';
+        const dbVal = savedMap[savedKey] || '';
+        const activeVal = envVal || dbVal;
+        return {
+          env: def.env,
+          grupo: def.grupo,
+          label: def.label,
+          link: def.link,
+          configurada: !!activeVal,
+          preview: activeVal ? activeVal.slice(0, 6) + '···' + activeVal.slice(-4) : '',
+          fonte: envVal ? 'env' : dbVal ? 'db' : 'nenhuma',
+        };
+      });
+
+      const grupos = {};
+      keys.forEach(k => {
+        if (!grupos[k.grupo]) grupos[k.grupo] = [];
+        grupos[k.grupo].push(k);
+      });
+
+      res.json({ keys, grupos });
+    } catch (e) {
+      console.error('Admin apikeys GET:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // PUT: salvar API keys (salva no app_settings + aplica em runtime)
+  app.put('/api/admin/apikeys', adminMiddleware, async (req, res) => {
+    try {
+      const { keys } = req.body; // { GEMINI_API_KEY: 'xxx', OPENAI_API_KEY: 'yyy', ... }
+      if (!keys || typeof keys !== 'object') return res.status(400).json({ error: 'Envie { keys: { ENV_NAME: "valor" } }' });
+
+      const validEnvs = new Set(API_KEY_DEFS.map(d => d.env));
+      let updated = 0;
+
+      for (const [envName, valor] of Object.entries(keys)) {
+        if (!validEnvs.has(envName)) continue;
+        const dbKey = `apikey_${envName}`;
+
+        if (valor && valor.trim()) {
+          // Salvar no DB
+          await pool.query(
+            "INSERT INTO app_settings (chave, valor, descricao) VALUES ($1, $2, $3) ON CONFLICT (chave) DO UPDATE SET valor = $2, updated_at = NOW()",
+            [dbKey, valor.trim(), `API Key: ${envName}`]
+          );
+          // Aplicar em runtime
+          process.env[envName] = valor.trim();
+          updated++;
+        } else {
+          // Limpar
+          await pool.query("DELETE FROM app_settings WHERE chave = $1", [dbKey]);
+          // Não limpa process.env pois pode ter vindo do .env file
+        }
+      }
+
+      res.json({ ok: true, updated, message: `${updated} chave(s) atualizada(s) em runtime.` });
+    } catch (e) {
+      console.error('Admin apikeys PUT:', e.message);
+      res.status(500).json({ error: e.message });
     }
   });
 
