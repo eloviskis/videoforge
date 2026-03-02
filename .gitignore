@@ -77,6 +77,8 @@ backend/clips/
 backend/downloads/
 backend/temp/
 backend/*.json
+!backend/package.json
+!backend/package-lock.json
 
 # Python worker venv
 python-worker/.venv/
