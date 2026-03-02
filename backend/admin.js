@@ -232,13 +232,184 @@ export function registrarRotasAdmin(app) {
   app.get('/api/public/precos', async (req, res) => {
     try {
       const { rows } = await pool.query(
-        "SELECT chave, valor FROM app_settings WHERE chave LIKE 'preco_%' OR chave LIKE 'limite_%' OR chave = 'aviso_tokens'"
+        "SELECT chave, valor FROM app_settings WHERE chave LIKE 'preco_%' OR chave LIKE 'limite_%' OR chave = 'aviso_tokens' OR chave LIKE 'hotmart_checkout_%'"
       );
       const map = {};
       rows.forEach(r => map[r.chave] = r.valor);
       res.json(map);
     } catch (e) {
       res.json({});
+    }
+  });
+
+  // ══════════════════════════════════════════
+  // HOTMART ADMIN ROUTES
+  // ══════════════════════════════════════════
+
+  // ── Hotmart: status da integração ──
+  app.get('/api/admin/hotmart/status', adminMiddleware, async (req, res) => {
+    try {
+      const hottok = process.env.HOTMART_TOKEN || process.env.HOTMART_HOTTOK || '';
+      const webhookUrl = `${req.protocol}://${req.get('host')}/api/hotmart/webhook`;
+
+      // Buscar settings do Hotmart
+      const { rows: settingsRows } = await pool.query(
+        "SELECT chave, valor FROM app_settings WHERE chave LIKE 'hotmart_%'"
+      );
+      const hotmartSettings = {};
+      settingsRows.forEach(r => hotmartSettings[r.chave] = r.valor);
+
+      // Contar eventos recentes
+      let eventStats = [];
+      try {
+        const { rows } = await pool.query(
+          `SELECT evento, status, COUNT(*) as total 
+           FROM hotmart_webhook_logs 
+           WHERE created_at > NOW() - INTERVAL '30 days'
+           GROUP BY evento, status ORDER BY total DESC`
+        );
+        eventStats = rows;
+      } catch { /* tabela pode não existir ainda */ }
+
+      // Último evento
+      let ultimoEvento = null;
+      try {
+        const { rows } = await pool.query(
+          'SELECT * FROM hotmart_webhook_logs ORDER BY created_at DESC LIMIT 1'
+        );
+        ultimoEvento = rows[0] || null;
+      } catch { /* */ }
+
+      res.json({
+        hottok_configurado: !!hottok,
+        hottok_preview: hottok ? hottok.slice(0, 6) + '...' + hottok.slice(-4) : '',
+        webhook_url: webhookUrl,
+        settings: hotmartSettings,
+        event_stats_30d: eventStats,
+        ultimo_evento: ultimoEvento,
+        checklist: {
+          hottok: !!hottok,
+          webhook_url: true,
+          checkout_mensal: !!hotmartSettings.hotmart_checkout_mensal,
+          checkout_anual: !!hotmartSettings.hotmart_checkout_anual,
+          checkout_vitalicio: !!hotmartSettings.hotmart_checkout_vitalicio,
+          produto_id: !!hotmartSettings.hotmart_produto_id,
+        }
+      });
+    } catch (e) {
+      console.error('Admin hotmart status:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Hotmart: logs de webhooks ──
+  app.get('/api/admin/hotmart/logs', adminMiddleware, async (req, res) => {
+    try {
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+      const offset = parseInt(req.query.offset) || 0;
+      const evento = req.query.evento || null;
+
+      let where = '';
+      const params = [];
+      if (evento) {
+        where = 'WHERE evento = $1';
+        params.push(evento);
+      }
+
+      const { rows } = await pool.query(
+        `SELECT id, evento, email, plano, transaction_id, subscription_id, status, ip_origem, created_at
+         FROM hotmart_webhook_logs ${where}
+         ORDER BY created_at DESC
+         LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+        [...params, limit, offset]
+      );
+
+      const { rows: countRows } = await pool.query(
+        `SELECT COUNT(*) as total FROM hotmart_webhook_logs ${where}`,
+        params
+      );
+
+      res.json({ logs: rows, total: parseInt(countRows[0].total) });
+    } catch (e) {
+      // Tabela pode não existir ainda
+      res.json({ logs: [], total: 0 });
+    }
+  });
+
+  // ── Hotmart: testar webhook ──
+  app.post('/api/admin/hotmart/test-webhook', adminMiddleware, async (req, res) => {
+    try {
+      const hottok = process.env.HOTMART_TOKEN || process.env.HOTMART_HOTTOK || '';
+      const webhookUrl = `${req.protocol}://${req.get('host')}/api/hotmart/webhook`;
+
+      // Simular payload Hotmart
+      const testPayload = {
+        hottok,
+        event: 'PURCHASE_APPROVED',
+        data: {
+          buyer: {
+            email: `teste-${Date.now()}@videoforge-test.com`,
+            name: 'Teste Webhook VideoForge',
+          },
+          purchase: {
+            transaction: `TEST-${Date.now()}`,
+            offer: { code: 'mensal' },
+          },
+          product: { name: 'VideoForge Mensal (TESTE)' },
+        }
+      };
+
+      // Chamar o próprio webhook internamente
+      const response = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testPayload),
+      });
+
+      const result = await response.json();
+
+      // Limpar o usuário de teste criado
+      try {
+        await pool.query("DELETE FROM users WHERE email LIKE 'teste-%@videoforge-test.com'");
+      } catch { /* */ }
+
+      res.json({
+        ok: response.ok,
+        status: response.status,
+        response: result,
+        message: response.ok
+          ? '✅ Webhook funcionando! Usuário de teste criado e removido com sucesso.'
+          : '❌ Erro no webhook.',
+      });
+    } catch (e) {
+      console.error('Admin hotmart test:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ── Hotmart: atualizar hottok via env (salva no app_settings como backup) ──
+  app.put('/api/admin/hotmart/token', adminMiddleware, async (req, res) => {
+    try {
+      const { token } = req.body;
+      if (!token) return res.status(400).json({ error: 'Token não informado' });
+
+      // Salvar no app_settings como referência
+      await pool.query(
+        "INSERT INTO app_settings (chave, valor, descricao) VALUES ('hotmart_token_backup', $1, 'Backup do Hottok (o real é no .env)') ON CONFLICT (chave) DO UPDATE SET valor = $1, updated_at = NOW()",
+        [token]
+      );
+
+      // Atualizar em runtime (process.env)
+      process.env.HOTMART_TOKEN = token;
+
+      res.json({
+        ok: true,
+        message: 'Token atualizado em runtime. Para persistir, atualize HOTMART_TOKEN no .env.production da VPS.',
+        preview: token.slice(0, 6) + '...' + token.slice(-4),
+      });
+    } catch (e) {
+      console.error('Admin hotmart token:', e.message);
+      res.status(500).json({ error: e.message });
     }
   });
 

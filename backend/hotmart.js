@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import pool from './news/db.js';
 import { criarUsuario, buscarUsuarioPorEmail, atualizarUsuario, hashSenha } from './auth.js';
 
 // ========================================
@@ -14,6 +15,19 @@ import { criarUsuario, buscarUsuarioPorEmail, atualizarUsuario, hashSenha } from
 // ========================================
 
 const HOTMART_TOKEN = () => process.env.HOTMART_TOKEN || process.env.HOTMART_HOTTOK || '';
+
+// Grava log no banco
+async function logWebhook(evento, email, plano, transaction, subscription, status, payload, ip) {
+  try {
+    await pool.query(
+      `INSERT INTO hotmart_webhook_logs (evento, email, plano, transaction_id, subscription_id, status, payload, ip_origem)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [evento, email || null, plano || null, transaction || null, subscription || null, status, JSON.stringify(payload || {}), ip || null]
+    );
+  } catch (e) {
+    console.error('Erro ao logar webhook:', e.message);
+  }
+}
 
 export function registrarRotasHotmart(app) {
 
@@ -45,6 +59,9 @@ export function registrarRotasHotmart(app) {
 
       console.log(`📦 Hotmart webhook: ${evento} | ${email} | plano=${plano} | tx=${transaction}`);
 
+      // Capturar IP de origem
+      const ipOrigem = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
+
       switch (evento) {
         case 'PURCHASE_APPROVED':
         case 'PURCHASE_COMPLETE': {
@@ -61,13 +78,12 @@ export function registrarRotasHotmart(app) {
           });
 
           console.log(`✅ Usuário criado/atualizado: ${email} (plano: ${plano})`);
+          await logWebhook(evento, email, plano, transaction, subscription, 'user_created', { buyer, produto }, ipOrigem);
           
           // Retornar senha para Hotmart exibir na página de obrigado
-          // (Hotmart suporta "webhook_url" com resposta que pode ser exibida)
           return res.json({
             ok: true,
             message: `Conta criada com sucesso! Email: ${email} | Senha: ${senha}`,
-            // Dados adicionais para automação
             user_email: email,
             user_senha: senha,
             plano,
@@ -83,6 +99,7 @@ export function registrarRotasHotmart(app) {
               hotmart_status: 'canceled',
             });
             console.log(`❌ Conta desativada: ${email} (${evento})`);
+            await logWebhook(evento, email, plano, transaction, subscription, 'deactivated', { buyer }, ipOrigem);
           }
           return res.json({ ok: true, action: 'deactivated' });
         }
@@ -94,23 +111,25 @@ export function registrarRotasHotmart(app) {
               hotmart_status: 'canceled',
             });
             console.log(`❌ Assinatura cancelada: ${email}`);
+            await logWebhook(evento, email, plano, transaction, subscription, 'subscription_canceled', { buyer }, ipOrigem);
           }
           return res.json({ ok: true, action: 'subscription_canceled' });
         }
 
         case 'PURCHASE_DELAYED': {
           console.log(`⏳ Pagamento pendente (boleto): ${email}`);
+          await logWebhook(evento, email, plano, transaction, subscription, 'pending', { buyer }, ipOrigem);
           return res.json({ ok: true, action: 'pending' });
         }
 
         default: {
           console.log(`📦 Hotmart evento não tratado: ${evento}`);
+          await logWebhook(evento, email, plano, transaction, subscription, 'ignored', data, ipOrigem);
           return res.json({ ok: true, action: 'ignored', evento });
         }
       }
     } catch (error) {
       console.error('❌ Erro no webhook Hotmart:', error);
-      // Retornar 200 mesmo com erro (Hotmart retenta em caso de 5xx)
       return res.status(200).json({ ok: false, error: error.message });
     }
   });

@@ -17,10 +17,21 @@ export default function AdminPanel({ onBack }) {
   const [search, setSearch] = useState('')
   const [editUser, setEditUser] = useState(null)
   const [resetPw, setResetPw] = useState({})
+  // Hotmart states
+  const [hotmartStatus, setHotmartStatus] = useState(null)
+  const [hotmartLogs, setHotmartLogs] = useState([])
+  const [hotmartLogsTotal, setHotmartLogsTotal] = useState(0)
+  const [hotmartLogsPage, setHotmartLogsPage] = useState(0)
+  const [hotmartTesting, setHotmartTesting] = useState(false)
+  const [hotmartTestResult, setHotmartTestResult] = useState('')
+  const [hotmartToken, setHotmartToken] = useState('')
+  const [hotmartSaving, setHotmartSaving] = useState(false)
+  const [hotmartCopied, setHotmartCopied] = useState(false)
 
   useEffect(() => { loadStats() }, [])
   useEffect(() => { if (tab === 'users') loadUsers() }, [tab])
   useEffect(() => { if (tab === 'settings') loadSettings() }, [tab])
+  useEffect(() => { if (tab === 'hotmart') { loadHotmartStatus(); loadHotmartLogs(0); loadSettings() } }, [tab])
 
   async function loadStats() {
     try {
@@ -101,6 +112,77 @@ export default function AdminPanel({ onBack }) {
     setTimeout(() => setMsg(''), 3000)
   }
 
+  // ── Hotmart functions ──
+  async function loadHotmartStatus() {
+    try {
+      const r = await fetch(`${API_URL}/admin/hotmart/status`, { headers: hdr() })
+      const data = await r.json()
+      setHotmartStatus(data)
+    } catch (e) { setMsg('Erro: ' + e.message) }
+  }
+
+  async function loadHotmartLogs(page = 0) {
+    try {
+      const limit = 20
+      const r = await fetch(`${API_URL}/admin/hotmart/logs?limit=${limit}&offset=${page * limit}`, { headers: hdr() })
+      const data = await r.json()
+      setHotmartLogs(data.logs || [])
+      setHotmartLogsTotal(data.total || 0)
+      setHotmartLogsPage(page)
+    } catch { setHotmartLogs([]); setHotmartLogsTotal(0) }
+  }
+
+  async function testHotmartWebhook() {
+    setHotmartTesting(true)
+    setHotmartTestResult('')
+    try {
+      const r = await fetch(`${API_URL}/admin/hotmart/test-webhook`, { method: 'POST', headers: hdr() })
+      const data = await r.json()
+      setHotmartTestResult(data.message || JSON.stringify(data))
+      loadHotmartLogs(0)
+      loadHotmartStatus()
+    } catch (e) { setHotmartTestResult('❌ Erro: ' + e.message) }
+    setHotmartTesting(false)
+  }
+
+  async function saveHotmartToken() {
+    if (!hotmartToken.trim()) { setMsg('Token não pode ser vazio'); return }
+    setHotmartSaving(true)
+    try {
+      const r = await fetch(`${API_URL}/admin/hotmart/token`, {
+        method: 'PUT', headers: hdr(), body: JSON.stringify({ token: hotmartToken.trim() })
+      })
+      const data = await r.json()
+      setMsg(data.message || 'Token atualizado')
+      setHotmartToken('')
+      loadHotmartStatus()
+    } catch (e) { setMsg('Erro: ' + e.message) }
+    setHotmartSaving(false)
+    setTimeout(() => setMsg(''), 5000)
+  }
+
+  async function saveHotmartCheckoutUrls() {
+    setHotmartSaving(true)
+    try {
+      const checkoutKeys = ['hotmart_checkout_mensal', 'hotmart_checkout_anual', 'hotmart_checkout_vitalicio', 'hotmart_produto_id', 'hotmart_email_boas_vindas']
+      const arr = checkoutKeys.filter(k => editSettings[k] !== undefined).map(k => ({ chave: k, valor: editSettings[k] || '' }))
+      const r = await fetch(`${API_URL}/admin/settings`, {
+        method: 'PUT', headers: hdr(), body: JSON.stringify({ settings: arr })
+      })
+      const data = await r.json()
+      if (data.ok) { setMsg('🔥 URLs do Hotmart salvas!'); loadHotmartStatus() }
+      else setMsg('Erro: ' + (data.error || 'desconhecido'))
+    } catch (e) { setMsg('Erro: ' + e.message) }
+    setHotmartSaving(false)
+    setTimeout(() => setMsg(''), 3000)
+  }
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text)
+    setHotmartCopied(true)
+    setTimeout(() => setHotmartCopied(false), 2000)
+  }
+
   const sty = {
     bg: { minHeight: '100vh', background: '#0a0a1a', color: '#e2e8f0', fontFamily: "'Inter',sans-serif", padding: '20px' },
     card: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '14px', padding: '24px', marginBottom: '16px' },
@@ -139,6 +221,7 @@ export default function AdminPanel({ onBack }) {
           { id: 'stats', label: '📊 Dashboard' },
           { id: 'users', label: '👥 Usuários' },
           { id: 'settings', label: '⚙️ Configurações' },
+          { id: 'hotmart', label: '🔥 Hotmart' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{
             ...sty.btn,
@@ -323,6 +406,269 @@ export default function AdminPanel({ onBack }) {
           }}>
             {saving ? 'Salvando...' : '💾 Salvar Configurações'}
           </button>
+        </div>
+      )}
+
+      {/* ═══ HOTMART ═══ */}
+      {tab === 'hotmart' && (
+        <div>
+          {/* Checklist de Setup */}
+          <div style={sty.card}>
+            <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 700 }}>🚀 Setup da Integração Hotmart</h3>
+            <p style={{ color: '#94a3b8', fontSize: '13px', marginBottom: '16px' }}>
+              Siga os passos abaixo para configurar a integração completa com a Hotmart.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[
+                { key: 'hottok', label: 'Configurar Hottok (token de segurança)', desc: 'Copie o Hottok em Hotmart → Ferramentas → Webhooks' },
+                { key: 'webhook_url', label: 'Webhook URL configurado', desc: 'Cole a URL do webhook na Hotmart (copiável abaixo)' },
+                { key: 'produto_id', label: 'ID do Produto configurado', desc: 'Opcional: para validar eventos de um produto específico' },
+                { key: 'checkout_mensal', label: 'URL de checkout mensal', desc: 'Link de pagamento para o plano mensal' },
+                { key: 'checkout_anual', label: 'URL de checkout anual', desc: 'Link de pagamento para o plano anual' },
+                { key: 'checkout_vitalicio', label: 'URL de checkout vitalício', desc: 'Link de pagamento para o plano vitalício' },
+              ].map((step, i) => {
+                const done = hotmartStatus?.checklist?.[step.key]
+                return (
+                  <div key={step.key} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px', borderRadius: '10px', background: done ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.02)', border: `1px solid ${done ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.06)'}` }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: done ? '#22c55e' : 'rgba(255,255,255,0.08)', color: done ? '#fff' : '#64748b', fontSize: '14px', fontWeight: 800, flexShrink: 0 }}>
+                      {done ? '✓' : i + 1}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '14px', color: done ? '#86efac' : '#e2e8f0' }}>{step.label}</div>
+                      <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{step.desc}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Webhook URL */}
+          <div style={sty.card}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>🔗 URL do Webhook</h3>
+            <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '12px' }}>
+              Copie esta URL e cole em <strong>Hotmart → Ferramentas → Webhooks → Novo Webhook</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <code style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#a5b4fc', flex: 1, wordBreak: 'break-all', fontFamily: "'JetBrains Mono', monospace" }}>
+                {hotmartStatus?.webhook_url || 'Carregando...'}
+              </code>
+              <button onClick={() => copyToClipboard(hotmartStatus?.webhook_url || '')} style={{ ...sty.btn, background: hotmartCopied ? '#22c55e' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff', padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                {hotmartCopied ? '✅ Copiado!' : '📋 Copiar'}
+              </button>
+            </div>
+            <div style={{ marginTop: '12px', padding: '10px', borderRadius: '8px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <div style={{ fontSize: '12px', color: '#fbbf24' }}>
+                ⚡ <strong>Eventos suportados:</strong> PURCHASE_APPROVED, PURCHASE_COMPLETE, PURCHASE_CANCELED, PURCHASE_REFUNDED, PURCHASE_CHARGEBACK, SUBSCRIPTION_CANCELLATION, PURCHASE_DELAYED
+              </div>
+            </div>
+          </div>
+
+          {/* Hottok */}
+          <div style={sty.card}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>🔐 Hottok (Token de Segurança)</h3>
+            {hotmartStatus?.hottok_configurado ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <span style={sty.tag('#22c55e')}>✅ Configurado</span>
+                <span style={{ color: '#64748b', fontSize: '13px', fontFamily: 'monospace' }}>{hotmartStatus.hottok_preview}</span>
+              </div>
+            ) : (
+              <div style={{ marginBottom: '12px' }}>
+                <span style={sty.tag('#ef4444')}>❌ Não configurado</span>
+              </div>
+            )}
+            <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '8px' }}>
+              Encontre o Hottok em: <strong>Hotmart → Ferramentas → Webhooks → Configurações</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="password"
+                value={hotmartToken}
+                onChange={e => setHotmartToken(e.target.value)}
+                placeholder="Cole o Hottok aqui..."
+                style={{ ...sty.input, maxWidth: '400px' }}
+              />
+              <button onClick={saveHotmartToken} disabled={hotmartSaving} style={{ ...sty.btn, background: '#f59e0b', color: '#000', padding: '8px 16px', opacity: hotmartSaving ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                {hotmartSaving ? 'Salvando...' : '💾 Salvar Token'}
+              </button>
+            </div>
+            <p style={{ color: '#64748b', fontSize: '11px', marginTop: '6px' }}>
+              ⚠️ O token é salvo em runtime. Para persistir entre restarts, adicione <code style={{ color: '#a5b4fc' }}>HOTMART_TOKEN=seu_token</code> no .env.production
+            </p>
+          </div>
+
+          {/* URLs de Checkout */}
+          <div style={sty.card}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>🛒 URLs de Checkout por Plano</h3>
+            <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '12px' }}>
+              Configure os links de pagamento da Hotmart para cada plano. Serão exibidos na Landing Page.
+            </p>
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {[
+                { key: 'hotmart_checkout_mensal', label: '💳 Checkout Mensal', color: '#3b82f6' },
+                { key: 'hotmart_checkout_anual', label: '⭐ Checkout Anual', color: '#6366f1' },
+                { key: 'hotmart_checkout_vitalicio', label: '👑 Checkout Vitalício', color: '#8b5cf6' },
+              ].map(plan => (
+                <div key={plan.key}>
+                  <label style={{ fontSize: '12px', color: plan.color, fontWeight: 600, display: 'block', marginBottom: '4px' }}>{plan.label}</label>
+                  <input
+                    value={editSettings[plan.key] || ''}
+                    onChange={e => setEditSettings(p => ({ ...p, [plan.key]: e.target.value }))}
+                    placeholder="https://pay.hotmart.com/..."
+                    style={sty.input}
+                  />
+                </div>
+              ))}
+              <div>
+                <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>🆔 ID do Produto (opcional)</label>
+                <input
+                  value={editSettings['hotmart_produto_id'] || ''}
+                  onChange={e => setEditSettings(p => ({ ...p, hotmart_produto_id: e.target.value }))}
+                  placeholder="Ex: 12345678"
+                  style={{ ...sty.input, maxWidth: '300px' }}
+                />
+              </div>
+            </div>
+            <button onClick={saveHotmartCheckoutUrls} disabled={hotmartSaving} style={{
+              ...sty.btn, background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#fff',
+              padding: '10px 24px', fontSize: '14px', marginTop: '16px', opacity: hotmartSaving ? 0.6 : 1,
+            }}>
+              {hotmartSaving ? 'Salvando...' : '💾 Salvar URLs de Checkout'}
+            </button>
+          </div>
+
+          {/* Email de Boas-Vindas */}
+          <div style={sty.card}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>📧 Template de Email de Boas-Vindas</h3>
+            <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '8px' }}>
+              Modelo de email enviado ao comprador. Use as variáveis: <code style={{ color: '#a5b4fc' }}>{'{URL}'}</code>, <code style={{ color: '#a5b4fc' }}>{'{EMAIL}'}</code>, <code style={{ color: '#a5b4fc' }}>{'{SENHA}'}</code>
+            </p>
+            <textarea
+              value={editSettings['hotmart_email_boas_vindas'] || ''}
+              onChange={e => setEditSettings(p => ({ ...p, hotmart_email_boas_vindas: e.target.value }))}
+              rows={6}
+              style={{ ...sty.input, fontFamily: 'monospace', fontSize: '12px', resize: 'vertical' }}
+              placeholder="Olá! Acesse {URL} com login {EMAIL} e senha {SENHA}"
+            />
+            <button onClick={() => {
+              const arr = [{ chave: 'hotmart_email_boas_vindas', valor: editSettings['hotmart_email_boas_vindas'] || '' }]
+              fetch(`${API_URL}/admin/settings`, { method: 'PUT', headers: hdr(), body: JSON.stringify({ settings: arr }) })
+                .then(r => r.json()).then(d => { if (d.ok) setMsg('📧 Template salvo!'); else setMsg('Erro') })
+                .catch(e => setMsg('Erro: ' + e.message))
+              setTimeout(() => setMsg(''), 3000)
+            }} style={{ ...sty.btn, background: 'rgba(99,102,241,0.2)', color: '#a5b4fc', marginTop: '8px' }}>
+              💾 Salvar Template
+            </button>
+          </div>
+
+          {/* Testar Webhook */}
+          <div style={sty.card}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>🧪 Testar Webhook</h3>
+            <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '12px' }}>
+              Envia um evento de teste (PURCHASE_APPROVED) para verificar se o webhook está funcionando. O usuário de teste é removido automaticamente.
+            </p>
+            <button onClick={testHotmartWebhook} disabled={hotmartTesting} style={{
+              ...sty.btn, background: hotmartTesting ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg,#22c55e,#16a34a)', color: '#fff',
+              padding: '10px 24px', fontSize: '14px', opacity: hotmartTesting ? 0.6 : 1,
+            }}>
+              {hotmartTesting ? '⏳ Testando...' : '🚀 Enviar Teste'}
+            </button>
+            {hotmartTestResult && (
+              <div style={{ marginTop: '12px', padding: '12px', borderRadius: '8px', background: hotmartTestResult.startsWith('✅') ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${hotmartTestResult.startsWith('✅') ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`, fontSize: '13px', color: hotmartTestResult.startsWith('✅') ? '#86efac' : '#fca5a5' }}>
+                {hotmartTestResult}
+              </div>
+            )}
+          </div>
+
+          {/* Log de Eventos */}
+          <div style={sty.card}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>📋 Log de Webhooks</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>{hotmartLogsTotal} eventos</span>
+                <button onClick={() => loadHotmartLogs(0)} style={{ ...sty.btn, background: 'rgba(255,255,255,0.06)', color: '#94a3b8', padding: '4px 12px', fontSize: '12px' }}>
+                  🔄 Atualizar
+                </button>
+              </div>
+            </div>
+
+            {hotmartLogs.length > 0 ? (
+              <>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                        {['Evento', 'Email', 'Plano', 'Status', 'IP', 'Data'].map(h => (
+                          <th key={h} style={{ textAlign: 'left', padding: '8px 6px', color: '#64748b', fontSize: '10px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hotmartLogs.map(log => {
+                        const statusColor = {
+                          user_created: '#22c55e', deactivated: '#ef4444', subscription_canceled: '#f59e0b',
+                          pending: '#3b82f6', ignored: '#64748b',
+                        }[log.status] || '#64748b'
+                        return (
+                          <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            <td style={{ padding: '8px 6px' }}>
+                              <span style={sty.tag(log.evento?.includes('APPROVED') || log.evento?.includes('COMPLETE') ? '#22c55e' : log.evento?.includes('CANCEL') || log.evento?.includes('REFUND') || log.evento?.includes('CHARGEBACK') ? '#ef4444' : '#6366f1')}>
+                                {log.evento?.replace('PURCHASE_', '').replace('SUBSCRIPTION_', 'SUB_') || '—'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 6px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{log.email || '—'}</td>
+                            <td style={{ padding: '8px 6px' }}>{log.plano || '—'}</td>
+                            <td style={{ padding: '8px 6px' }}><span style={{ color: statusColor, fontWeight: 600 }}>{log.status || '—'}</span></td>
+                            <td style={{ padding: '8px 6px', color: '#64748b', fontFamily: 'monospace', fontSize: '11px' }}>{log.ip_origem || '—'}</td>
+                            <td style={{ padding: '8px 6px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                              {log.created_at ? new Date(log.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {hotmartLogsTotal > 20 && (
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginTop: '12px' }}>
+                    <button disabled={hotmartLogsPage === 0} onClick={() => loadHotmartLogs(hotmartLogsPage - 1)}
+                      style={{ ...sty.btn, background: 'rgba(255,255,255,0.06)', color: '#94a3b8', padding: '6px 14px', fontSize: '12px', opacity: hotmartLogsPage === 0 ? 0.4 : 1 }}>
+                      ← Anterior
+                    </button>
+                    <span style={{ padding: '6px 12px', fontSize: '12px', color: '#64748b' }}>
+                      Página {hotmartLogsPage + 1} de {Math.ceil(hotmartLogsTotal / 20)}
+                    </span>
+                    <button disabled={(hotmartLogsPage + 1) * 20 >= hotmartLogsTotal} onClick={() => loadHotmartLogs(hotmartLogsPage + 1)}
+                      style={{ ...sty.btn, background: 'rgba(255,255,255,0.06)', color: '#94a3b8', padding: '6px 14px', fontSize: '12px', opacity: (hotmartLogsPage + 1) * 20 >= hotmartLogsTotal ? 0.4 : 1 }}>
+                      Próxima →
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#475569' }}>
+                <div style={{ fontSize: '40px', marginBottom: '12px' }}>📭</div>
+                <div style={{ fontSize: '14px', fontWeight: 600 }}>Nenhum evento recebido ainda</div>
+                <div style={{ fontSize: '12px', marginTop: '4px' }}>Configure o webhook na Hotmart e faça uma compra de teste</div>
+              </div>
+            )}
+          </div>
+
+          {/* Stats últimos 30 dias */}
+          {hotmartStatus?.event_stats_30d?.length > 0 && (
+            <div style={sty.card}>
+              <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>📈 Estatísticas (30 dias)</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
+                {hotmartStatus.event_stats_30d.map((s, i) => (
+                  <div key={i} style={{ padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', textAlign: 'center' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 800, color: s.status === 'user_created' ? '#22c55e' : s.status === 'deactivated' ? '#ef4444' : '#a5b4fc' }}>{s.total}</div>
+                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', textTransform: 'uppercase' }}>{s.evento?.replace('PURCHASE_', '').replace('SUBSCRIPTION_', '')}</div>
+                    <div style={{ fontSize: '10px', color: '#475569' }}>{s.status}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
