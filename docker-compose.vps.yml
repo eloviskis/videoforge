@@ -43,6 +43,7 @@ services:
       - ./nginx/nginx.vps.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
+      - ./downloads:/downloads:ro
     depends_on:
       - frontend
       - backend
