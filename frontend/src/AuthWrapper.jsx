@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 import App from './App.jsx'
 import LoginPage from './LoginPage.jsx'
 import LandingPage from './LandingPage.jsx'
@@ -23,6 +24,9 @@ export default function AuthWrapper() {
     const saved = localStorage.getItem('vf_token')
     if (!saved) { setPage('landing'); return }
 
+    // Configurar axios com token salvo
+    axios.defaults.headers.common['Authorization'] = `Bearer ${saved}`
+
     fetch(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${saved}` } })
       .then(r => {
         if (!r.ok) throw new Error('invalid')
@@ -39,14 +43,35 @@ export default function AuthWrapper() {
       .catch(() => {
         localStorage.removeItem('vf_token')
         localStorage.removeItem('vf_user')
+        delete axios.defaults.headers.common['Authorization']
         setPage('landing')
       })
   }, [])
+
+  /* ── interceptor: auto-logout on 401 ── */
+  useEffect(() => {
+    const id = axios.interceptors.response.use(
+      r => r,
+      err => {
+        if (err.response?.status === 401 && page === 'app') {
+          localStorage.removeItem('vf_token')
+          localStorage.removeItem('vf_user')
+          delete axios.defaults.headers.common['Authorization']
+          setToken(null)
+          setUser(null)
+          setPage('landing')
+        }
+        return Promise.reject(err)
+      }
+    )
+    return () => axios.interceptors.response.eject(id)
+  }, [page])
 
   /* ── callbacks ── */
   function handleLogin(tkn, usr) {
     localStorage.setItem('vf_token', tkn)
     localStorage.setItem('vf_user', JSON.stringify(usr))
+    axios.defaults.headers.common['Authorization'] = `Bearer ${tkn}`
     setToken(tkn)
     setUser(usr)
     setPage('app')
@@ -55,6 +80,7 @@ export default function AuthWrapper() {
   function handleLogout() {
     localStorage.removeItem('vf_token')
     localStorage.removeItem('vf_user')
+    delete axios.defaults.headers.common['Authorization']
     setToken(null)
     setUser(null)
     setPage('landing')
