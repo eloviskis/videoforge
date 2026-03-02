@@ -70,6 +70,7 @@ temp/
 # Desktop build output
 dist-desktop/
 desktop/dist/
+desktop/backend-bundle/
 
 # Backend temp files
 backend/clips/

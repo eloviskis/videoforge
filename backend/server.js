@@ -5235,9 +5235,9 @@ with yt_dlp.YoutubeDL(ydl_opts) as ydl:
       const downloadScriptPath = resolve(hostCorteDir, 'download.py');
       await fs.writeFile(downloadScriptPath, downloadScript, 'utf-8');
 
-      const dockerCorteDir = `/media/cortes/${jobId}`;
+      const dockerCorteDir = NO_DOCKER ? hostCorteDir.replace(/\\/g, '/') : `/media/cortes/${jobId}`;
       const resultJsonPath = resolve(hostCorteDir, 'info.json');
-      const downloadCmd = makeExecCmd(`python ${dockerCorteDir}/download.py "${youtubeUrl}" "${dockerCorteDir}" "${dockerCorteDir}/info.json"`);
+      const downloadCmd = makeExecCmd(`python "${dockerCorteDir}/download.py" "${youtubeUrl}" "${dockerCorteDir}" "${dockerCorteDir}/info.json"`);
       await execAsync(downloadCmd, { timeout: 300000 });
       const videoInfo = JSON.parse(await fs.readFile(resultJsonPath, 'utf-8'));
       job.videoInfo = videoInfo;
@@ -5394,7 +5394,7 @@ Responda SOMENTE com JSON válido, sem markdown, com exatamente ${topPeaks.lengt
       // ── FONTE 3: Fallback — Whisper transcrição + Gemini ──────────────────────
       if (segments.length === 0) {
         logCorte(job, '🔊 Heatmap não disponível — extraindo áudio para transcrição...');
-        const extractAudioCmd = makeExecCmd(`ffmpeg -y -i /media/cortes/${jobId}/original.mp4 -vn -ar 16000 -ac 1 -c:a pcm_s16le /media/cortes/${jobId}/audio.wav`);
+        const extractAudioCmd = makeExecCmd(`ffmpeg -y -i "${dockerCorteDir}/original.mp4" -vn -ar 16000 -ac 1 -c:a pcm_s16le "${dockerCorteDir}/audio.wav"`);
         await execAsync(extractAudioCmd, { timeout: 120000 });
         logCorte(job, '🎤 Transcrevendo com Whisper (pode demorar alguns minutos)...');
 
@@ -5416,7 +5416,7 @@ print(f'Segmentos: {len(transcript)}, Duracao: {info.duration:.1f}s')
 
         const audioDurationMin = Math.ceil((videoInfo.duration || 600) / 60);
         const whisperTimeout = Math.max(900000, audioDurationMin * 60000);
-        const whisperCmd = makeExecCmd(`python /media/cortes/${jobId}/whisper.py /media/cortes/${jobId}/audio.wav /media/cortes/${jobId}/transcricao.json "${hfToken}"`);
+        const whisperCmd = makeExecCmd(`python "${dockerCorteDir}/whisper.py" "${dockerCorteDir}/audio.wav" "${dockerCorteDir}/transcricao.json" "${hfToken}"`);
         await execAsync(whisperCmd, { timeout: whisperTimeout });
         logCorte(job, '✅ Transcrição concluída');
 
@@ -5612,9 +5612,10 @@ print(json.dumps(results))
       const cutScriptPath = resolve(hostCorteDir, 'cut.py');
       await fs.writeFile(cutScriptPath, cutScript, 'utf-8');
 
+      const dockerCorteDirCut = NO_DOCKER ? hostCorteDir.replace(/\\/g, '/') : `/media/cortes/${job.id}`;
       const segmentsArg = JSON.stringify(selectedSegments).replace(/"/g, '\\"');
       const formatsArg = JSON.stringify(formats).replace(/"/g, '\\"');
-      const cutCmd = makeExecCmd(`python /media/cortes/${job.id}/cut.py "/media/cortes/${job.id}" "${segmentsArg}" "${formatsArg}"`);
+      const cutCmd = makeExecCmd(`python "${dockerCorteDirCut}/cut.py" "${dockerCorteDirCut}" "${segmentsArg}" "${formatsArg}"`);
       const { stdout: cutOut } = await execAsync(cutCmd, { timeout: 1200000 });
 
       const clipsRaw = cutOut.trim().split('\n').pop();
