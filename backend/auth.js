@@ -67,6 +67,7 @@ export function authMiddleware(req, res, next) {
     '/api/hotmart/webhook',
     '/api/youtube/callback',
     '/api/social/',
+    '/api/user/social/',
     '/api/health',
     '/api/public/',
     '/api/download/info',

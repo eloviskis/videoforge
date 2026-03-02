@@ -26,6 +26,7 @@ import { authMiddleware, loginUsuario, criarUsuario, buscarUsuarioPorEmail, hash
 import { registrarRotasHotmart } from './hotmart.js';
 import { registrarRotasAdmin } from './admin.js';
 import { registrarRotasUserSettings } from './user-settings.js';
+import { registrarRotasSocialOAuth } from './social-oauth.js';
 
 const execAsync = promisify(exec);
 
@@ -207,6 +208,9 @@ registrarRotasAdmin(app);
 
 // User settings routes (API keys + social per user)
 registrarRotasUserSettings(app);
+
+// OAuth social simplificado (click-to-connect per user)
+registrarRotasSocialOAuth(app);
 
 // Auth middleware (protege rotas /api/* exceto as públicas)
 if (AUTH_ENABLED) {

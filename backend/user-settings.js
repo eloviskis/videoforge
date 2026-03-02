@@ -44,14 +44,7 @@ const USER_KEY_DEFS = [
   { key: 'PIXABAY_API_KEY',         grupo: 'media', label: 'Pixabay (Música)',          icon: '🎵', free: true,  hint: 'https://pixabay.com/api/docs/', desc: 'Músicas de fundo gratuitas para vídeos' },
 ];
 
-const SOCIAL_DEFS = [
-  { platform: 'youtube',   label: 'YouTube',   icon: '▶️',  color: '#FF0000', desc: 'Publique vídeos direto no seu canal', scopes: 'youtube.upload youtube.readonly' },
-  { platform: 'twitter',   label: 'Twitter/X', icon: '𝕏',   color: '#000000', desc: 'Compartilhe clipes e links automaticamente' },
-  { platform: 'facebook',  label: 'Facebook',  icon: '📘',  color: '#1877F2', desc: 'Publique vídeos na sua página' },
-  { platform: 'linkedin',  label: 'LinkedIn',  icon: '💼',  color: '#0A66C2', desc: 'Compartilhe conteúdo profissional' },
-  { platform: 'tiktok',    label: 'TikTok',    icon: '🎵',  color: '#000000', desc: 'Suba shorts e vídeos curtos' },
-  { platform: 'instagram', label: 'Instagram',  icon: '📷',  color: '#E4405F', desc: 'Publique reels e stories' },
-];
+// NOTA: Social connections foram movidas para social-oauth.js (fluxo OAuth simplificado)
 
 function maskValue(val) {
   if (!val || val.length < 8) return val ? '••••' : '';
@@ -157,119 +150,8 @@ export function registrarRotasUserSettings(app) {
   });
 
   // ══════════════════════════════════════
-  // SOCIAL CONNECTIONS DO USUÁRIO
+  // SOCIAL CONNECTIONS → Movido para social-oauth.js
   // ══════════════════════════════════════
-
-  // GET: status de todas as redes sociais do usuário
-  app.get('/api/user/social', userMiddleware, async (req, res) => {
-    try {
-      const { rows } = await pool.query(
-        'SELECT platform, profile_name, profile_id, profile_image, connected, metadata, updated_at FROM user_social_tokens WHERE user_id = $1',
-        [req.user.id]
-      );
-      const connMap = {};
-      rows.forEach(r => connMap[r.platform] = r);
-
-      // Verificar quais redes têm credenciais (global ou do usuário)
-      const { rows: userKeys } = await pool.query(
-        "SELECT key_name FROM user_api_keys WHERE user_id = $1 AND key_name LIKE '%CLIENT%' OR key_name LIKE '%APP_%'",
-        [req.user.id]
-      );
-      const userKeySet = new Set(userKeys.map(r => r.key_name));
-
-      const socials = SOCIAL_DEFS.map(def => {
-        const conn = connMap[def.platform] || null;
-        let configured = false;
-
-        // Verificar se as credenciais da rede existem (global ou usuário)
-        switch (def.platform) {
-          case 'youtube':
-            configured = !!(process.env.YOUTUBE_CLIENT_ID || userKeySet.has('YOUTUBE_CLIENT_ID'));
-            break;
-          case 'twitter':
-            configured = !!(process.env.TWITTER_CLIENT_ID || process.env.TWITTER_BEARER_TOKEN || userKeySet.has('TWITTER_CLIENT_ID'));
-            break;
-          case 'facebook':
-          case 'instagram':
-            configured = !!(process.env.FACEBOOK_APP_ID || userKeySet.has('FACEBOOK_APP_ID'));
-            break;
-          case 'linkedin':
-            configured = !!(process.env.LINKEDIN_CLIENT_ID || userKeySet.has('LINKEDIN_CLIENT_ID'));
-            break;
-          case 'tiktok':
-            configured = !!(process.env.TIKTOK_CLIENT_KEY || userKeySet.has('TIKTOK_CLIENT_KEY'));
-            break;
-        }
-
-        return {
-          ...def,
-          configured,
-          connected: !!conn?.connected,
-          profile: conn ? {
-            name: conn.profile_name,
-            id: conn.profile_id,
-            image: conn.profile_image,
-            metadata: conn.metadata,
-          } : null,
-          lastUpdate: conn?.updated_at,
-        };
-      });
-
-      res.json(socials);
-    } catch (e) {
-      console.error('User social GET:', e.message);
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // POST: salvar token social (chamado após OAuth callback)
-  app.post('/api/user/social/:platform/connect', userMiddleware, async (req, res) => {
-    try {
-      const { platform } = req.params;
-      const { access_token, refresh_token, token_expiry, profile_name, profile_id, profile_image, metadata } = req.body;
-
-      await pool.query(
-        `INSERT INTO user_social_tokens (user_id, platform, access_token, refresh_token, token_expiry, profile_name, profile_id, profile_image, metadata, connected)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
-         ON CONFLICT (user_id, platform) DO UPDATE SET
-           access_token = $3, refresh_token = $4, token_expiry = $5,
-           profile_name = $6, profile_id = $7, profile_image = $8,
-           metadata = $9, connected = true, updated_at = NOW()`,
-        [req.user.id, platform, access_token, refresh_token, token_expiry, profile_name, profile_id, profile_image, JSON.stringify(metadata || {})]
-      );
-
-      res.json({ ok: true, message: `${platform} conectado!` });
-    } catch (e) {
-      console.error('User social connect:', e.message);
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // POST: desconectar rede social
-  app.post('/api/user/social/:platform/disconnect', userMiddleware, async (req, res) => {
-    try {
-      await pool.query(
-        'UPDATE user_social_tokens SET connected = false, access_token = NULL, refresh_token = NULL, updated_at = NOW() WHERE user_id = $1 AND platform = $2',
-        [req.user.id, req.params.platform]
-      );
-      res.json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
-
-  // DELETE: remover conexão completamente
-  app.delete('/api/user/social/:platform', userMiddleware, async (req, res) => {
-    try {
-      await pool.query(
-        'DELETE FROM user_social_tokens WHERE user_id = $1 AND platform = $2',
-        [req.user.id, req.params.platform]
-      );
-      res.json({ ok: true });
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
 
   // ══════════════════════════════════════
   // PERFIL DO USUÁRIO

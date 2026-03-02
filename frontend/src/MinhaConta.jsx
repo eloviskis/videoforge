@@ -14,6 +14,7 @@ export default function MinhaConta({ onBack, user }) {
   const [apiSaving, setApiSaving] = useState(false)
   const [showValues, setShowValues] = useState({})
   const [socials, setSocials] = useState([])
+  const [socialLoading, setSocialLoading] = useState(null) // platform being connected
   const [msg, setMsg] = useState('')
   const [profile, setProfile] = useState(null)
 
@@ -40,7 +41,7 @@ export default function MinhaConta({ onBack, user }) {
 
   async function loadSocials() {
     try {
-      const r = await fetch(`${API_URL}/user/social`, { headers: hdr() })
+      const r = await fetch(`${API_URL}/user/social/platforms`, { headers: hdr() })
       if (r.ok) setSocials(await r.json())
     } catch (e) { flash('Erro: ' + e.message) }
   }
@@ -70,26 +71,38 @@ export default function MinhaConta({ onBack, user }) {
   }
 
   async function connectSocial(platform) {
+    setSocialLoading(platform)
     try {
-      const r = await fetch(`${API_URL}/social/${platform}/auth`, { headers: hdr() })
+      const r = await fetch(`${API_URL}/user/social/${platform}/auth`, { headers: hdr() })
       const data = await r.json()
+      if (!r.ok) { flash(`Erro: ${data.error || 'Falha ao iniciar'}`); setSocialLoading(null); return }
       if (data.authUrl) {
-        const popup = window.open(data.authUrl, '_blank', 'width=600,height=700')
+        const popup = window.open(data.authUrl, `connect_${platform}`, 'width=600,height=700,scrollbars=yes')
         const check = setInterval(() => {
-          if (popup?.closed) { clearInterval(check); loadSocials() }
-        }, 1500)
+          if (!popup || popup.closed) {
+            clearInterval(check)
+            setSocialLoading(null)
+            loadSocials()
+            loadProfile()
+          }
+        }, 1000)
       } else {
         flash('Erro: URL de autorização não disponível')
+        setSocialLoading(null)
       }
-    } catch (e) { flash(`Erro: ${e.message}`) }
+    } catch (e) {
+      flash(`Erro: ${e.message}`)
+      setSocialLoading(null)
+    }
   }
 
   async function disconnectSocial(platform) {
-    if (!confirm('Desconectar esta rede?')) return
+    if (!confirm('Desconectar esta rede social?')) return
     try {
       await fetch(`${API_URL}/user/social/${platform}/disconnect`, { method: 'POST', headers: hdr() })
-      flash('Desconectado')
+      flash('✅ Desconectado!')
       loadSocials()
+      loadProfile()
     } catch (e) { flash('Erro: ' + e.message) }
   }
 
@@ -281,10 +294,11 @@ export default function MinhaConta({ onBack, user }) {
       {tab === 'social' && (
         <div>
           {/* Intro */}
-          <div style={{ ...sty.card, borderColor: 'rgba(59,130,246,0.15)', background: 'linear-gradient(135deg, rgba(59,130,246,0.06), rgba(168,85,247,0.04))' }}>
+          <div style={{ ...sty.card, borderColor: 'rgba(139,92,246,0.15)', background: 'linear-gradient(135deg, rgba(139,92,246,0.06), rgba(168,85,247,0.04))' }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: 700 }}>📱 Conecte suas redes sociais</h3>
             <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0, lineHeight: 1.6 }}>
-              Conecte suas contas para publicar vídeos automaticamente. Depois de conectar, basta criar um vídeo e escolher onde publicar!
+              Clique em <strong>"Conectar"</strong> e autorize o acesso à sua conta.
+              Depois de conectar, seus vídeos poderão ser publicados automaticamente!
             </p>
           </div>
 
@@ -293,69 +307,99 @@ export default function MinhaConta({ onBack, user }) {
             {socials.map(social => (
               <div key={social.platform} style={{
                 ...sty.card,
-                borderColor: social.connected ? `${social.color}33` : 'rgba(255,255,255,0.06)',
-                background: social.connected ? `${social.color}08` : 'rgba(255,255,255,0.02)',
+                borderColor: social.connected ? `${social.color}33` : social.available ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+                background: social.connected ? `${social.color}0a` : 'rgba(255,255,255,0.02)',
                 display: 'flex', flexDirection: 'column', gap: '12px',
-                transition: 'all 0.2s',
-                marginBottom: 0,
+                transition: 'all 0.3s', marginBottom: 0,
+                opacity: social.available || social.connected ? 1 : 0.5,
               }}>
                 {/* Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
-                    width: '48px', height: '48px', borderRadius: '14px',
+                    width: '52px', height: '52px', borderRadius: '16px',
                     background: social.connected ? social.color : 'rgba(255,255,255,0.06)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '22px', flexShrink: 0,
-                    boxShadow: social.connected ? `0 4px 15px ${social.color}33` : 'none',
+                    fontSize: '24px', flexShrink: 0,
+                    boxShadow: social.connected ? `0 4px 20px ${social.color}40` : 'none',
+                    transition: 'all 0.3s',
                   }}>
-                    {social.icon}
+                    {social.emoji}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: '15px' }}>{social.label}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '15px' }}>{social.label}</span>
+                      {social.connected && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#22c55e', background: 'rgba(34,197,94,0.12)', padding: '2px 8px', borderRadius: '99px', fontWeight: 600 }}>
+                          ● Conectado
+                        </span>
+                      )}
+                    </div>
                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{social.desc}</div>
                   </div>
                 </div>
 
-                {/* Status */}
+                {/* Profile info quando conectado */}
                 {social.connected && social.profile && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)' }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    padding: '10px 14px', borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)',
+                  }}>
                     {social.profile.image && (
-                      <img src={social.profile.image} alt="" style={{ width: '32px', height: '32px', borderRadius: '50%', border: `2px solid ${social.color}` }} />
+                      <img src={social.profile.image} alt=""
+                        style={{ width: '36px', height: '36px', borderRadius: '50%', border: `2px solid ${social.color}` }}
+                        onError={e => { e.target.style.display = 'none' }}
+                      />
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 600, fontSize: '13px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {social.profile.name || social.profile.id || 'Conectado'}
+                      <div style={{ fontWeight: 600, fontSize: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {social.profile.name || social.profile.id || 'Conta conectada'}
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748b' }}>
-                        Conectado {social.lastUpdate ? `em ${new Date(social.lastUpdate).toLocaleDateString('pt-BR')}` : ''}
+                        Conectado {social.connectedAt ? `em ${new Date(social.connectedAt).toLocaleDateString('pt-BR')}` : ''}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Botão */}
+                {/* Botão de ação */}
                 <div style={{ marginTop: 'auto' }}>
                   {social.connected ? (
                     <button onClick={() => disconnectSocial(social.platform)} style={{
                       ...sty.btn, width: '100%', padding: '10px',
-                      background: 'rgba(239,68,68,0.1)', color: '#fca5a5',
-                      border: '1px solid rgba(239,68,68,0.2)',
+                      background: 'rgba(239,68,68,0.08)', color: '#fca5a5',
+                      border: '1px solid rgba(239,68,68,0.15)',
+                      transition: 'all 0.2s',
                     }}>
                       🔌 Desconectar
                     </button>
-                  ) : social.configured ? (
-                    <button onClick={() => connectSocial(social.platform)} style={{
-                      ...sty.btn, width: '100%', padding: '10px',
-                      background: `linear-gradient(135deg, ${social.color}, ${social.color}cc)`,
-                      color: '#fff',
-                      boxShadow: `0 4px 15px ${social.color}33`,
-                    }}>
-                      🔗 Conectar {social.label}
+                  ) : social.available ? (
+                    <button
+                      onClick={() => connectSocial(social.platform)}
+                      disabled={socialLoading === social.platform}
+                      style={{
+                        ...sty.btn, width: '100%', padding: '12px',
+                        background: socialLoading === social.platform
+                          ? 'rgba(255,255,255,0.1)'
+                          : `linear-gradient(135deg, ${social.color}, ${social.color}cc)`,
+                        color: '#fff',
+                        boxShadow: `0 4px 15px ${social.color}33`,
+                        opacity: socialLoading === social.platform ? 0.7 : 1,
+                        cursor: socialLoading === social.platform ? 'wait' : 'pointer',
+                        fontSize: '14px', fontWeight: 700,
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {socialLoading === social.platform ? '⏳ Abrindo...' : `🔗 Conectar ${social.label}`}
                     </button>
                   ) : (
-                    <div style={{ padding: '10px', borderRadius: '8px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.12)', textAlign: 'center' }}>
-                      <span style={{ fontSize: '12px', color: '#fbbf24' }}>
-                        ⚠️ Configure as chaves de API primeiro
+                    <div style={{
+                      padding: '10px', borderRadius: '8px',
+                      background: 'rgba(100,116,139,0.06)', border: '1px solid rgba(100,116,139,0.1)',
+                      textAlign: 'center',
+                    }}>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>
+                        🔒 Não configurado pelo administrador
                       </span>
                     </div>
                   )}
@@ -365,14 +409,14 @@ export default function MinhaConta({ onBack, user }) {
           </div>
 
           {/* Info box */}
-          <div style={{ ...sty.card, marginTop: '16px', borderColor: 'rgba(245,158,11,0.15)', background: 'rgba(245,158,11,0.04)' }}>
-            <h4 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: '#fbbf24' }}>💡 Como funciona?</h4>
-            <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.7 }}>
-              <p style={{ margin: '0 0 6px' }}><strong>1.</strong> Configure as chaves da rede na aba "🔑 Minhas API Keys" (YouTube Client ID, Twitter Client ID, etc.)</p>
-              <p style={{ margin: '0 0 6px' }}><strong>2.</strong> Clique em "Conectar" para autorizar o acesso à sua conta</p>
-              <p style={{ margin: '0 0 6px' }}><strong>3.</strong> Ao criar um vídeo, escolha em qual rede publicar automaticamente!</p>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>
-                ℹ️ Se o admin já configurou as credenciais globais, você pode conectar diretamente sem precisar adicionar suas próprias chaves.
+          <div style={{ ...sty.card, marginTop: '16px', borderColor: 'rgba(139,92,246,0.12)', background: 'rgba(139,92,246,0.04)' }}>
+            <h4 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: '#c4b5fd' }}>💡 Como funciona?</h4>
+            <div style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.8 }}>
+              <p style={{ margin: '0 0 6px' }}><strong>1.</strong> Clique em <strong>"Conectar"</strong> na rede desejada</p>
+              <p style={{ margin: '0 0 6px' }}><strong>2.</strong> Uma janela abrirá para você autorizar o acesso</p>
+              <p style={{ margin: '0 0 6px' }}><strong>3.</strong> Pronto! Ao criar um vídeo, escolha onde publicar automaticamente</p>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '12px', marginTop: '8px' }}>
+                🔒 Seus tokens ficam seguros e são usados apenas para publicar seus vídeos. Você pode desconectar a qualquer momento.
               </p>
             </div>
           </div>
