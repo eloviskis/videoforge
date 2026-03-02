@@ -1,5 +1,8 @@
 FROM node:20-alpine
 
+# Instala Docker CLI para comunicar com o python-worker via socket
+RUN apk add --no-cache docker-cli
+
 WORKDIR /app
 
 COPY package*.json ./
