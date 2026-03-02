@@ -296,15 +296,49 @@ Retorne APENAS JSON válido (sem markdown):
     console.log('✅ Roteiro de notícias gerado via Vertex AI');
   } catch (vertexErr) {
     console.warn('⚠️ Vertex falhou, tentando API Key...', vertexErr.message);
-    if (!getGeminiKey()) throw new Error('Nenhum método de LLM disponível');
 
-    const resp = await axios.post(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-      { contents: [{ parts: [{ text: prompt }] }] },
-      { headers: { 'Content-Type': 'application/json' }, params: { key: getGeminiKey() }, timeout: 30000 }
-    );
-    content = resp.data.candidates[0].content.parts[0].text;
-    console.log('✅ Roteiro de notícias gerado via API Key');
+    // Tenta Gemini API Key
+    if (getGeminiKey()) {
+      try {
+        const resp = await axios.post(
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+          { contents: [{ parts: [{ text: prompt }] }] },
+          { headers: { 'Content-Type': 'application/json' }, params: { key: getGeminiKey() }, timeout: 30000 }
+        );
+        content = resp.data.candidates[0].content.parts[0].text;
+        console.log('✅ Roteiro de notícias gerado via API Key');
+      } catch (apiKeyErr) {
+        const status = apiKeyErr.response?.status;
+        console.warn(`⚠️ Gemini API Key falhou (${status || apiKeyErr.message}), tentando Pollinations...`);
+      }
+    }
+
+    // Fallback: Pollinations.ai (gratuito, sem API key)
+    if (!content) {
+      const pollinationsModels = ['mistral', 'openai', 'llama'];
+      for (const model of pollinationsModels) {
+        try {
+          console.log(`  🔄 Pollinations (${model})...`);
+          const polResp = await axios.post(
+            'https://text.pollinations.ai/',
+            { messages: [{ role: 'user', content: prompt }], model, jsonMode: false, seed: 42 },
+            { headers: { 'Content-Type': 'application/json' }, timeout: 60000, responseType: 'text' }
+          );
+          const raw = typeof polResp.data === 'string' ? polResp.data : JSON.stringify(polResp.data);
+          // Extrai JSON mesmo que venha com texto ao redor
+          const jsonMatch2 = raw.match(/\{[\s\S]*\}/);
+          if (jsonMatch2) {
+            content = raw;
+            console.log(`✅ Roteiro de notícias gerado via Pollinations (${model})`);
+            break;
+          }
+        } catch (polErr) {
+          console.warn(`  ⚠️ Pollinations ${model}: ${polErr.response?.status || polErr.message}`);
+        }
+      }
+    }
+
+    if (!content) throw new Error('Todos os provedores de LLM falharam (Gemini cota esgotada, Pollinations indisponível)');
   }
 
   const jsonMatch = content.match(/\{[\s\S]*\}/);
