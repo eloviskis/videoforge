@@ -21,6 +21,10 @@ import newsPool from './news/db.js';
 // Gerador de roteiro offline (zero APIs, zero tokens)
 import { gerarRoteiroDark, HISTORIAS_DARK } from './roteiro-offline-dark.js';
 
+// Auth + Hotmart
+import { authMiddleware, loginUsuario, criarUsuario, buscarUsuarioPorEmail, hashSenha, gerarToken } from './auth.js';
+import { registrarRotasHotmart } from './hotmart.js';
+
 const execAsync = promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
@@ -122,6 +126,86 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// ============================================
+// AUTH: Rotas de login/registro (ANTES do middleware)
+// ============================================
+const AUTH_ENABLED = process.env.AUTH_ENABLED !== 'false'; // ativo por padrão
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+    if (!email || !senha) return res.status(400).json({ error: 'Email e senha obrigatórios' });
+    const result = await loginUsuario(email, senha);
+    if (result.error) return res.status(401).json({ error: result.error });
+    res.json(result);
+  } catch (e) {
+    console.error('Erro login:', e.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, senha, nome } = req.body;
+    if (!email || !senha) return res.status(400).json({ error: 'Email e senha obrigatórios' });
+    if (senha.length < 6) return res.status(400).json({ error: 'Senha mínima: 6 caracteres' });
+    
+    const existe = await buscarUsuarioPorEmail(email);
+    if (existe) return res.status(409).json({ error: 'Email já cadastrado' });
+    
+    const user = await criarUsuario({ email, senha, nome, plano: 'trial' });
+    const token = gerarToken({ id: user.id, email: user.email, plano: user.plano });
+    
+    res.json({
+      token,
+      user: {
+        id: user.id, email: user.email, nome: user.nome,
+        plano: user.plano, ativo: user.ativo,
+        videos_mes_limite: user.videos_mes_limite,
+        videos_mes_usados: user.videos_mes_usados,
+      }
+    });
+  } catch (e) {
+    console.error('Erro register:', e.message);
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'Não autenticado' });
+    
+    const { verificarToken } = await import('./auth.js');
+    const payload = verificarToken(token);
+    if (!payload) return res.status(401).json({ error: 'Token inválido' });
+    
+    const user = await buscarUsuarioPorEmail(payload.email);
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    
+    res.json({
+      id: user.id, email: user.email, nome: user.nome,
+      plano: user.plano, ativo: user.ativo,
+      videos_mes_limite: user.videos_mes_limite,
+      videos_mes_usados: user.videos_mes_usados,
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro interno' });
+  }
+});
+
+// Hotmart webhooks (antes do middleware para não exigir auth)
+registrarRotasHotmart(app);
+
+// Auth middleware (protege rotas /api/* exceto as públicas)
+if (AUTH_ENABLED) {
+  app.use(authMiddleware);
+  console.log('🔐 Auth ativado — rotas protegidas por JWT');
+} else {
+  console.log('🔓 Auth desativado (AUTH_ENABLED=false)');
+}
 
 // Servir frontend estático (quando build existe)
 const FRONTEND_DIST = resolve(__dirname, '..', 'frontend', 'dist');
