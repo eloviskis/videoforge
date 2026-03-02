@@ -21,9 +21,10 @@ import newsPool from './news/db.js';
 // Gerador de roteiro offline (zero APIs, zero tokens)
 import { gerarRoteiroDark, HISTORIAS_DARK } from './roteiro-offline-dark.js';
 
-// Auth + Hotmart
+// Auth + Hotmart + Admin
 import { authMiddleware, loginUsuario, criarUsuario, buscarUsuarioPorEmail, hashSenha, gerarToken } from './auth.js';
 import { registrarRotasHotmart } from './hotmart.js';
+import { registrarRotasAdmin } from './admin.js';
 
 const execAsync = promisify(exec);
 
@@ -188,6 +189,7 @@ app.get('/api/auth/me', async (req, res) => {
     res.json({
       id: user.id, email: user.email, nome: user.nome,
       plano: user.plano, ativo: user.ativo,
+      is_admin: user.is_admin || false,
       videos_mes_limite: user.videos_mes_limite,
       videos_mes_usados: user.videos_mes_usados,
     });
@@ -198,6 +200,9 @@ app.get('/api/auth/me', async (req, res) => {
 
 // Hotmart webhooks (antes do middleware para não exigir auth)
 registrarRotasHotmart(app);
+
+// Admin routes (verificação de admin é interna)
+registrarRotasAdmin(app);
 
 // Auth middleware (protege rotas /api/* exceto as públicas)
 if (AUTH_ENABLED) {

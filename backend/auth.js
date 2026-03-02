@@ -68,6 +68,8 @@ export function authMiddleware(req, res, next) {
     '/api/youtube/callback',
     '/api/social/',
     '/api/health',
+    '/api/public/',
+    '/api/download/info',
   ];
   
   // Se a rota não começa com /api, libera (frontend, media, etc.)

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import App from './App.jsx'
 import LoginPage from './LoginPage.jsx'
 import LandingPage from './LandingPage.jsx'
+import AdminPanel from './AdminPanel.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -10,9 +11,11 @@ const API_URL = import.meta.env.VITE_API_URL
     : `${window.location.origin}/api`)
 
 export default function AuthWrapper() {
-  const [page, setPage] = useState('loading')   // loading | landing | login | app
+  const [page, setPage] = useState('loading')   // loading | landing | login | app | admin
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
+  const [appInfo, setAppInfo] = useState({})
+  const [showDownload, setShowDownload] = useState(false)
 
   /* ── ao montar, verifica se já tem token salvo ── */
   useEffect(() => {
@@ -28,6 +31,9 @@ export default function AuthWrapper() {
         setToken(saved)
         setUser(data.user ?? data)
         setPage('app')
+        // buscar info do app (versão, aviso tokens)
+        fetch(`${API_URL}/download/info`)
+          .then(r => r.json()).then(setAppInfo).catch(() => {})
       })
       .catch(() => {
         localStorage.removeItem('vf_token')
@@ -82,6 +88,10 @@ export default function AuthWrapper() {
     )
   }
 
+  if (page === 'admin') {
+    return <AdminPanel onBack={() => setPage('app')} />
+  }
+
   /* page === 'app' */
   return (
     <div>
@@ -89,7 +99,8 @@ export default function AuthWrapper() {
       <div style={{
         background: 'rgba(15,15,35,0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)',
         padding: '8px 20px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-        gap: '16px', fontSize: '13px', color: '#94a3b8', fontFamily: 'Inter, sans-serif',
+        gap: '12px', fontSize: '13px', color: '#94a3b8', fontFamily: 'Inter, sans-serif',
+        flexWrap: 'wrap',
       }}>
         {user && (
           <>
@@ -103,6 +114,33 @@ export default function AuthWrapper() {
             <span style={{ color: '#64748b' }}>
               {user.videos_mes_usados ?? 0}/{user.videos_mes_limite ?? 5} vídeos
             </span>
+            <span style={{ flex: 1 }} />
+
+            {/* Download button */}
+            <button
+              onClick={() => setShowDownload(!showDownload)}
+              style={{
+                padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(34,197,94,0.3)',
+                background: 'rgba(34,197,94,0.1)', color: '#86efac', cursor: 'pointer', fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              📥 Download App
+            </button>
+
+            {/* Admin button (se is_admin) */}
+            {user.is_admin && (
+              <button
+                onClick={() => setPage('admin')}
+                style={{
+                  padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(245,158,11,0.3)',
+                  background: 'rgba(245,158,11,0.1)', color: '#fcd34d', cursor: 'pointer', fontSize: '12px',
+                  fontWeight: 600,
+                }}
+              >
+                🛡️ Admin
+              </button>
+            )}
           </>
         )}
         <button
@@ -116,6 +154,94 @@ export default function AuthWrapper() {
           Sair
         </button>
       </div>
+
+      {/* ── Painel de Download ── */}
+      {showDownload && (
+        <div style={{
+          background: 'rgba(15,15,35,0.98)', borderBottom: '1px solid rgba(255,255,255,0.06)',
+          padding: '20px 24px', fontFamily: 'Inter, sans-serif', color: '#e2e8f0',
+        }}>
+          <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700 }}>📥 Download — VideoForge Desktop</h3>
+              <button onClick={() => setShowDownload(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '18px' }}>✕</button>
+            </div>
+
+            <div style={{
+              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+              borderRadius: '12px', padding: '20px', marginBottom: '16px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '48px' }}>🖥️</div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>VideoForge para Windows</h4>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
+                    Versão {appInfo.versao_app || '1.1.0'} — Instalador .exe (Setup)
+                  </p>
+                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
+                    Inclui backend + frontend integrados. Roda localmente sem precisar de servidor.
+                  </p>
+                </div>
+                <a
+                  href={`${API_URL}/download/installer`}
+                  onClick={e => {
+                    e.preventDefault()
+                    const a = document.createElement('a')
+                    a.href = `${API_URL}/download/installer`
+                    // adicionar token como header via fetch
+                    fetch(`${API_URL}/download/installer`, {
+                      headers: { Authorization: `Bearer ${token}` }
+                    }).then(r => {
+                      if (!r.ok) throw new Error('Erro ao baixar')
+                      return r.blob()
+                    }).then(blob => {
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `VideoForge-Setup-${appInfo.versao_app || '1.1.0'}.exe`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }).catch(err => alert('Erro ao baixar: ' + err.message))
+                  }}
+                  style={{
+                    padding: '10px 24px', borderRadius: '10px', textDecoration: 'none',
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
+                    fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap',
+                    boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
+                  }}
+                >
+                  ⬇️ Baixar .exe
+                </a>
+              </div>
+            </div>
+
+            {/* Aviso sobre tokens pagos */}
+            <div style={{
+              background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+              borderRadius: '12px', padding: '16px',
+            }}>
+              <h4 style={{ margin: '0 0 8px', fontSize: '14px', fontWeight: 700, color: '#fcd34d' }}>
+                ⚠️ Importante sobre custos de IA
+              </h4>
+              <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8', lineHeight: 1.7 }}>
+                {appInfo.aviso_tokens || 'Alguns modos de geração usam APIs de IA pagas (Replicate, Kling, Veo, Sora). O custo varia por provedor e duração do vídeo. Modos gratuitos: Stock Images e Stick Animation.'}
+              </p>
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, background: 'rgba(34,197,94,0.15)', color: '#86efac' }}>
+                  🟢 Grátis: Stock Images, Stick Animation
+                </span>
+                <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, background: 'rgba(245,158,11,0.15)', color: '#fcd34d' }}>
+                  🟡 Freemium: HuggingFace, Replicate
+                </span>
+                <span style={{ padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 600, background: 'rgba(239,68,68,0.15)', color: '#fca5a5' }}>
+                  🔴 Pago: Kling, Veo, Sora, D-ID
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <App />
     </div>
   )

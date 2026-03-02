@@ -1,5 +1,24 @@
+import { useState, useEffect } from 'react'
+
 export default function LandingPage({ onGoLogin }) {
   const HOTMART_URL = import.meta.env.VITE_HOTMART_URL || '#'
+
+  const API_URL = import.meta.env.VITE_API_URL
+    ? `${import.meta.env.VITE_API_URL}/api`
+    : (window.location.port === '3000' ? 'http://localhost:3001/api' : `${window.location.origin}/api`)
+
+  const [precos, setPrecos] = useState({})
+  const [avisoTokens, setAvisoTokens] = useState('')
+
+  useEffect(() => {
+    fetch(`${API_URL}/public/precos`)
+      .then(r => r.json())
+      .then(data => {
+        setPrecos(data)
+        if (data.aviso_tokens) setAvisoTokens(data.aviso_tokens)
+      })
+      .catch(() => {})
+  }, [])
 
   const features = [
     { icon: '🤖', title: 'Roteiro com IA', desc: 'Gemini gera roteiros completos a partir de um tema. Basta digitar e pronto.' },
@@ -18,25 +37,25 @@ export default function LandingPage({ onGoLogin }) {
       preco: 'Grátis',
       periodo: '7 dias',
       destaque: false,
-      items: ['5 vídeos/mês', 'Roteiro com IA', 'Narração automática', 'Renderização 1080p', 'Upload YouTube'],
+      items: [`${precos.limite_trial || 5} vídeos/mês`, 'Roteiro com IA (Gemini — grátis)', 'Narração automática (Edge TTS — grátis)', 'Renderização 1080p', 'Upload YouTube'],
       cta: 'Começar grátis',
       link: null,
     },
     {
       nome: 'Mensal',
-      preco: 'R$ 47',
+      preco: `R$ ${precos.preco_mensal || '47'}`,
       periodo: '/mês',
       destaque: true,
-      items: ['50 vídeos/mês', 'Tudo do Trial', 'Notícias automáticas', 'Cortes de vídeo', 'Multi-plataforma', 'Suporte prioritário'],
+      items: [`${precos.limite_mensal || 50} vídeos/mês`, 'Tudo do Trial', 'Notícias automáticas', 'Cortes de vídeo', 'Multi-plataforma', 'Download app Windows', 'Suporte prioritário'],
       cta: 'Assinar agora',
       link: HOTMART_URL,
     },
     {
       nome: 'Anual',
-      preco: 'R$ 397',
-      periodo: '/ano (R$ 33/mês)',
+      preco: `R$ ${precos.preco_anual || '397'}`,
+      periodo: `/ano (R$ ${Math.round((parseInt(precos.preco_anual) || 397) / 12)}/mês)`,
       destaque: false,
-      items: ['100 vídeos/mês', 'Tudo do Mensal', '30% de economia', 'Atualizações antecipadas'],
+      items: [`${precos.limite_anual || 100} vídeos/mês`, 'Tudo do Mensal', '30% de economia', 'Atualizações antecipadas'],
       cta: 'Assinar anual',
       link: HOTMART_URL,
     },
@@ -245,6 +264,58 @@ export default function LandingPage({ onGoLogin }) {
               )}
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ═══ AVISO TOKENS IA ═══ */}
+      <section style={{ padding: '60px 24px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,68,68,0.05))',
+            border: '1px solid rgba(245,158,11,0.2)', borderRadius: '16px', padding: '32px',
+          }}>
+            <h3 style={{ fontSize: '22px', fontWeight: 800, margin: '0 0 16px', color: '#fcd34d' }}>
+              ⚠️ Sobre custos de Tokens de IA
+            </h3>
+            <p style={{ fontSize: '15px', color: '#cbd5e1', lineHeight: 1.8, margin: '0 0 20px' }}>
+              {avisoTokens || 'Alguns modos de geração de vídeo consomem tokens de IA pagos. O custo depende do provedor e da duração. Modos gratuitos usam apenas APIs como Gemini e Pexels.'}
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+              <div style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: '10px', padding: '14px' }}>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: '#86efac', marginBottom: '8px' }}>🟢 100% Gratuito</div>
+                <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '13px', color: '#94a3b8', lineHeight: 1.8 }}>
+                  <li><strong>Stock Images</strong> — Pexels/Pixabay</li>
+                  <li><strong>Stick Animation</strong> — Animação local</li>
+                  <li><strong>Roteiro</strong> — Gemini (API gratuita)</li>
+                  <li><strong>Narração</strong> — Edge TTS (gratuito)</li>
+                </ul>
+              </div>
+              <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px', padding: '14px' }}>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: '#fcd34d', marginBottom: '8px' }}>🟡 Freemium (créditos limitados)</div>
+                <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '13px', color: '#94a3b8', lineHeight: 1.8 }}>
+                  <li><strong>HuggingFace</strong> — vídeo IA</li>
+                  <li><strong>Replicate</strong> — ~R$0,03/cena</li>
+                  <li><strong>ElevenLabs</strong> — voz premium</li>
+                </ul>
+              </div>
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', padding: '14px' }}>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: '#fca5a5', marginBottom: '8px' }}>🔴 Pago (requer tokens próprios)</div>
+                <ul style={{ margin: 0, padding: '0 0 0 16px', fontSize: '13px', color: '#94a3b8', lineHeight: 1.8 }}>
+                  <li><strong>Kling AI</strong> — vídeo premium</li>
+                  <li><strong>Veo 3 (Google)</strong> — ~R$2/seg</li>
+                  <li><strong>Sora (OpenAI)</strong> — créditos ChatGPT</li>
+                  <li><strong>D-ID</strong> — avatar apresentador</li>
+                </ul>
+              </div>
+            </div>
+
+            <p style={{ margin: '16px 0 0', fontSize: '13px', color: '#64748b', lineHeight: 1.6 }}>
+              💡 <strong>Recomendação:</strong> Comece com Stock Images + Gemini + Edge TTS (tudo grátis!). 
+              Quando quiser vídeos com IA generativa, configure os tokens do provedor desejado na aba Tutoriais.
+              O VideoForge <strong>não cobra</strong> pelos tokens — você usa suas próprias chaves de API.
+            </p>
+          </div>
         </div>
       </section>
 
