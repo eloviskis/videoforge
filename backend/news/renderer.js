@@ -457,22 +457,41 @@ duracao_idx = 0
 print('--- ABERTURA ---')
 abertura_dur = duracoes[duracao_idx] if duracao_idx < len(duracoes) else 10.0
 abertura_clip = f'{temp_dir}/clip_abertura.mp4'
-titulo = escape_text(roteiro.get('titulo', 'Resumo do Dia'))
+titulo = escape_text(roteiro.get('titulo', 'Resumo do Dia')[:70])
+data_hoje = escape_text(roteiro.get('data', ''))[:30] if roteiro.get('data') else ''
+total_str  = escape_text(f'{len(roteiro.get("noticias", []))} noticias selecionadas')
 
 abertura_overlays = [
-    f"eq=brightness=-0.12:saturation=0.85",
-    f"drawbox=x=0:y=ih/2-140:w=iw:h=280:color={COR_BARRA_TOPO}@0.88:t=fill",
-    f"drawbox=x=0:y=ih/2-140:w=iw:h=4:color={COR_ACCENT}:t=fill",
-    f"drawbox=x=0:y=ih/2+136:w=iw:h=4:color={COR_ACCENT}:t=fill",
-    f"drawtext=text='{titulo}':fontcolor=white:fontsize=46:"
-    f"x=(w-text_w)/2:y=(h-text_h)/2-30:"
-    f"font=DejaVu Sans Bold:borderw=3:bordercolor=black:"
-    f"enable='gte(t,0.4)'",
-    f"drawtext=text='COMPILACAO DE NOTICIAS DO DIA':fontcolor={COR_TEXTO_LIGHT}:fontsize=24:"
-    f"x=(w-text_w)/2:y=(h/2)+30:"
-    f"font=DejaVu Sans:borderw=2:bordercolor=black:"
-    f"enable='gte(t,0.7)'",
-    f"drawbox=x=iw/2-200:y=ih/2+65:w=400:h=3:color={COR_ACCENT_GOLD}:t=fill:"
+    # Escurecer levemente para destacar texto
+    f"eq=brightness=-0.10:saturation=0.80",
+
+    # Painel central semi-transparente (card)
+    f"drawbox=x=iw/2-600:y=ih/2-160:w=1200:h=320:color=#000000@0.78:t=fill",
+
+    # Bordas do card
+    f"drawbox=x=iw/2-600:y=ih/2-160:w=1200:h=4:color=#42a5f5:t=fill",
+    f"drawbox=x=iw/2-600:y=ih/2+156:w=1200:h=4:color=#42a5f5:t=fill",
+
+    # Label "NOTICIAS" pequeno acima do título
+    f"drawtext=text='▶  RESUMO DO DIA':fontcolor=#42a5f5:fontsize=22:"
+    f"x=(w-text_w)/2:y=ih/2-130:"
+    f"font=DejaVu Sans Bold:borderw=1:bordercolor=#00000080:"
+    f"enable='gte(t,0.3)'",
+
+    # Título principal
+    f"drawtext=text='{titulo}':fontcolor=white:fontsize=44:"
+    f"x=(w-text_w)/2:y=ih/2-78:"
+    f"font=DejaVu Sans Bold:borderw=3:bordercolor=#00000090:"
+    f"enable='gte(t,0.5)'",
+
+    # Linha decorativa dourada
+    f"drawbox=x=iw/2-220:y=ih/2+12:w=440:h=3:color=#f9a825:t=fill:"
+    f"enable='gte(t,0.8)'",
+
+    # Total de notícias
+    f"drawtext=text='{total_str}':fontcolor=#b0bec5:fontsize=23:"
+    f"x=(w-text_w)/2:y=ih/2+30:"
+    f"font=DejaVu Sans:borderw=1:bordercolor=black:"
     f"enable='gte(t,0.9)'",
 ]
 if renderizar_segmento(imagens_map.get(0, []), abertura_dur, abertura_overlays, abertura_clip, kb_base=0):
@@ -482,7 +501,7 @@ else:
     print(f'  Abertura: FALHOU')
 duracao_idx += 1
 
-# --- NOTICIAS ---
+# --- NOTICIAS (estilo slideshow PowerPoint) ---
 for i, noticia in enumerate(roteiro.get('noticias', [])):
     print(f'--- NOTICIA {i+1}/{total_noticias} ---')
     dur = duracoes[duracao_idx] if duracao_idx < len(duracoes) else 18.0
@@ -490,33 +509,73 @@ for i, noticia in enumerate(roteiro.get('noticias', [])):
     img_idx = i + 1
     imgs = imagens_map.get(img_idx, imagens_map.get(0, []))
 
-    manchete = escape_text(noticia.get('manchete', f'Noticia {i+1}')[:75])
-    fonte = escape_text(noticia.get('fonte', 'Fonte')[:35])
-    numero_text = escape_text(f'{i+1}/{total_noticias}')
+    # ---- quebra de linha manual da manchete (max 2 linhas x 48 chars) ----
+    raw_manchete = noticia.get('manchete', f'Noticia {i+1}')[:100]
+    raw_fonte    = noticia.get('fonte', 'Fonte')[:40]
+    words = raw_manchete.split()
+    lines_m, cur = [], ''
+    for w in words:
+        if len(cur) + len(w) + 1 <= 48:
+            cur = (cur + ' ' + w).strip()
+        else:
+            if cur: lines_m.append(cur)
+            cur = w
+    if cur: lines_m.append(cur)
+    while len(lines_m) < 2: lines_m.append('')
+    linha1 = escape_text(lines_m[0])
+    linha2 = escape_text(lines_m[1])
+    fonte_esc = escape_text(raw_fonte)
+    numero_text = f'{i+1} / {total_noticias}'
 
+    # ---- design "apresentação" ────────────────────────────────────────────
+    # Gradiente escuro em 3 camadas na parte inferior (simula fade)
+    # Área de texto: últimos 225px
     news_overlays = [
-        f"drawbox=x=0:y=0:w=iw:h=55:color={COR_BARRA_TOPO}@0.85:t=fill",
-        f"drawtext=text='NOTICIAS DO DIA':fontcolor={COR_TEXTO_LIGHT}:fontsize=20:"
-        f"x=25:y=16:font=DejaVu Sans Bold",
-        f"drawbox=x=iw-120:y=8:w=105:h=40:color={COR_ACCENT}@0.92:t=fill:"
-        f"enable='gte(t,0.3)'",
-        f"drawtext=text='{numero_text}':fontcolor=white:fontsize=22:"
-        f"x=iw-108:y=18:font=DejaVu Sans Bold:"
-        f"enable='gte(t,0.3)'",
-        f"drawbox=x=0:y=ih-160:w=iw:h=90:color={COR_BARRA_LOWER}@0.93:t=fill:"
+        # Título topo fino (canal / programa)
+        f"drawbox=x=0:y=0:w=iw:h=52:color=#000000@0.70:t=fill",
+        f"drawtext=text='NOTICIAS DO DIA':fontcolor=#90caf9:fontsize=19:"
+        f"x=30:y=16:font=DejaVu Sans Bold",
+
+        # Contador de slide (canto superior direito, pill colorido)
+        f"drawbox=x=iw-115:y=8:w=105:h=36:color=#1565c0@0.90:t=fill:"
+        f"enable='gte(t,0.2)'",
+        f"drawtext=text='{numero_text}':fontcolor=white:fontsize=20:"
+        f"x=iw-104:y=18:font=DejaVu Sans Bold:"
+        f"enable='gte(t,0.2)'",
+
+        # Gradiente inferior em 3 passos
+        f"drawbox=x=0:y=ih*3/4:w=iw:h=ih/4:color=#000000@0.35:t=fill:"
+        f"enable='gte(t,0.4)'",
+        f"drawbox=x=0:y=ih*4/5:w=iw:h=ih/5:color=#000000@0.50:t=fill:"
+        f"enable='gte(t,0.4)'",
+        f"drawbox=x=0:y=ih-220:w=iw:h=220:color=#000000@0.72:t=fill:"
+        f"enable='gte(t,0.4)'",
+
+        # Linha accent (azul) – topo da área de texto
+        f"drawbox=x=0:y=ih-222:w=iw:h=4:color=#42a5f5:t=fill:"
         f"enable='gte(t,0.5)'",
-        f"drawbox=x=0:y=ih-70:w=iw:h=70:color={COR_BARRA_TOPO}@0.90:t=fill:"
+
+        # Barra vertical esquerda (elemento de destaque)
+        f"drawbox=x=0:y=ih-220:w=6:h=220:color=#42a5f5:t=fill:"
         f"enable='gte(t,0.5)'",
-        f"drawbox=x=0:y=ih-160:w=6:h=160:color={COR_ACCENT_GOLD}:t=fill:"
+
+        # Linha 1 da manchete
+        f"drawtext=text='{linha1}':fontcolor=white:fontsize=42:"
+        f"x=30:y=ih-208:font=DejaVu Sans Bold:"
+        f"borderw=2:bordercolor=#00000090:"
         f"enable='gte(t,0.5)'",
-        f"drawtext=text='{manchete}':fontcolor=white:fontsize=34:"
-        f"x=30:y=ih-148:font=DejaVu Sans Bold:"
-        f"borderw=2:bordercolor=black:"
-        f"enable='gte(t,0.6)'",
-        f"drawtext=text='Fonte\\\\: {fonte}':fontcolor={COR_TEXTO_LIGHT}:fontsize=20:"
-        f"x=30:y=ih-50:font=DejaVu Sans:"
-        f"borderw=1:bordercolor=black:"
-        f"enable='gte(t,0.6)'",
+
+        # Linha 2 (se houver)
+        f"drawtext=text='{linha2}':fontcolor=#e3f2fd:fontsize=42:"
+        f"x=30:y=ih-152:font=DejaVu Sans Bold:"
+        f"borderw=2:bordercolor=#00000090:"
+        f"enable='gte(t,0.55)'",
+
+        # Fonte da notícia
+        f"drawtext=text='Fonte\\\\: {fonte_esc}':fontcolor=#90caf9:fontsize=22:"
+        f"x=30:y=ih-72:font=DejaVu Sans:"
+        f"borderw=1:bordercolor=#00000080:"
+        f"enable='gte(t,0.65)'",
     ]
 
     if renderizar_segmento(imgs, dur, news_overlays, clip_path, kb_base=i):
@@ -535,24 +594,36 @@ print('--- ENCERRAMENTO ---')
 enc_dur = duracoes[duracao_idx] if duracao_idx < len(duracoes) else 10.0
 enc_img_idx = len(visuais) - 1
 enc_clip = f'{temp_dir}/clip_encerramento.mp4'
-texto_obrigado = escape_text('Obrigado por assistir!')
-cta_text = escape_text('INSCREVA-SE e ATIVE o sino!')
 
 enc_overlays = [
-    f"eq=brightness=-0.18:saturation=0.8",
-    f"drawbox=x=0:y=ih/2-160:w=iw:h=320:color={COR_BARRA_TOPO}@0.88:t=fill",
-    f"drawbox=x=0:y=ih/2-160:w=iw:h=4:color={COR_ACCENT}:t=fill",
-    f"drawbox=x=0:y=ih/2+156:w=iw:h=4:color={COR_ACCENT}:t=fill",
-    f"drawtext=text='{texto_obrigado}':fontcolor=white:fontsize=50:"
-    f"x=(w-text_w)/2:y=(h-text_h)/2-40:"
-    f"font=DejaVu Sans Bold:borderw=3:bordercolor=black:"
+    f"eq=brightness=-0.15:saturation=0.75",
+
+    # Card central
+    f"drawbox=x=iw/2-620:y=ih/2-175:w=1240:h=350:color=#000000@0.80:t=fill",
+    f"drawbox=x=iw/2-620:y=ih/2-175:w=1240:h=4:color=#42a5f5:t=fill",
+    f"drawbox=x=iw/2-620:y=ih/2+171:w=1240:h=4:color=#42a5f5:t=fill",
+
+    # Emoji + obrigado
+    f"drawtext=text='Obrigado por assistir!':fontcolor=white:fontsize=52:"
+    f"x=(w-text_w)/2:y=ih/2-135:"
+    f"font=DejaVu Sans Bold:borderw=3:bordercolor=#00000090:"
     f"enable='gte(t,0.3)'",
-    f"drawtext=text='{cta_text}':fontcolor={COR_ACCENT_GOLD}:fontsize=30:"
-    f"x=(w-text_w)/2:y=(h/2)+25:"
-    f"font=DejaVu Sans Bold:borderw=2:bordercolor=black:"
-    f"enable='gte(t,0.8)'",
-    f"drawbox=x=iw/2-180:y=ih/2+70:w=360:h=3:color={COR_ACCENT_GOLD}:t=fill:"
-    f"enable='gte(t,1.2)'",
+
+    # Linha dourada
+    f"drawbox=x=iw/2-200:y=ih/2+5:w=400:h=3:color=#f9a825:t=fill:"
+    f"enable='gte(t,0.7)'",
+
+    # CTA
+    f"drawtext=text='INSCREVA-SE e ative o sino':fontcolor=#f9a825:fontsize=30:"
+    f"x=(w-text_w)/2:y=ih/2+22:"
+    f"font=DejaVu Sans Bold:borderw=2:bordercolor=#00000090:"
+    f"enable='gte(t,0.9)'",
+
+    # Sub-CTA
+    f"drawtext=text='para nao perder nenhuma noticia!':fontcolor=#b0bec5:fontsize=23:"
+    f"x=(w-text_w)/2:y=ih/2+65:"
+    f"font=DejaVu Sans:borderw=1:bordercolor=black:"
+    f"enable='gte(t,1.1)'",
 ]
 if renderizar_segmento(imagens_map.get(enc_img_idx, imagens_map.get(0, [])), enc_dur, enc_overlays, enc_clip, kb_base=99):
     clips.append(enc_clip)

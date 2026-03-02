@@ -483,49 +483,96 @@ print(f'DURACOES:{json.dumps(duracoes)}')
 // ========================================
 // BUSCAR VISUAIS PARA NOTÍCIAS
 // ========================================
+// ========================================
+// EXTRAIR og:image DE UMA URL DE NOTÍCIA
+// ========================================
+async function buscarOgImage(url) {
+  if (!url) return null;
+  try {
+    const resp = await axios.get(url, {
+      timeout: 8000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; VideoForgeBot/1.0)',
+        'Accept': 'text/html',
+      },
+      maxRedirects: 3,
+      responseType: 'text',
+    });
+    const html = resp.data || '';
+    // og:image, twitter:image, ou primeira <img> de alta resolução
+    const patterns = [
+      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i,
+      /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["']/i,
+    ];
+    for (const re of patterns) {
+      const m = html.match(re);
+      if (m && m[1] && m[1].startsWith('http') && !m[1].includes('logo') && !m[1].includes('icon')) {
+        return m[1];
+      }
+    }
+  } catch (_) { /* timeout or blocked */ }
+  return null;
+}
+
 async function buscarVisuaisNoticias(roteiro, noticias) {
   const visuais = [];
 
-  // Abertura: 3 imagens de news studio
-  const aberturaImgs = await buscarImagensPexels('news broadcast studio desk television', 3);
+  // Abertura: og:image das primeiras notícias + fallback Pexels
+  const aberturaImgs = await buscarImagensPexels('breaking news broadcast live television studio', 3);
   visuais.push({
     tipo: 'abertura',
     urls: aberturaImgs,
     manchete: null,
+    modo: 'slideshow',
   });
 
-  // Para cada notícia: imagem do artigo + 2 Pexels = até 3 imagens para slideshow
+  // Para cada notícia: og:image (print real do portal) + Pexels como backup
   for (let i = 0; i < roteiro.noticias.length; i++) {
     const n = roteiro.noticias[i];
     const noticiaOriginal = noticias[i];
 
     const urls = [];
 
-    // Prioridade 1: imagem do artigo original
-    if (noticiaOriginal?.imagem_url) {
+    // Prioridade 1: og:image do site da notícia (print/screenshot via meta tag)
+    if (noticiaOriginal?.url) {
+      console.log(`  🖼️ Buscando og:image: ${noticiaOriginal.url.substring(0, 60)}...`);
+      const ogImg = await buscarOgImage(noticiaOriginal.url);
+      if (ogImg) {
+        urls.push(ogImg);
+        console.log(`  ✅ og:image encontrado: ${ogImg.substring(0, 60)}`);
+      }
+    }
+
+    // Prioridade 2: imagem_url salva no banco (thumbnail do feed RSS)
+    if (noticiaOriginal?.imagem_url && !urls.includes(noticiaOriginal.imagem_url)) {
       urls.push(noticiaOriginal.imagem_url);
     }
 
-    // Completar com Pexels (4-5 imagens para slideshow dinamico)
-    const needed = Math.max(5 - urls.length, 2);
+    // Completar com Pexels para ter no mínimo 2 imagens por slide
+    const needed = Math.max(3 - urls.length, 1);
     const pexelsImgs = await buscarImagensPexels(n.keyword_visual || n.manchete, needed);
     urls.push(...pexelsImgs);
 
     visuais.push({
       tipo: 'noticia',
       numero: n.numero,
-      urls: urls.slice(0, 5),
+      urls: urls.slice(0, 4),
       manchete: n.manchete,
       fonte: n.fonte,
+      url_original: noticiaOriginal?.url || null,
+      modo: 'slideshow',
     });
   }
 
-  // Encerramento: 3 imagens
-  const encImgs = await buscarImagensPexels('subscribe social media notification bell', 3);
+  // Encerramento
+  const encImgs = await buscarImagensPexels('subscribe like notification social media youtube', 3);
   visuais.push({
     tipo: 'encerramento',
     urls: encImgs,
     manchete: null,
+    modo: 'slideshow',
   });
 
   return visuais;
