@@ -112,19 +112,21 @@ export default function LandingPage({ onGoLogin }) {
       }}>
         <div style={{ maxWidth: '800px' }}>
           {/* Logo principal */}
-          <img src="/logo.png" alt="VideoForge" style={{
-            width: '140px', height: '140px', borderRadius: '28px',
-            marginBottom: '28px',
-            filter: 'drop-shadow(0 0 40px rgba(139,92,246,0.5)) drop-shadow(0 0 80px rgba(168,85,247,0.3))',
-            animation: 'float 3s ease-in-out infinite',
-          }} />
-          <style>{`@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}`}</style>
-          <div style={{
-            display: 'inline-block', padding: '6px 16px', borderRadius: '99px', fontSize: '13px',
-            background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)',
-            color: '#c4b5fd', marginBottom: '24px', fontWeight: 500,
-          }}>
-            ⚡ Automatize seu canal de vídeos com IA
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
+            <img src="/logo.png" alt="VideoForge" style={{
+              width: '140px', height: '140px', borderRadius: '28px',
+              marginBottom: '20px',
+              filter: 'drop-shadow(0 0 40px rgba(139,92,246,0.5)) drop-shadow(0 0 80px rgba(168,85,247,0.3))',
+              animation: 'float 3s ease-in-out infinite',
+            }} />
+            <style>{`@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}`}</style>
+            <div style={{
+              padding: '6px 16px', borderRadius: '99px', fontSize: '13px',
+              background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)',
+              color: '#c4b5fd', fontWeight: 500,
+            }}>
+              ⚡ Automatize seu canal de vídeos com IA
+            </div>
           </div>
           <h1 style={{
             fontSize: 'clamp(36px, 6vw, 64px)', fontWeight: 800, lineHeight: 1.1,
