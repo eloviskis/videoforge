@@ -187,6 +187,7 @@ export async function loginUsuario(email, senha) {
       nome: user.nome,
       plano: user.plano,
       ativo: user.ativo,
+      is_admin: user.is_admin || false,
       videos_mes_limite: user.videos_mes_limite,
       videos_mes_usados: user.videos_mes_usados,
     },
