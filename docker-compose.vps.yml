@@ -1,4 +1,4 @@
-# docker-compose.vps.yml — Deploy direto via IP, sem SSL
+# docker-compose.vps.yml — Deploy com domínio videoforge.tech + SSL
 # Uso: docker compose -f docker-compose.vps.yml up -d --build
 
 services:
@@ -38,8 +38,11 @@ services:
     restart: always
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.vps.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
     depends_on:
       - frontend
       - backend
