@@ -784,40 +784,38 @@ function App() {
             </div>
           )}
 
-          {/* Redes Sociais - Conexão */}
+          {/* Redes Sociais - Info */}
           <div style={{ marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '16px', marginBottom: '5px' }}>🔗 Conexões de Redes Sociais</h3>
+            <h3 style={{ fontSize: '16px', marginBottom: '5px' }}>📤 Compartilhamento nas Redes Sociais</h3>
             <p style={{ fontSize: '13px', color: '#888', marginBottom: '12px' }}>
-              Conecte suas redes para compartilhar automaticamente quando um vídeo for publicado no YouTube
+              Quando seu vídeo for publicado, use os botões de compartilhamento rápido para postar diretamente nas suas redes sociais favoritas.
             </p>
-            <div style={{ display: 'grid', gap: '10px' }}>
-              {config.social && Object.entries(config.social).map(([key, network]) => (
-                <div key={key} style={{
-                  padding: '12px 16px',
-                  background: network.connected ? '#f0fdf4' : '#f5f5f5',
-                  borderRadius: '8px',
-                  borderLeft: `4px solid ${network.color}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px'
+            <div style={{ display: 'grid', gap: '8px' }}>
+              {[
+                { icon: '🐦', name: 'X (Twitter)', desc: 'Posta automaticamente com título + link do YouTube', color: '#000' },
+                { icon: '📘', name: 'Facebook', desc: 'Compartilha o link do vídeo no seu perfil', color: '#1877F2' },
+                { icon: '📸', name: 'Instagram', desc: 'Abre o Instagram para você fazer upload do vídeo', color: '#E1306C' },
+                { icon: '🎵', name: 'TikTok', desc: 'Abre o TikTok para você fazer upload do vídeo', color: '#000' },
+                { icon: '💼', name: 'LinkedIn', desc: 'Compartilha o link no seu perfil profissional', color: '#0A66C2' },
+                { icon: '💬', name: 'WhatsApp', desc: 'Envia título + link para contatos ou grupos', color: '#25D366' },
+                { icon: '✈️', name: 'Telegram', desc: 'Compartilha título + link em chats ou canais', color: '#0088CC' },
+                { icon: '🔴', name: 'Reddit', desc: 'Posta o link em qualquer subreddit', color: '#FF4500' },
+              ].map((s, i) => (
+                <div key={i} style={{
+                  padding: '10px 14px', borderRadius: '8px', background: '#f5f5f5',
+                  borderLeft: `4px solid ${s.color}`, display: 'flex', alignItems: 'center', gap: '10px',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '20px' }}>{network.icon}</span>
-                    <div>
-                      <strong style={{ fontSize: '14px' }}>{network.name}</strong>
-                      <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>
-                        {network.connected ? '✅ Conectado' : network.configured ? '⚠️ Configurado — clique para conectar' : '🔧 Configure as chaves acima'}
-                      </p>
-                    </div>
-                  </div>
+                  <span style={{ fontSize: '20px' }}>{s.icon}</span>
                   <div>
-                    {network.connected ? (
-                      <button onClick={() => desconectarRedeSocial(key)} className="social-disconnect-btn">Desconectar</button>
-                    ) : network.configured ? (
-                      <button onClick={() => conectarRedeSocial(key)} className="social-connect-btn" style={{ background: network.color }}>Conectar</button>
-                    ) : null}
+                    <strong style={{ fontSize: '13px' }}>{s.name}</strong>
+                    <p style={{ fontSize: '11px', color: '#888', margin: 0 }}>{s.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
+            <p style={{ fontSize: '12px', color: '#aaa', marginTop: '10px', fontStyle: 'italic' }}>
+              💡 Os botões de compartilhamento aparecem no card de cada vídeo publicado. Basta clicar e a rede social abre em uma nova aba!
+            </p>
           </div>
 
           {/* Dicas */}
@@ -1220,31 +1218,52 @@ function App() {
                     <p style={{ fontSize: '12px', marginBottom: '8px' }}>
                       ✅ Vídeo pronto em: <code>{video.videoUrl}</code>
                     </p>
-                    {config.youtube_connected && !video.youtubeId && (
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {config.youtube_connected && !video.youtubeId && (
+                        <button
+                          onClick={async () => {
+                            try {
+                              const r = await axios.post(`${API_URL}/videos/${video.id}/publish-youtube`)
+                              alert(`✅ Publicado no YouTube! ID: ${r.data.youtubeId}`)
+                              carregarVideos()
+                            } catch (err) {
+                              alert('❌ Erro ao publicar: ' + (err.response?.data?.error || err.message))
+                            }
+                          }}
+                          style={{
+                            background: '#FF0000',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            fontWeight: 'bold',
+                            fontSize: '13px'
+                          }}
+                        >
+                          ▶️ Publicar no YouTube
+                        </button>
+                      )}
                       <button
-                        onClick={async () => {
-                          try {
-                            const r = await axios.post(`${API_URL}/videos/${video.id}/publish-youtube`)
-                            alert(`✅ Publicado no YouTube! ID: ${r.data.youtubeId}`)
-                            carregarVideos()
-                          } catch (err) {
-                            alert('❌ Erro ao publicar: ' + (err.response?.data?.error || err.message))
-                          }
+                        onClick={() => {
+                          const titulo = video.roteiro?.titulo || video.titulo || 'Meu vídeo'
+                          const texto = `🎬 ${titulo}\n\nCriado com VideoForge`
+                          navigator.clipboard.writeText(texto).then(() => alert('📋 Título copiado! Cole nas suas redes sociais.'))
                         }}
                         style={{
-                          background: '#FF0000',
+                          background: 'linear-gradient(135deg, #667eea, #764ba2)',
                           color: 'white',
                           border: 'none',
                           borderRadius: '6px',
                           padding: '8px 16px',
                           cursor: 'pointer',
-                          fontWeight: 'bold',
-                          fontSize: '13px'
+                          fontWeight: '600',
+                          fontSize: '12px',
                         }}
                       >
-                        ▶️ Publicar no YouTube
+                        📤 Copiar p/ compartilhar
                       </button>
-                    )}
+                    </div>
                   </div>
                 )}
 
@@ -1271,54 +1290,31 @@ function App() {
                       </div>
                     )}
 
-                    {/* Botões de compartilhamento rápido */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-                      <a href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(video.roteiro?.titulo || video.titulo)}&url=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}`} 
-                        target="_blank" className="share-btn" style={{ background: '#1DA1F2' }} title="Twitter/X">
-                        🐦 X
-                      </a>
-                      <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}`} 
-                        target="_blank" className="share-btn" style={{ background: '#1877F2' }} title="Facebook">
-                        📘 FB
-                      </a>
-                      <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}`} 
-                        target="_blank" className="share-btn" style={{ background: '#0A66C2' }} title="LinkedIn">
-                        💼 IN
-                      </a>
-                      <a href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${video.roteiro?.titulo || video.titulo} - https://youtube.com/watch?v=${video.youtubeId}`)}`} 
-                        target="_blank" className="share-btn" style={{ background: '#25D366' }} title="WhatsApp">
-                        💬 Zap
-                      </a>
-                      <a href={`https://t.me/share/url?url=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}&text=${encodeURIComponent(video.roteiro?.titulo || video.titulo)}`} 
-                        target="_blank" className="share-btn" style={{ background: '#0088CC' }} title="Telegram">
-                        ✈️ TG
-                      </a>
-                      <a href={`https://reddit.com/submit?url=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}&title=${encodeURIComponent(video.roteiro?.titulo || video.titulo)}`} 
-                        target="_blank" className="share-btn" style={{ background: '#FF4500' }} title="Reddit">
-                        🔴 Reddit
-                      </a>
+                    {/* Botão único de compartilhar */}
+                    <div style={{ marginTop: '10px' }}>
+                      <p style={{ fontSize: '12px', color: '#888', marginBottom: '6px', fontWeight: 600 }}>📤 Compartilhar nas redes:</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {[
+                          { name: '🐦 X', bg: '#000', url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(video.roteiro?.titulo || video.titulo)}&url=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}` },
+                          { name: '📘 Facebook', bg: '#1877F2', url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}` },
+                          { name: '📸 Instagram', bg: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)', url: `https://www.instagram.com/`, tip: 'Abra o Instagram e cole o link do vídeo' },
+                          { name: '🎵 TikTok', bg: '#000', url: `https://www.tiktok.com/upload`, tip: 'Abra o TikTok e faça upload do vídeo' },
+                          { name: '💼 LinkedIn', bg: '#0A66C2', url: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}` },
+                          { name: '💬 WhatsApp', bg: '#25D366', url: `https://api.whatsapp.com/send?text=${encodeURIComponent(`${video.roteiro?.titulo || video.titulo} - https://youtube.com/watch?v=${video.youtubeId}`)}` },
+                          { name: '✈️ Telegram', bg: '#0088CC', url: `https://t.me/share/url?url=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}&text=${encodeURIComponent(video.roteiro?.titulo || video.titulo)}` },
+                          { name: '🔴 Reddit', bg: '#FF4500', url: `https://reddit.com/submit?url=${encodeURIComponent(`https://youtube.com/watch?v=${video.youtubeId}`)}&title=${encodeURIComponent(video.roteiro?.titulo || video.titulo)}` },
+                        ].map((s, i) => (
+                          <a key={i} href={s.url} target="_blank" title={s.tip || `Compartilhar no ${s.name}`}
+                            style={{
+                              padding: '5px 10px', borderRadius: '6px', color: '#fff', fontSize: '11px',
+                              fontWeight: 600, textDecoration: 'none', background: s.bg, cursor: 'pointer',
+                              display: 'inline-flex', alignItems: 'center', gap: '3px',
+                            }}>
+                            {s.name}
+                          </a>
+                        ))}
+                      </div>
                     </div>
-
-                    {/* Botão compartilhar em todas as redes conectadas */}
-                    {config.social && Object.values(config.social).some(n => n.connected) && (
-                      <button 
-                        onClick={() => compartilharManual(video.id)}
-                        style={{
-                          marginTop: '8px',
-                          padding: '6px 14px',
-                          background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '6px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          width: '100%'
-                        }}
-                      >
-                        📢 Compartilhar em todas as redes conectadas
-                      </button>
-                    )}
                   </div>
                 )}
 
