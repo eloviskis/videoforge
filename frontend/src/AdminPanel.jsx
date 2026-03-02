@@ -27,6 +27,11 @@ export default function AdminPanel({ onBack }) {
   const [hotmartToken, setHotmartToken] = useState('')
   const [hotmartSaving, setHotmartSaving] = useState(false)
   const [hotmartCopied, setHotmartCopied] = useState(false)
+  // Planos & Preços states
+  const [planosData, setPlanosData] = useState({})
+  const [planosEdits, setPlanosEdits] = useState({})
+  const [planosSaving, setPlanosSaving] = useState(false)
+  const [planosPreview, setPlanosPreview] = useState(false)
   // API Keys states
   const [apiKeys, setApiKeys] = useState([])
   const [apiKeyGrupos, setApiKeyGrupos] = useState({})
@@ -38,6 +43,7 @@ export default function AdminPanel({ onBack }) {
   useEffect(() => { if (tab === 'users') loadUsers() }, [tab])
   useEffect(() => { if (tab === 'settings') loadSettings() }, [tab])
   useEffect(() => { if (tab === 'hotmart') { loadHotmartStatus(); loadHotmartLogs(0); loadSettings() } }, [tab])
+  useEffect(() => { if (tab === 'planos') loadPlanos() }, [tab])
   useEffect(() => { if (tab === 'apikeys') loadApiKeys() }, [tab])
 
   async function loadStats() {
@@ -117,6 +123,38 @@ export default function AdminPanel({ onBack }) {
       setResetPw(p => ({ ...p, [id]: '' }))
     } catch (e) { setMsg('Erro: ' + e.message) }
     setTimeout(() => setMsg(''), 3000)
+  }
+
+  // ── Planos & Preços functions ──
+  async function loadPlanos() {
+    try {
+      const r = await fetch(`${API_URL}/admin/settings`, { headers: hdr() })
+      const data = await r.json()
+      const map = {}
+      data.forEach(s => map[s.chave] = s.valor)
+      setPlanosData(map)
+      setPlanosEdits(map)
+    } catch (e) { setMsg('Erro: ' + e.message) }
+  }
+
+  async function savePlanos() {
+    setPlanosSaving(true)
+    try {
+      const keys = [
+        'preco_mensal', 'preco_anual', 'preco_vitalicio',
+        'limite_trial', 'limite_mensal', 'limite_anual', 'limite_vitalicio',
+        'hotmart_checkout_mensal', 'hotmart_checkout_anual', 'hotmart_checkout_vitalicio'
+      ]
+      const arr = keys.filter(k => planosEdits[k] !== undefined).map(k => ({ chave: k, valor: planosEdits[k] || '' }))
+      const r = await fetch(`${API_URL}/admin/settings`, {
+        method: 'PUT', headers: hdr(), body: JSON.stringify({ settings: arr })
+      })
+      const data = await r.json()
+      if (data.ok) { setMsg('✅ Planos e preços salvos!'); loadPlanos() }
+      else setMsg('Erro: ' + (data.error || 'desconhecido'))
+    } catch (e) { setMsg('Erro: ' + e.message) }
+    setPlanosSaving(false)
+    setTimeout(() => setMsg(''), 4000)
   }
 
   // ── Hotmart functions ──
@@ -244,9 +282,7 @@ export default function AdminPanel({ onBack }) {
   )
 
   const settingsGroups = [
-    { label: '💰 Preços', keys: ['preco_mensal', 'preco_anual', 'preco_vitalicio'] },
-    { label: '📊 Limites de vídeos/mês', keys: ['limite_trial', 'limite_mensal', 'limite_anual', 'limite_vitalicio'] },
-    { label: '📥 Download / App', keys: ['versao_app', 'download_url'] },
+    { label: ' Download / App', keys: ['versao_app', 'download_url'] },
     { label: '⚠️ Avisos', keys: ['aviso_tokens'] },
   ]
 
@@ -268,6 +304,7 @@ export default function AdminPanel({ onBack }) {
         {[
           { id: 'stats', label: '📊 Dashboard' },
           { id: 'users', label: '👥 Usuários' },
+          { id: 'planos', label: '💰 Planos & Preços' },
           { id: 'settings', label: '⚙️ Configurações' },
           { id: 'apikeys', label: '🔑 API Keys' },
           { id: 'hotmart', label: '🔥 Hotmart' },
@@ -410,6 +447,211 @@ export default function AdminPanel({ onBack }) {
             </table>
             {filteredUsers.length === 0 && <p style={{ textAlign: 'center', color: '#64748b', padding: '32px' }}>Nenhum usuário encontrado</p>}
           </div>
+        </div>
+      )}
+
+      {/* ═══ PLANOS & PREÇOS ═══ */}
+      {tab === 'planos' && (
+        <div>
+          {/* Header info */}
+          <div style={{ ...sty.card, borderColor: 'rgba(139,92,246,0.15)', background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(168,85,247,0.04))' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 800 }}>💰 Gerencie seus Planos</h3>
+                <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
+                  Altere preços, limites e links de checkout. As mudanças refletem imediatamente na Landing Page.
+                </p>
+              </div>
+              <button onClick={() => setPlanosPreview(!planosPreview)} style={{ ...sty.btn, background: planosPreview ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.06)', color: planosPreview ? '#c4b5fd' : '#94a3b8' }}>
+                {planosPreview ? '✏️ Editar' : '👁️ Preview'}
+              </button>
+            </div>
+          </div>
+
+          {!planosPreview ? (
+            <>
+              {/* Cards de edição de planos */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                {/* Trial */}
+                <div style={{ ...sty.card, borderColor: 'rgba(100,116,139,0.2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(100,116,139,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>🆓</div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '16px' }}>Trial</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>7 dias grátis</div>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Preço</label>
+                    <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: '#86efac', fontWeight: 700, fontSize: '18px' }}>GRÁTIS</div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>📊 Limite de vídeos/mês</label>
+                    <input type="number" value={planosEdits.limite_trial || ''} onChange={e => setPlanosEdits(p => ({ ...p, limite_trial: e.target.value }))} placeholder="5" style={{ ...sty.input, fontSize: '16px', fontWeight: 600 }} />
+                  </div>
+                </div>
+
+                {/* Mensal */}
+                <div style={{ ...sty.card, borderColor: 'rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(59,130,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>💳</div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '16px' }}>Mensal</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>Cobrança recorrente</div>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>💲 Preço (R$)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#64748b' }}>R$</span>
+                      <input type="number" value={planosEdits.preco_mensal || ''} onChange={e => setPlanosEdits(p => ({ ...p, preco_mensal: e.target.value }))} placeholder="47" style={{ ...sty.input, fontSize: '20px', fontWeight: 700 }} />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>📊 Limite de vídeos/mês</label>
+                    <input type="number" value={planosEdits.limite_mensal || ''} onChange={e => setPlanosEdits(p => ({ ...p, limite_mensal: e.target.value }))} placeholder="50" style={{ ...sty.input, fontSize: '16px', fontWeight: 600 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#3b82f6', display: 'block', marginBottom: '4px', fontWeight: 600 }}>🔗 Link de Checkout Hotmart</label>
+                    <input value={planosEdits.hotmart_checkout_mensal || ''} onChange={e => setPlanosEdits(p => ({ ...p, hotmart_checkout_mensal: e.target.value }))} placeholder="https://pay.hotmart.com/..." style={{ ...sty.input, fontSize: '12px', fontFamily: 'monospace' }} />
+                    {planosEdits.hotmart_checkout_mensal && <div style={{ fontSize: '10px', color: '#22c55e', marginTop: '4px' }}>✅ Link configurado</div>}
+                    {!planosEdits.hotmart_checkout_mensal && <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '4px' }}>⚠️ Sem link — botão redirecionará para login</div>}
+                  </div>
+                </div>
+
+                {/* Anual */}
+                <div style={{ ...sty.card, borderColor: 'rgba(139,92,246,0.3)', background: 'rgba(139,92,246,0.03)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(139,92,246,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>⭐</div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '16px' }}>Anual</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>Economia de ~30%</div>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>💲 Preço (R$)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#64748b' }}>R$</span>
+                      <input type="number" value={planosEdits.preco_anual || ''} onChange={e => setPlanosEdits(p => ({ ...p, preco_anual: e.target.value }))} placeholder="397" style={{ ...sty.input, fontSize: '20px', fontWeight: 700 }} />
+                    </div>
+                    {planosEdits.preco_anual && <div style={{ fontSize: '11px', color: '#a78bfa', marginTop: '4px' }}>≈ R$ {Math.round(parseInt(planosEdits.preco_anual) / 12)}/mês</div>}
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>📊 Limite de vídeos/mês</label>
+                    <input type="number" value={planosEdits.limite_anual || ''} onChange={e => setPlanosEdits(p => ({ ...p, limite_anual: e.target.value }))} placeholder="100" style={{ ...sty.input, fontSize: '16px', fontWeight: 600 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#8b5cf6', display: 'block', marginBottom: '4px', fontWeight: 600 }}>🔗 Link de Checkout Hotmart</label>
+                    <input value={planosEdits.hotmart_checkout_anual || ''} onChange={e => setPlanosEdits(p => ({ ...p, hotmart_checkout_anual: e.target.value }))} placeholder="https://pay.hotmart.com/..." style={{ ...sty.input, fontSize: '12px', fontFamily: 'monospace' }} />
+                    {planosEdits.hotmart_checkout_anual && <div style={{ fontSize: '10px', color: '#22c55e', marginTop: '4px' }}>✅ Link configurado</div>}
+                    {!planosEdits.hotmart_checkout_anual && <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '4px' }}>⚠️ Sem link — botão redirecionará para login</div>}
+                  </div>
+                </div>
+
+                {/* Vitalício */}
+                <div style={{ ...sty.card, borderColor: 'rgba(168,85,247,0.3)', background: 'linear-gradient(135deg, rgba(168,85,247,0.05), rgba(139,92,246,0.08))' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>👑</div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '16px' }}>Vitalício</div>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>Pagamento único</div>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>💲 Preço (R$)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px', fontWeight: 700, color: '#64748b' }}>R$</span>
+                      <input type="number" value={planosEdits.preco_vitalicio || ''} onChange={e => setPlanosEdits(p => ({ ...p, preco_vitalicio: e.target.value }))} placeholder="997" style={{ ...sty.input, fontSize: '20px', fontWeight: 700 }} />
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>📊 Limite de vídeos/mês</label>
+                    <input type="number" value={planosEdits.limite_vitalicio || ''} onChange={e => setPlanosEdits(p => ({ ...p, limite_vitalicio: e.target.value }))} placeholder="9999" style={{ ...sty.input, fontSize: '16px', fontWeight: 600 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: '#a855f7', display: 'block', marginBottom: '4px', fontWeight: 600 }}>🔗 Link de Checkout Hotmart</label>
+                    <input value={planosEdits.hotmart_checkout_vitalicio || ''} onChange={e => setPlanosEdits(p => ({ ...p, hotmart_checkout_vitalicio: e.target.value }))} placeholder="https://pay.hotmart.com/..." style={{ ...sty.input, fontSize: '12px', fontFamily: 'monospace' }} />
+                    {planosEdits.hotmart_checkout_vitalicio && <div style={{ fontSize: '10px', color: '#22c55e', marginTop: '4px' }}>✅ Link configurado</div>}
+                    {!planosEdits.hotmart_checkout_vitalicio && <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '4px' }}>⚠️ Sem link — botão redirecionará para login</div>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Salvar */}
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <button onClick={savePlanos} disabled={planosSaving} style={{
+                  ...sty.btn, background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff',
+                  padding: '14px 36px', fontSize: '16px', opacity: planosSaving ? 0.6 : 1,
+                }}>
+                  {planosSaving ? '⏳ Salvando...' : '💾 Salvar Planos & Preços'}
+                </button>
+              </div>
+
+              {/* Dica */}
+              <div style={{ marginTop: '16px', padding: '14px', borderRadius: '10px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.12)' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#a78bfa' }}>
+                  💡 <strong>Como funciona:</strong> Os preços e limites definidos aqui aparecem na Landing Page automaticamente.
+                  Os links de checkout devem ser criados na Hotmart (Produto → Checkout → Pegar link). Cole o link de cada plano acima.
+                  Quando um visitante clicar em "Assinar", será redirecionado para o checkout da Hotmart.
+                </p>
+              </div>
+            </>
+          ) : (
+            /* Preview dos planos como aparecem na Landing */
+            <div>
+              <div style={{ ...sty.card, borderColor: 'rgba(139,92,246,0.1)' }}>
+                <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 700 }}>👁️ Preview — como aparece na Landing Page</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
+                  {[
+                    { nome: 'Trial', preco: 'Grátis', periodo: '7 dias', destaque: false, items: [`${planosEdits.limite_trial || 5} vídeos/mês`, 'Roteiro com IA', 'Narração automática', 'Renderização 1080p'] },
+                    { nome: 'Mensal', preco: `R$ ${planosEdits.preco_mensal || '47'}`, periodo: '/mês', destaque: true, items: [`${planosEdits.limite_mensal || 50} vídeos/mês`, 'Tudo do Trial', 'Notícias automáticas', 'Multi-plataforma'] },
+                    { nome: 'Anual', preco: `R$ ${planosEdits.preco_anual || '397'}`, periodo: `/ano (~R$ ${Math.round((parseInt(planosEdits.preco_anual) || 397) / 12)}/mês)`, destaque: false, items: [`${planosEdits.limite_anual || 100} vídeos/mês`, 'Tudo do Mensal', '30% de economia'] },
+                    { nome: 'Vitalício', preco: `R$ ${planosEdits.preco_vitalicio || '997'}`, periodo: 'pagamento único', destaque: false, items: [`${planosEdits.limite_vitalicio || 9999} vídeos/mês`, 'Tudo incluído', 'Para sempre'] },
+                  ].map(p => (
+                    <div key={p.nome} style={{
+                      background: p.destaque ? 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(168,85,247,0.08))' : 'rgba(255,255,255,0.03)',
+                      border: p.destaque ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.06)',
+                      borderRadius: '14px', padding: '24px', position: 'relative', overflow: 'hidden',
+                    }}>
+                      {p.destaque && <div style={{ position: 'absolute', top: '10px', right: '-26px', background: '#8b5cf6', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '3px 28px', transform: 'rotate(45deg)' }}>POPULAR</div>}
+                      <h4 style={{ fontSize: '16px', margin: '0 0 4px', color: '#e2e8f0' }}>{p.nome}</h4>
+                      <div style={{ fontSize: '28px', fontWeight: 800, color: '#fff', margin: '6px 0' }}>
+                        {p.preco}
+                        <span style={{ fontSize: '13px', fontWeight: 400, color: '#64748b' }}> {p.periodo}</span>
+                      </div>
+                      <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 0' }}>
+                        {p.items.map(item => (
+                          <li key={item} style={{ fontSize: '12px', color: '#94a3b8', padding: '4px 0', display: 'flex', gap: '6px' }}>
+                            <span style={{ color: '#a855f7' }}>✓</span> {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Status dos links */}
+              <div style={sty.card}>
+                <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>🔗 Status dos Links de Checkout</h3>
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {[
+                    { label: 'Mensal', key: 'hotmart_checkout_mensal', color: '#3b82f6' },
+                    { label: 'Anual', key: 'hotmart_checkout_anual', color: '#8b5cf6' },
+                    { label: 'Vitalício', key: 'hotmart_checkout_vitalicio', color: '#a855f7' },
+                  ].map(l => (
+                    <div key={l.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 14px', borderRadius: '8px', background: 'rgba(255,255,255,0.02)' }}>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: planosEdits[l.key] ? '#22c55e' : '#ef4444' }} />
+                      <span style={{ fontWeight: 600, fontSize: '13px', color: l.color }}>{l.label}</span>
+                      <span style={{ flex: 1, fontSize: '12px', color: '#64748b', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {planosEdits[l.key] || '— Não configurado'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -564,9 +806,9 @@ export default function AdminPanel({ onBack }) {
                 { key: 'hottok', label: 'Configurar Hottok (token de segurança)', desc: 'Copie o Hottok em Hotmart → Ferramentas → Webhooks' },
                 { key: 'webhook_url', label: 'Webhook URL configurado', desc: 'Cole a URL do webhook na Hotmart (copiável abaixo)' },
                 { key: 'produto_id', label: 'ID do Produto configurado', desc: 'Opcional: para validar eventos de um produto específico' },
-                { key: 'checkout_mensal', label: 'URL de checkout mensal', desc: 'Link de pagamento para o plano mensal' },
-                { key: 'checkout_anual', label: 'URL de checkout anual', desc: 'Link de pagamento para o plano anual' },
-                { key: 'checkout_vitalicio', label: 'URL de checkout vitalício', desc: 'Link de pagamento para o plano vitalício' },
+                { key: 'checkout_mensal', label: 'URL de checkout mensal', desc: 'Configure na aba 💰 Planos & Preços' },
+                { key: 'checkout_anual', label: 'URL de checkout anual', desc: 'Configure na aba 💰 Planos & Preços' },
+                { key: 'checkout_vitalicio', label: 'URL de checkout vitalício', desc: 'Configure na aba 💰 Planos & Preços' },
               ].map((step, i) => {
                 const done = hotmartStatus?.checklist?.[step.key]
                 return (
@@ -638,44 +880,32 @@ export default function AdminPanel({ onBack }) {
             </p>
           </div>
 
-          {/* URLs de Checkout */}
+          {/* ID do Produto (simplificado) */}
           <div style={sty.card}>
-            <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>🛒 URLs de Checkout por Plano</h3>
+            <h3 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 700 }}>🆔 ID do Produto Hotmart</h3>
             <p style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '12px' }}>
-              Configure os links de pagamento da Hotmart para cada plano. Serão exibidos na Landing Page.
+              Opcional: para validar que os webhooks são do seu produto específico.
             </p>
-            <div style={{ display: 'grid', gap: '12px' }}>
-              {[
-                { key: 'hotmart_checkout_mensal', label: '💳 Checkout Mensal', color: '#3b82f6' },
-                { key: 'hotmart_checkout_anual', label: '⭐ Checkout Anual', color: '#8b5cf6' },
-                { key: 'hotmart_checkout_vitalicio', label: '👑 Checkout Vitalício', color: '#8b5cf6' },
-              ].map(plan => (
-                <div key={plan.key}>
-                  <label style={{ fontSize: '12px', color: plan.color, fontWeight: 600, display: 'block', marginBottom: '4px' }}>{plan.label}</label>
-                  <input
-                    value={editSettings[plan.key] || ''}
-                    onChange={e => setEditSettings(p => ({ ...p, [plan.key]: e.target.value }))}
-                    placeholder="https://pay.hotmart.com/..."
-                    style={sty.input}
-                  />
-                </div>
-              ))}
-              <div>
-                <label style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, display: 'block', marginBottom: '4px' }}>🆔 ID do Produto (opcional)</label>
-                <input
-                  value={editSettings['hotmart_produto_id'] || ''}
-                  onChange={e => setEditSettings(p => ({ ...p, hotmart_produto_id: e.target.value }))}
-                  placeholder="Ex: 12345678"
-                  style={{ ...sty.input, maxWidth: '300px' }}
-                />
-              </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                value={editSettings['hotmart_produto_id'] || ''}
+                onChange={e => setEditSettings(p => ({ ...p, hotmart_produto_id: e.target.value }))}
+                placeholder="Ex: 12345678"
+                style={{ ...sty.input, maxWidth: '300px' }}
+              />
+              <button onClick={() => {
+                const arr = [{ chave: 'hotmart_produto_id', valor: editSettings['hotmart_produto_id'] || '' }]
+                fetch(`${API_URL}/admin/settings`, { method: 'PUT', headers: hdr(), body: JSON.stringify({ settings: arr }) })
+                  .then(r => r.json()).then(d => { if (d.ok) setMsg('🆔 Produto salvo!'); else setMsg('Erro') })
+                  .catch(e => setMsg('Erro: ' + e.message))
+                setTimeout(() => setMsg(''), 3000)
+              }} style={{ ...sty.btn, background: 'rgba(139,92,246,0.15)', color: '#c4b5fd', whiteSpace: 'nowrap' }}>
+                💾 Salvar
+              </button>
             </div>
-            <button onClick={saveHotmartCheckoutUrls} disabled={hotmartSaving} style={{
-              ...sty.btn, background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#fff',
-              padding: '10px 24px', fontSize: '14px', marginTop: '16px', opacity: hotmartSaving ? 0.6 : 1,
-            }}>
-              {hotmartSaving ? 'Salvando...' : '💾 Salvar URLs de Checkout'}
-            </button>
+            <p style={{ color: '#64748b', fontSize: '11px', marginTop: '6px' }}>
+              💡 Os links de checkout estão na aba <strong>"💰 Planos & Preços"</strong>
+            </p>
           </div>
 
           {/* Email de Boas-Vindas */}

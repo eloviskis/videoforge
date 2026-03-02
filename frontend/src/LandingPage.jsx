@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 
 export default function LandingPage({ onGoLogin }) {
-  const HOTMART_URL = import.meta.env.VITE_HOTMART_URL || '#'
-
   const API_URL = import.meta.env.VITE_API_URL
     ? `${import.meta.env.VITE_API_URL}/api`
     : (window.location.port === '3000' ? 'http://localhost:3001/api' : `${window.location.origin}/api`)
@@ -48,7 +46,7 @@ export default function LandingPage({ onGoLogin }) {
       destaque: true,
       items: [`${precos.limite_mensal || 50} vídeos/mês`, 'Tudo do Trial', 'Notícias automáticas', 'Cortes de vídeo', 'Multi-plataforma', 'Download app Windows', 'Suporte prioritário'],
       cta: 'Assinar agora',
-      link: HOTMART_URL,
+      link: precos.hotmart_checkout_mensal || null,
     },
     {
       nome: 'Anual',
@@ -57,7 +55,17 @@ export default function LandingPage({ onGoLogin }) {
       destaque: false,
       items: [`${precos.limite_anual || 100} vídeos/mês`, 'Tudo do Mensal', '30% de economia', 'Atualizações antecipadas'],
       cta: 'Assinar anual',
-      link: HOTMART_URL,
+      link: precos.hotmart_checkout_anual || null,
+    },
+    {
+      nome: 'Vitalício',
+      preco: `R$ ${precos.preco_vitalicio || '997'}`,
+      periodo: 'pagamento único',
+      destaque: false,
+      items: [`${precos.limite_vitalicio || 9999} vídeos/mês`, 'Tudo do Anual', 'Acesso para sempre', 'Sem mensalidade', 'Atualizações vitalícias'],
+      cta: 'Comprar vitalício',
+      link: precos.hotmart_checkout_vitalicio || null,
+      badge: '👑',
     },
   ]
 
@@ -221,19 +229,21 @@ export default function LandingPage({ onGoLogin }) {
       </section>
 
       {/* ═══ PREÇOS ═══ */}
-      <section id="precos" style={{ padding: '80px 24px', maxWidth: '1000px', margin: '0 auto' }}>
+      <section id="precos" style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto' }}>
         <h2 style={{ textAlign: 'center', fontSize: '36px', fontWeight: 800, marginBottom: '12px' }}>
           Planos e preços
         </h2>
         <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '48px', fontSize: '16px' }}>
           Comece grátis. Escale quando quiser.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '20px', alignItems: 'start' }}>
           {planos.map(p => (
             <div key={p.nome} style={{
-              background: p.destaque ? 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(168,85,247,0.08))' : 'rgba(255,255,255,0.03)',
-              border: p.destaque ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.06)',
-              borderRadius: '16px', padding: '32px',
+              background: p.badge === '👑'
+                ? 'linear-gradient(135deg, rgba(168,85,247,0.1), rgba(139,92,246,0.12))'
+                : p.destaque ? 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(168,85,247,0.08))' : 'rgba(255,255,255,0.03)',
+              border: p.badge === '👑' ? '2px solid #a855f7' : p.destaque ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.06)',
+              borderRadius: '16px', padding: '28px',
               position: 'relative', overflow: 'hidden',
             }}>
               {p.destaque && (
@@ -243,14 +253,23 @@ export default function LandingPage({ onGoLogin }) {
                   padding: '4px 32px', transform: 'rotate(45deg)',
                 }}>POPULAR</div>
               )}
-              <h3 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px', color: '#e2e8f0' }}>{p.nome}</h3>
-              <div style={{ fontSize: '40px', fontWeight: 800, margin: '8px 0', color: '#fff' }}>
+              {p.badge === '👑' && (
+                <div style={{
+                  position: 'absolute', top: '12px', right: '-28px',
+                  background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#fff', fontSize: '11px', fontWeight: 700,
+                  padding: '4px 32px', transform: 'rotate(45deg)',
+                }}>MELHOR</div>
+              )}
+              <h3 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px', color: '#e2e8f0' }}>
+                {p.badge ? `${p.badge} ` : ''}{p.nome}
+              </h3>
+              <div style={{ fontSize: '36px', fontWeight: 800, margin: '8px 0', color: '#fff' }}>
                 {p.preco}
-                <span style={{ fontSize: '16px', fontWeight: 400, color: '#64748b' }}>{p.periodo}</span>
+                <span style={{ fontSize: '14px', fontWeight: 400, color: '#64748b' }}> {p.periodo}</span>
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: '20px 0' }}>
                 {p.items.map(item => (
-                  <li key={item} style={{ fontSize: '14px', color: '#94a3b8', padding: '6px 0', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <li key={item} style={{ fontSize: '13px', color: '#94a3b8', padding: '5px 0', display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <span style={{ color: '#a855f7' }}>✓</span> {item}
                   </li>
                 ))}
@@ -259,9 +278,11 @@ export default function LandingPage({ onGoLogin }) {
                 <a href={p.link} target="_blank" rel="noopener noreferrer" style={{
                   display: 'block', textAlign: 'center', padding: '13px',
                   borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '15px',
-                  background: p.destaque ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'rgba(255,255,255,0.08)',
-                  color: '#fff', border: p.destaque ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: p.destaque ? '0 4px 15px rgba(139,92,246,0.5)' : 'none',
+                  background: p.badge === '👑'
+                    ? 'linear-gradient(135deg, #f59e0b, #ef4444)'
+                    : p.destaque ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'rgba(255,255,255,0.08)',
+                  color: '#fff', border: (p.destaque || p.badge) ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: p.destaque ? '0 4px 15px rgba(139,92,246,0.5)' : p.badge === '👑' ? '0 4px 15px rgba(245,158,11,0.4)' : 'none',
                 }}>{p.cta}</a>
               ) : (
                 <button onClick={onGoLogin} style={{
