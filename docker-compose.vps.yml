@@ -19,9 +19,13 @@ services:
     restart: always
     env_file:
       - ./backend/.env.production
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
     volumes:
       - ./media:/media
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./backend/.env.production:/app/.env:ro
     depends_on:
       postgres:
         condition: service_healthy
