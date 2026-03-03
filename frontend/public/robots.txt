@@ -1,0 +1,23 @@
+# VideoForge
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /n8n/
+Disallow: /login
+
+# Sitemaps
+Sitemap: https://videoforge.tech/sitemap.xml
+
+# Crawl-delay
+User-agent: *
+Crawl-delay: 1
+
+# Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1

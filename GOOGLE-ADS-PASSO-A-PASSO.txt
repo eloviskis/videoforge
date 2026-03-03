@@ -1,0 +1,126 @@
+=========================================
+  GOOGLE ADS - PASSO A PASSO
+  Campanha VideoForge - R$ 100
+=========================================
+
+1. ACESSAR O GOOGLE ADS
+   - Vá em: https://ads.google.com
+   - Faça login com sua conta Google
+   - Se for a primeira vez, clique "Começar agora"
+   - Se pedir modo "Smart" ou "Expert", escolha "Expert" (mais controle)
+
+2. CRIAR NOVA CAMPANHA
+   - Clique "+ Nova campanha"
+   - Objetivo: "Tráfego do site"
+   - Tipo de campanha: "Pesquisa" (aparece nos resultados do Google)
+   - URL do site: https://videoforge.tech
+   - Nome da campanha: "VideoForge - Vitalício R$59"
+
+3. CONFIGURAR ORÇAMENTO
+   - Orçamento diário: R$ 10,00 (vai durar ~10 dias com R$ 100)
+   - Estratégia de lances: "Maximizar cliques"
+   - Redes: Marque "Rede de Pesquisa do Google"
+   - Desmarque: "Rede de Display do Google" (gasta sem converter)
+
+4. SEGMENTAÇÃO
+   - Localização: Brasil
+   - Idioma: Português
+   - Público: Deixe aberto (as palavras-chave já filtram)
+
+5. CRIAR GRUPO DE ANÚNCIOS
+   - Nome: "Vídeos com IA"
+   - Palavras-chave (copie e cole todas):
+
+     criar vídeo com inteligência artificial
+     gerar vídeo automático
+     automação de vídeos
+     criador de vídeos ia
+     ferramenta de vídeo com ia
+     gerar vídeo para youtube
+     criar vídeo para tiktok automaticamente
+     software criar vídeos
+     fazer vídeo com ia
+     criar vídeo automatizado
+     plataforma de vídeos ia
+     gerador de vídeo online
+     vídeo ia automático
+     criar conteúdo para youtube com ia
+     automatizar criação de vídeos
+
+   DICA: Use correspondência de frase colocando entre aspas:
+     "criar vídeo com ia"
+     "gerador de vídeo"
+     "automação de vídeos"
+
+6. CRIAR O ANÚNCIO
+   
+   Títulos (máx 30 caracteres cada):
+   - Título 1: VideoForge - Crie Vídeos com IA
+   - Título 2: Automação Completa de Vídeos
+   - Título 3: Acesso Vitalício por R$ 59
+   - Título 4: Crie Vídeos em Minutos
+   - Título 5: Sem Edição Manual
+
+   Descrições (máx 90 caracteres cada):
+   - Descrição 1: Gere roteiros, narração e visuais automaticamente. Publique no YouTube, TikTok e mais. Pague uma vez.
+   - Descrição 2: IA cria seus vídeos do zero. Sem edição manual. Acesso vitalício. Comece agora!
+
+   URL final: https://videoforge.tech
+   Caminho de exibição: videoforge.tech/criar-videos
+
+7. EXTENSÕES DO ANÚNCIO (muito importante!)
+   Adicione estas extensões para melhorar CTR:
+   
+   a) Sitelinks:
+      - "Preços" → https://videoforge.tech/#precos
+      - "Política de Privacidade" → https://videoforge.tech/privacy
+   
+   b) Frase de destaque:
+      - "Acesso Vitalício"
+      - "Sem Mensalidade"
+      - "YouTube + TikTok"
+      - "Narração Automática"
+   
+   c) Snippets estruturados:
+      - Tipo: "Tipos"
+      - Valores: "Vídeos para YouTube, TikTok, Twitter, Instagram"
+
+8. PAGAMENTO
+   - Adicione R$ 100 como crédito
+   - Método: Cartão de crédito, débito ou boleto
+   - País de faturamento: Brasil
+   - Moeda: BRL (Real)
+
+9. REVISAR E PUBLICAR
+   - Revise todos os dados
+   - Clique "Publicar campanha"
+   - O anúncio entrará em revisão (leva 1-2 dias úteis)
+
+=========================================
+  DICAS DE OTIMIZAÇÃO
+=========================================
+
+- Após 3-5 dias, verifique quais palavras-chave geram cliques
+- Pause as que não convertem (gastam sem resultado)
+- Aumente o lance nas que têm bom CTR (taxa de cliques)
+- Adicione palavras-chave negativas para evitar cliques ruins:
+    -grátis
+    -free
+    -download
+    -pirata
+    -crack
+
+- Se o CTR estiver abaixo de 2%, melhore os títulos
+- Se o custo por clique estiver alto (>R$ 3), use mais palavras long-tail
+
+=========================================
+  ACOMPANHAMENTO COM GOOGLE ANALYTICS
+=========================================
+
+O Google Analytics (G-6TEHSNBW3J) já está configurado no site.
+Para ver os resultados:
+1. Vá em: https://analytics.google.com
+2. Relatórios → Aquisição → Tráfego
+3. Filtre por "google / cpc" para ver o tráfego pago
+4. No Google Ads, vincule a conta do Analytics:
+   - Google Ads → Ferramentas → Contas vinculadas → Google Analytics

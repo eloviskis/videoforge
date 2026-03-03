@@ -1,0 +1,24 @@
+{
+  "name": "VideoForge",
+  "short_name": "VideoForge",
+  "description": "Crie vídeos prontos para o YouTube em minutos com IA. Roteiro, narração, imagens e renderização automática.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#8b5cf6",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64",
+      "type": "image/x-icon"
+    }
+  ]
+}

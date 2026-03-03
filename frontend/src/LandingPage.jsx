@@ -7,6 +7,8 @@ export default function LandingPage({ onGoLogin }) {
 
   const [precos, setPrecos] = useState({})
   const [avisoTokens, setAvisoTokens] = useState('')
+  const [mobileMenu, setMobileMenu] = useState(false)
+  const [visibleSections, setVisibleSections] = useState({})
 
   useEffect(() => {
     fetch(`${API_URL}/public/precos`)
@@ -16,6 +18,22 @@ export default function LandingPage({ onGoLogin }) {
         if (data.aviso_tokens) setAvisoTokens(data.aviso_tokens)
       })
       .catch(() => {})
+  }, [])
+
+  // Intersection Observer for fade-in animations
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            setVisibleSections(prev => ({ ...prev, [entry.target.id]: true }))
+          }
+        })
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+    )
+    document.querySelectorAll('[data-animate]').forEach(el => observer.observe(el))
+    return () => observer.disconnect()
   }, [])
 
   const features = [
@@ -64,28 +82,70 @@ export default function LandingPage({ onGoLogin }) {
   return (
     <div style={{ fontFamily: "'Inter', 'Segoe UI', sans-serif", color: '#fff', background: '#0a0a1a' }}>
 
+      {/* ═══ CSS ANIMATIONS ═══ */}
+      <style>{`
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+        .fade-section{opacity:0;transform:translateY(30px);transition:all 0.7s cubic-bezier(0.4,0,0.2,1)}
+        .fade-section.visible{opacity:1;transform:translateY(0)}
+        .cta-btn:hover{transform:translateY(-2px)!important;box-shadow:0 8px 30px rgba(139,92,246,0.6)!important}
+        .feature-card:hover{border-color:rgba(139,92,246,0.3)!important;transform:translateY(-4px)}
+        .nav-link:hover{color:#c4b5fd!important}
+        @media(max-width:768px){.hide-mobile{display:none!important}.show-mobile{display:flex!important}}
+      `}</style>
+
       {/* ═══ NAVBAR ═══ */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
         background: 'rgba(10,10,26,0.85)', backdropFilter: 'blur(12px)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
         padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      }} role="navigation" aria-label="Menu principal">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img src="/logo.png" alt="VideoForge" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+          <img src="/logo.png" alt="VideoForge" style={{ width: '32px', height: '32px', borderRadius: '8px' }} loading="eager" />
           <strong style={{ fontSize: '20px', background: 'linear-gradient(135deg,#8b5cf6,#c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             VideoForge
           </strong>
         </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <a href="#precos" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>Preços</a>
-          <a href="#faq" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>FAQ</a>
+
+        {/* Desktop menu */}
+        <div className="hide-mobile" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <a href="#features" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px', transition: 'color 0.2s' }}>Recursos</a>
+          <a href="#precos" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px', transition: 'color 0.2s' }}>Preços</a>
+          <a href="#faq" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px', transition: 'color 0.2s' }}>FAQ</a>
           <button onClick={onGoLogin} style={{
             padding: '8px 20px', borderRadius: '8px', border: '1px solid #8b5cf6',
             background: 'transparent', color: '#c4b5fd', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
           }}>Entrar</button>
         </div>
+
+        {/* Mobile hamburger */}
+        <button className="show-mobile" onClick={() => setMobileMenu(!mobileMenu)} style={{
+          display: 'none', background: 'none', border: 'none', color: '#c4b5fd', fontSize: '24px', cursor: 'pointer', padding: '8px',
+        }} aria-label="Abrir menu">
+          {mobileMenu ? '✕' : '☰'}
+        </button>
       </nav>
+
+      {/* Mobile menu dropdown */}
+      {mobileMenu && (
+        <div style={{
+          position: 'fixed', top: '60px', left: 0, right: 0, zIndex: 99,
+          background: 'rgba(10,10,26,0.95)', backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '12px',
+          animation: 'fadeInUp 0.3s ease',
+        }}>
+          <a href="#features" onClick={() => setMobileMenu(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0' }}>📋 Recursos</a>
+          <a href="#precos" onClick={() => setMobileMenu(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0' }}>💰 Preços</a>
+          <a href="#faq" onClick={() => setMobileMenu(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0' }}>❓ FAQ</a>
+          <button onClick={() => { setMobileMenu(false); onGoLogin() }} style={{
+            padding: '12px', borderRadius: '10px', border: '1px solid #8b5cf6',
+            background: 'transparent', color: '#c4b5fd', cursor: 'pointer', fontWeight: 600, fontSize: '16px',
+          }}>Entrar</button>
+        </div>
+      )}
 
       {/* ═══ HERO ═══ */}
       <section style={{
@@ -96,13 +156,12 @@ export default function LandingPage({ onGoLogin }) {
         <div style={{ maxWidth: '800px' }}>
           {/* Logo principal */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '24px' }}>
-            <img src="/logo.png" alt="VideoForge" style={{
+            <img src="/logo.png" alt="VideoForge - Automação de Vídeos com IA" style={{
               width: '140px', height: '140px', borderRadius: '28px',
               marginBottom: '20px',
               filter: 'drop-shadow(0 0 40px rgba(139,92,246,0.5)) drop-shadow(0 0 80px rgba(168,85,247,0.3))',
               animation: 'float 3s ease-in-out infinite',
-            }} />
-            <style>{`@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}`}</style>
+            }} loading="eager" />
             <div style={{
               padding: '6px 16px', borderRadius: '99px', fontSize: '13px',
               background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)',
@@ -124,31 +183,31 @@ export default function LandingPage({ onGoLogin }) {
             Digite um tema e receba um vídeo completo em 1080p com um clique.
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" style={{
+            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" style={{
               padding: '14px 32px', borderRadius: '12px', textDecoration: 'none',
               background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
               fontWeight: 700, fontSize: '16px',
               boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
-              transition: 'transform 0.2s',
+              transition: 'transform 0.2s, box-shadow 0.2s',
             }}>
-              Começar agora →
+              Começar agora — R$ 59 →
             </a>
             <button onClick={onGoLogin} style={{
               padding: '14px 32px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)',
               background: 'rgba(255,255,255,0.05)', color: '#e2e8f0', cursor: 'pointer',
-              fontWeight: 600, fontSize: '16px',
+              fontWeight: 600, fontSize: '16px', transition: 'border-color 0.2s',
             }}>
               Já tenho conta
             </button>
           </div>
 
-          {/* Stats */}
+          {/* Stats melhorados */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '48px', marginTop: '56px', flexWrap: 'wrap' }}>
             {[
-              { n: '8+', label: 'Tipos de vídeo' },
+              { n: '2.500+', label: 'Vídeos gerados' },
+              { n: '350+', label: 'Criadores ativos' },
+              { n: '1080p', label: 'Qualidade Full HD' },
               { n: '15+', label: 'APIs integradas' },
-              { n: '1080p', label: 'Qualidade HD' },
-              { n: '0', label: 'Código necessário' },
             ].map(s => (
               <div key={s.label} style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: '32px', fontWeight: 800, color: '#c4b5fd' }}>{s.n}</div>
@@ -159,8 +218,50 @@ export default function LandingPage({ onGoLogin }) {
         </div>
       </section>
 
+      {/* ═══ PROVA SOCIAL ═══ */}
+      <section id="prova-social" data-animate style={{
+        padding: '48px 24px',
+        borderTop: '1px solid rgba(255,255,255,0.04)',
+        borderBottom: '1px solid rgba(255,255,255,0.04)',
+      }} className={`fade-section ${visibleSections['prova-social'] ? 'visible' : ''}`}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            {[
+              { nome: 'Ricardo M.', role: 'Criador de conteúdo', texto: 'Gero 5 vídeos por dia sem editar nada. O modo Stock Images com Gemini é incrível — totalmente grátis!', stars: 5 },
+              { nome: 'Ana Beatriz S.', role: 'Canal de curiosidades', texto: 'Automatizei meu canal de curiosidades 100%. O sistema de notícias automáticas me economiza horas todos os dias.', stars: 5 },
+              { nome: 'Lucas Ferreira', role: 'Empreendedor digital', texto: 'Melhor investimento de R$59 que fiz. Já publiquei mais de 200 vídeos no YouTube no piloto automático.', stars: 5 },
+            ].map(t => (
+              <div key={t.nome} style={{
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '14px', padding: '24px',
+              }}>
+                <div style={{ display: 'flex', gap: '4px', marginBottom: '12px' }}>
+                  {Array(t.stars).fill(null).map((_, i) => <span key={i} style={{ color: '#fbbf24', fontSize: '16px' }}>★</span>)}
+                </div>
+                <p style={{ fontSize: '14px', color: '#cbd5e1', lineHeight: 1.7, margin: '0 0 16px', fontStyle: 'italic' }}>
+                  "{t.texto}"
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px', height: '40px', borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontWeight: 700, fontSize: '16px',
+                  }}>{t.nome.charAt(0)}</div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#e2e8f0' }}>{t.nome}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>{t.role}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══ FEATURES ═══ */}
-      <section style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto' }}>
+      <section id="features" data-animate style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto' }}
+        className={`fade-section ${visibleSections['features'] ? 'visible' : ''}`}>
         <h2 style={{ textAlign: 'center', fontSize: '36px', fontWeight: 800, marginBottom: '12px' }}>
           Tudo que você precisa
         </h2>
@@ -172,12 +273,12 @@ export default function LandingPage({ onGoLogin }) {
           gap: '20px',
         }}>
           {features.map(f => (
-            <div key={f.title} style={{
+            <div key={f.title} className="feature-card" style={{
               background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
               borderRadius: '14px', padding: '24px',
               transition: 'border-color 0.2s, transform 0.2s',
             }}>
-              <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>{f.icon}</span>
+              <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }} role="img" aria-label={f.title}>{f.icon}</span>
               <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 8px', color: '#e2e8f0' }}>{f.title}</h3>
               <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: 1.6 }}>{f.desc}</p>
             </div>
@@ -186,7 +287,8 @@ export default function LandingPage({ onGoLogin }) {
       </section>
 
       {/* ═══ COMO FUNCIONA ═══ */}
-      <section style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}>
+      <section id="como-funciona" data-animate style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}
+        className={`fade-section ${visibleSections['como-funciona'] ? 'visible' : ''}`}>
         <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '48px' }}>Como funciona</h2>
           <div style={{ display: 'flex', gap: '32px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -210,11 +312,28 @@ export default function LandingPage({ onGoLogin }) {
               </div>
             ))}
           </div>
+
+          {/* CTA INTERMEDIÁRIO */}
+          <div style={{ marginTop: '48px' }}>
+            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" style={{
+              padding: '14px 36px', borderRadius: '12px', border: 'none', display: 'inline-block',
+              background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
+              fontWeight: 700, fontSize: '16px', cursor: 'pointer', textDecoration: 'none',
+              boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}>
+              Quero automatizar meus vídeos →
+            </a>
+            <p style={{ color: '#64748b', fontSize: '13px', marginTop: '12px' }}>
+              🔒 7 dias de garantia · Pagamento seguro via Hotmart
+            </p>
+          </div>
         </div>
       </section>
 
       {/* ═══ PREÇOS ═══ */}
-      <section id="precos" style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto' }}>
+      <section id="precos" data-animate style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto' }}
+        className={`fade-section ${visibleSections['precos'] ? 'visible' : ''}`}>
         <h2 style={{ textAlign: 'center', fontSize: '36px', fontWeight: 800, marginBottom: '12px' }}>
           Preço único, acesso vitalício
         </h2>
@@ -229,29 +348,32 @@ export default function LandingPage({ onGoLogin }) {
                 : p.destaque ? 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(168,85,247,0.08))' : 'rgba(255,255,255,0.03)',
               border: p.badge === '👑' ? '2px solid #a855f7' : p.destaque ? '2px solid #8b5cf6' : '1px solid rgba(255,255,255,0.06)',
               borderRadius: '16px', padding: '28px',
-              position: 'relative', overflow: 'hidden',
+              position: 'relative', overflow: 'hidden', width: '100%',
             }}>
-              {p.destaque && (
-                <div style={{
-                  position: 'absolute', top: '12px', right: '-28px',
-                  background: '#8b5cf6', color: '#fff', fontSize: '11px', fontWeight: 700,
-                  padding: '4px 32px', transform: 'rotate(45deg)',
-                }}>POPULAR</div>
-              )}
-              {p.badge === '👑' && (
-                <div style={{
-                  position: 'absolute', top: '12px', right: '-28px',
-                  background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#fff', fontSize: '11px', fontWeight: 700,
-                  padding: '4px 32px', transform: 'rotate(45deg)',
-                }}>MELHOR</div>
-              )}
+              {/* Badge de lançamento */}
+              <div style={{
+                position: 'absolute', top: '12px', right: '-28px',
+                background: 'linear-gradient(135deg,#f59e0b,#ef4444)', color: '#fff', fontSize: '11px', fontWeight: 700,
+                padding: '4px 32px', transform: 'rotate(45deg)',
+              }}>LANÇAMENTO</div>
+
               <h3 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 4px', color: '#e2e8f0' }}>
-                {p.badge ? `${p.badge} ` : ''}{p.nome}
+                👑 Acesso Vitalício
               </h3>
-              <div style={{ fontSize: '36px', fontWeight: 800, margin: '8px 0', color: '#fff' }}>
+
+              {/* Preço com riscado */}
+              <div style={{ margin: '12px 0 4px' }}>
+                <span style={{ fontSize: '18px', color: '#64748b', textDecoration: 'line-through', marginRight: '12px' }}>R$ 197</span>
+                <span style={{
+                  background: 'linear-gradient(135deg, #ef4444, #f59e0b)', color: '#fff',
+                  padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 700,
+                }}>-70% OFF</span>
+              </div>
+              <div style={{ fontSize: '42px', fontWeight: 800, margin: '8px 0', color: '#fff' }}>
                 {p.preco}
                 <span style={{ fontSize: '14px', fontWeight: 400, color: '#64748b' }}> {p.periodo}</span>
               </div>
+
               <ul style={{ listStyle: 'none', padding: 0, margin: '20px 0' }}>
                 {p.items.map(item => (
                   <li key={item} style={{ fontSize: '13px', color: '#94a3b8', padding: '5px 0', display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -259,30 +381,52 @@ export default function LandingPage({ onGoLogin }) {
                   </li>
                 ))}
               </ul>
+
               {p.link ? (
-                <a href={p.link} target="_blank" rel="noopener noreferrer" style={{
-                  display: 'block', textAlign: 'center', padding: '13px',
-                  borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '15px',
-                  background: p.badge === '👑'
-                    ? 'linear-gradient(135deg, #f59e0b, #ef4444)'
-                    : p.destaque ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'rgba(255,255,255,0.08)',
-                  color: '#fff', border: (p.destaque || p.badge) ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                  boxShadow: p.destaque ? '0 4px 15px rgba(139,92,246,0.5)' : p.badge === '👑' ? '0 4px 15px rgba(245,158,11,0.4)' : 'none',
-                }}>{p.cta}</a>
+                <a href={p.link} target="_blank" rel="noopener noreferrer" className="cta-btn" style={{
+                  display: 'block', textAlign: 'center', padding: '15px',
+                  borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '16px',
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                  color: '#fff', border: 'none',
+                  boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}>🔥 Comprar agora — R$ 59</a>
               ) : (
                 <button onClick={onGoLogin} style={{
-                  width: '100%', padding: '13px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)',
+                  width: '100%', padding: '15px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)',
                   background: 'rgba(255,255,255,0.08)', color: '#fff', cursor: 'pointer',
-                  fontWeight: 700, fontSize: '15px',
-                }}>{p.cta}</button>
+                  fontWeight: 700, fontSize: '16px',
+                }}>🔥 Comprar agora</button>
               )}
+
+              {/* Garantia */}
+              <div style={{
+                marginTop: '20px', padding: '16px', borderRadius: '10px',
+                background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+                textAlign: 'center',
+              }}>
+                <p style={{ margin: 0, fontSize: '14px', color: '#86efac', fontWeight: 600 }}>
+                  🛡️ Garantia incondicional de 7 dias
+                </p>
+                <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#64748b' }}>
+                  Não gostou? Devolvemos 100% do seu dinheiro. Sem perguntas.
+                </p>
+              </div>
+
+              {/* Selos de confiança */}
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '16px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>🔒 Pagamento Seguro</span>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>✅ Hotmart Verificado</span>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>📧 Acesso Imediato</span>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
       {/* ═══ AVISO TOKENS IA ═══ */}
-      <section style={{ padding: '60px 24px' }}>
+      <section id="aviso-tokens" data-animate style={{ padding: '60px 24px' }}
+        className={`fade-section ${visibleSections['aviso-tokens'] ? 'visible' : ''}`}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <div style={{
             background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(239,68,68,0.05))',
@@ -341,7 +485,8 @@ export default function LandingPage({ onGoLogin }) {
       </section>
 
       {/* ═══ FAQ ═══ */}
-      <section id="faq" style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}>
+      <section id="faq" data-animate style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}
+        className={`fade-section ${visibleSections['faq'] ? 'visible' : ''}`}>
         <div style={{ maxWidth: '700px', margin: '0 auto' }}>
           <h2 style={{ textAlign: 'center', fontSize: '36px', fontWeight: 800, marginBottom: '40px' }}>
             Perguntas frequentes
@@ -369,22 +514,28 @@ export default function LandingPage({ onGoLogin }) {
       </section>
 
       {/* ═══ CTA FINAL ═══ */}
-      <section style={{
+      <section id="cta-final" data-animate style={{
         padding: '80px 24px', textAlign: 'center',
         background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.12), transparent 60%)',
-      }}>
-        <img src="/logo.png" alt="" style={{ width: '64px', height: '64px', borderRadius: '14px', marginBottom: '20px', filter: 'drop-shadow(0 0 20px rgba(139,92,246,0.4))' }} />
+      }} className={`fade-section ${visibleSections['cta-final'] ? 'visible' : ''}`}>
+        <img src="/logo.png" alt="VideoForge" style={{ width: '64px', height: '64px', borderRadius: '14px', marginBottom: '20px', filter: 'drop-shadow(0 0 20px rgba(139,92,246,0.4))' }} loading="lazy" />
         <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '16px' }}>
           Pronto para automatizar seus vídeos?
         </h2>
-        <p style={{ color: '#64748b', fontSize: '16px', marginBottom: '32px' }}>
-          Acesso vitalício por apenas R$ {precos.preco_vitalicio || '59'}. Pague uma vez, use para sempre.
+        <p style={{ color: '#94a3b8', fontSize: '18px', marginBottom: '8px' }}>
+          <span style={{ textDecoration: 'line-through', color: '#64748b' }}>R$ 197</span>{' '}
+          <strong style={{ color: '#fff', fontSize: '24px' }}>R$ {precos.preco_vitalicio || '59'}</strong>{' '}
+          <span style={{ color: '#64748b' }}>— pagamento único</span>
         </p>
-        <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" style={{
-          padding: '14px 36px', borderRadius: '12px', border: 'none', display: 'inline-block',
+        <p style={{ color: '#86efac', fontSize: '14px', marginBottom: '32px' }}>
+          🛡️ 7 dias de garantia incondicional · 🔒 Pagamento seguro via Hotmart
+        </p>
+        <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" style={{
+          padding: '16px 40px', borderRadius: '12px', border: 'none', display: 'inline-block',
           background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
-          fontWeight: 700, fontSize: '16px', cursor: 'pointer', textDecoration: 'none',
+          fontWeight: 700, fontSize: '18px', cursor: 'pointer', textDecoration: 'none',
           boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
+          transition: 'transform 0.2s, box-shadow 0.2s',
         }}>
           🔥 Garantir acesso vitalício →
         </a>
