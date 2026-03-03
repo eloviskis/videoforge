@@ -44,6 +44,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
       - ./downloads:/downloads:ro
+      - ./public-pages:/public-pages:ro
     depends_on:
       - frontend
       - backend
