@@ -652,8 +652,7 @@ export default function AdminPanel({ onBack }) {
                 <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 700 }}>👁️ Preview — como aparece na Landing Page</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: '16px' }}>
                   {[
-                    { nome: 'Trial', preco: 'Grátis', periodo: '7 dias', destaque: false, items: [`${planosEdits.limite_trial || 5} vídeos/mês`, 'Roteiro com IA', 'Narração automática', 'Renderização 1080p'] },
-                    { nome: 'Mensal', preco: `R$ ${planosEdits.preco_mensal || '47'}`, periodo: '/mês', destaque: true, items: [`${planosEdits.limite_mensal || 50} vídeos/mês`, 'Tudo do Trial', 'Notícias automáticas', 'Multi-plataforma'] },
+                    { nome: 'Vitalício', preco: `R$ ${planosEdits.preco_vitalicio || '59'}`, periodo: 'pagamento único', destaque: true, items: [`${planosEdits.limite_vitalicio || 9999} vídeos/mês`, 'Tudo incluído', 'Para sempre', 'Atualizações vitalícias'] },
                     { nome: 'Anual', preco: `R$ ${planosEdits.preco_anual || '397'}`, periodo: `/ano (~R$ ${Math.round((parseInt(planosEdits.preco_anual) || 397) / 12)}/mês)`, destaque: false, items: [`${planosEdits.limite_anual || 100} vídeos/mês`, 'Tudo do Mensal', '30% de economia'] },
                     { nome: 'Vitalício', preco: `R$ ${planosEdits.preco_vitalicio || '997'}`, periodo: 'pagamento único', destaque: false, items: [`${planosEdits.limite_vitalicio || 9999} vídeos/mês`, 'Tudo incluído', 'Para sempre'] },
                   ].map(p => (

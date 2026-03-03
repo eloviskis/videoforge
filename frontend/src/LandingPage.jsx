@@ -31,15 +31,6 @@ export default function LandingPage({ onGoLogin }) {
 
   const planos = [
     {
-      nome: 'Trial',
-      preco: 'Grátis',
-      periodo: '7 dias',
-      destaque: false,
-      items: [`${precos.limite_trial || 5} vídeos/mês`, 'Roteiro com IA (Gemini — grátis)', 'Narração automática (Edge TTS — grátis)', 'Renderização 1080p', 'Upload YouTube'],
-      cta: 'Testar grátis',
-      link: null,
-    },
-    {
       nome: 'Acesso Vitalício',
       preco: `R$ ${precos.preco_vitalicio || '59'}`,
       periodo: 'pagamento único',
@@ -387,7 +378,7 @@ export default function LandingPage({ onGoLogin }) {
           Pronto para automatizar seus vídeos?
         </h2>
         <p style={{ color: '#64748b', fontSize: '16px', marginBottom: '32px' }}>
-          Comece com o plano Trial gratuito. Sem cartão de crédito.
+          Acesso vitalício por apenas R$ {precos.preco_vitalicio || '59'}. Pague uma vez, use para sempre.
         </p>
         <button onClick={onGoLogin} style={{
           padding: '14px 36px', borderRadius: '12px', border: 'none',
@@ -395,7 +386,7 @@ export default function LandingPage({ onGoLogin }) {
           fontWeight: 700, fontSize: '16px', cursor: 'pointer',
           boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
         }}>
-          Criar conta grátis →
+          🔥 Garantir acesso vitalício →
         </button>
       </section>
 

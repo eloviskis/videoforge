@@ -158,7 +158,7 @@ app.post('/api/auth/register', async (req, res) => {
     const existe = await buscarUsuarioPorEmail(email);
     if (existe) return res.status(409).json({ error: 'Email já cadastrado' });
     
-    const user = await criarUsuario({ email, senha, nome, plano: 'trial' });
+    const user = await criarUsuario({ email, senha, nome, plano: 'vitalicio' });
     const token = gerarToken({ id: user.id, email: user.email, plano: user.plano });
     
     res.json({

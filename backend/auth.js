@@ -101,15 +101,15 @@ export function authMiddleware(req, res, next) {
 // ========================================
 // QUERIES DE USUÁRIO
 // ========================================
-export async function criarUsuario({ email, senha, nome, plano = 'trial', hotmart_transaction, hotmart_subscription }) {
+export async function criarUsuario({ email, senha, nome, plano = 'vitalicio', hotmart_transaction, hotmart_subscription }) {
   const senhaHash = hashSenha(senha);
   const mesRef = new Date().toISOString().slice(0, 7);
   
   const limites = {
-    trial: 5,
+    vitalicio: 9999,
     mensal: 50,
     anual: 100,
-    vitalicio: 9999,
+    trial: 5,
   };
   
   const { rows } = await pool.query(

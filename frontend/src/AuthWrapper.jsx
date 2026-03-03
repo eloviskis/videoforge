@@ -157,7 +157,7 @@ export default function AuthWrapper() {
               padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 600,
               background: 'rgba(139,92,246,0.15)', color: '#c4b5fd', textTransform: 'uppercase',
             }}>
-              {user.plano || 'trial'}
+              {user.plano || 'vitalicio'}
             </span>
             <span style={{ color: '#64748b' }}>
               {user.videos_mes_usados ?? 0}/{user.videos_mes_limite ?? 5} vídeos

@@ -116,8 +116,8 @@ export default function MinhaConta({ onBack, user }) {
     tag: (c) => ({ display: 'inline-block', padding: '2px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 600, background: c, color: '#fff' }),
   }
 
-  const planoColors = { trial: '#64748b', mensal: '#3b82f6', anual: '#8b5cf6', vitalicio: '#a855f7' }
-  const planoNames = { trial: 'Trial', mensal: 'Mensal', anual: 'Anual', vitalicio: 'Vitalício' }
+  const planoColors = { vitalicio: '#a855f7', mensal: '#3b82f6', anual: '#8b5cf6', trial: '#64748b' }
+  const planoNames = { vitalicio: 'Vitalício', mensal: 'Mensal', anual: 'Anual', trial: 'Trial' }
   const changedCount = Object.keys(apiEdits).length
 
   return (
