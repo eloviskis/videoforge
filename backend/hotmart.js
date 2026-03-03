@@ -159,8 +159,8 @@ function detectarPlano(data) {
   if (prodName.includes('anual') || prodName.includes('yearly') || offerName.includes('anual')) {
     return 'anual';
   }
-  // Padrão: mensal
-  return 'mensal';
+  // Padrão: vitalicio (único plano ativo)
+  return 'vitalicio';
 }
 
 function gerarSenhaAleatoria() {
