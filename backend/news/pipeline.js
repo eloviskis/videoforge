@@ -315,14 +315,15 @@ Retorne APENAS JSON válido (sem markdown):
 
     // Fallback: Pollinations.ai (gratuito, sem API key)
     if (!content) {
-      const pollinationsModels = ['mistral', 'openai', 'llama'];
+      // POST com modelos atualizados
+      const pollinationsModels = ['openai', 'mistral-large', 'deepseek', 'llama', 'mistral'];
       for (const model of pollinationsModels) {
         try {
-          console.log(`  🔄 Pollinations (${model})...`);
+          console.log(`  🔄 Pollinations POST (${model})...`);
           const polResp = await axios.post(
             'https://text.pollinations.ai/',
-            { messages: [{ role: 'user', content: prompt }], model, jsonMode: false, seed: 42 },
-            { headers: { 'Content-Type': 'application/json' }, timeout: 60000, responseType: 'text' }
+            { messages: [{ role: 'user', content: prompt }], model, jsonMode: false, seed: Date.now() },
+            { headers: { 'Content-Type': 'application/json' }, timeout: 90000, responseType: 'text' }
           );
           let raw = typeof polResp.data === 'string' ? polResp.data : JSON.stringify(polResp.data);
           // Pollinations pode retornar {role:'assistant', content:'...'} — extrair o content
@@ -338,8 +339,10 @@ Retorne APENAS JSON válido (sem markdown):
           const jsonMatch2 = raw.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
           if (jsonMatch2) {
             content = raw;
-            console.log(`✅ Roteiro de notícias gerado via Pollinations (${model})`);
+            console.log(`✅ Roteiro de notícias gerado via Pollinations POST (${model})`);
             break;
+          } else {
+            console.warn(`  ⚠️ Pollinations ${model}: resposta sem campo titulo`);
           }
         } catch (polErr) {
           console.warn(`  ⚠️ Pollinations ${model}: ${polErr.response?.status || polErr.message}`);
@@ -347,7 +350,68 @@ Retorne APENAS JSON válido (sem markdown):
       }
     }
 
-    if (!content) throw new Error('Todos os provedores de LLM falharam (Gemini cota esgotada, Pollinations indisponível)');
+    // Fallback: Pollinations GET (endpoint mais simples e estável)
+    if (!content) {
+      try {
+        console.log('  🔄 Pollinations GET...');
+        const encodedPrompt = encodeURIComponent(prompt);
+        const getUrl = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=${Date.now()}`;
+        const polGetResp = await axios.get(getUrl, { timeout: 90000, responseType: 'text' });
+        let raw = typeof polGetResp.data === 'string' ? polGetResp.data : JSON.stringify(polGetResp.data);
+        const jsonMatch2 = raw.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
+        if (jsonMatch2) {
+          content = raw;
+          console.log('✅ Roteiro de notícias gerado via Pollinations GET');
+        } else {
+          console.warn('  ⚠️ Pollinations GET: resposta sem campo titulo');
+        }
+      } catch (polGetErr) {
+        console.warn(`  ⚠️ Pollinations GET: ${polGetErr.response?.status || polGetErr.message}`);
+      }
+    }
+
+    // Fallback: OpenRouter (modelos free tier - sem API key necessária para free models)
+    if (!content) {
+      const openRouterModels = [
+        'deepseek/deepseek-chat-v3-0324:free',
+        'google/gemma-3-27b-it:free',
+        'meta-llama/llama-4-maverick:free',
+        'qwen/qwen3-235b-a22b:free',
+      ];
+      for (const model of openRouterModels) {
+        try {
+          const modelShort = model.split('/')[1]?.split(':')[0] || model;
+          console.log(`  🔄 OpenRouter (${modelShort})...`);
+          const orResp = await axios.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            { model, messages: [{ role: 'user', content: prompt }], temperature: 0.7, max_tokens: 4096 },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://videoforge.tech',
+                'X-Title': 'VideoForge News',
+              },
+              timeout: 90000,
+            }
+          );
+          const orContent = orResp.data?.choices?.[0]?.message?.content;
+          if (orContent) {
+            const jsonMatch2 = orContent.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
+            if (jsonMatch2) {
+              content = orContent;
+              console.log(`✅ Roteiro de notícias gerado via OpenRouter (${modelShort})`);
+              break;
+            } else {
+              console.warn(`  ⚠️ OpenRouter ${modelShort}: resposta sem campo titulo`);
+            }
+          }
+        } catch (orErr) {
+          console.warn(`  ⚠️ OpenRouter ${model.split('/')[1]?.split(':')[0] || model}: ${orErr.response?.status || orErr.message}`);
+        }
+      }
+    }
+
+    if (!content) throw new Error('Todos os provedores de LLM falharam (Gemini cota esgotada, Pollinations indisponível, OpenRouter indisponível)');
   }
 
   const jsonMatch = content.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
