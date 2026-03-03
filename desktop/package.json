@@ -94,10 +94,8 @@
       "shortcutName": "VideoForge"
     },
     "publish": {
-      "provider": "github",
-      "owner": "SEU_USUARIO",
-      "repo": "videoforge",
-      "releaseType": "release"
+      "provider": "generic",
+      "url": "https://videoforge.tech/downloads/"
     }
   },
   "dependencies": {

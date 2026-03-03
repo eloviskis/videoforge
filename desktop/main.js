@@ -286,11 +286,12 @@ function getIconPath() {
 }
 
 function showAbout() {
+  const version = app.getVersion();
   dialog.showMessageBox(mainWindow, {
     type: 'info',
     title: 'Sobre o VideoForge',
     message: 'VideoForge',
-    detail: `Versão 1.0.0\n\nCriação automática de vídeos com IA\n\nGenai + Pexels + FFmpeg + YouTube\n\nServidor: http://localhost:${PORT}`,
+    detail: `Versão ${version}\n\nCriação automática de vídeos com IA\n\nGenai + Pexels + FFmpeg + YouTube\n\nServidor: http://localhost:${PORT}`,
     buttons: ['OK']
   });
 }
