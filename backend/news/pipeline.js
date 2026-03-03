@@ -108,11 +108,11 @@ async function _executarPipeline(videoId, statusObj, config, opcoes) {
 
     const tom = opcoes.tom || config.tom || 'casual';
     const roteiro = await gerarRoteiroNoticias(noticias, tom);
-    statusObj.titulo = roteiro.titulo;
+    statusObj.titulo = roteiro.titulo || statusObj.titulo;
 
     await pool.query(
       "UPDATE news_videos SET roteiro = $2, titulo = $3, status = 'ROTEIRO_GERADO', total_noticias = $4 WHERE id = $1",
-      [videoId, JSON.stringify(roteiro), roteiro.titulo, noticias.length]
+      [videoId, JSON.stringify(roteiro), roteiro.titulo || statusObj.titulo, noticias.length]
     );
     console.log(`✅ Roteiro gerado: "${roteiro.titulo}" (${roteiro.noticias.length} notícias)`);
 
@@ -324,9 +324,18 @@ Retorne APENAS JSON válido (sem markdown):
             { messages: [{ role: 'user', content: prompt }], model, jsonMode: false, seed: 42 },
             { headers: { 'Content-Type': 'application/json' }, timeout: 60000, responseType: 'text' }
           );
-          const raw = typeof polResp.data === 'string' ? polResp.data : JSON.stringify(polResp.data);
-          // Extrai JSON mesmo que venha com texto ao redor
-          const jsonMatch2 = raw.match(/\{[\s\S]*\}/);
+          let raw = typeof polResp.data === 'string' ? polResp.data : JSON.stringify(polResp.data);
+          // Pollinations pode retornar {role:'assistant', content:'...'} — extrair o content
+          try {
+            const parsed = typeof polResp.data === 'object' ? polResp.data : JSON.parse(raw);
+            if (parsed.content && typeof parsed.content === 'string') {
+              raw = parsed.content;
+            } else if (parsed.choices?.[0]?.message?.content) {
+              raw = parsed.choices[0].message.content;
+            }
+          } catch (_) { /* raw já é string, OK */ }
+          // Extrai JSON do roteiro (contém "titulo")
+          const jsonMatch2 = raw.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
           if (jsonMatch2) {
             content = raw;
             console.log(`✅ Roteiro de notícias gerado via Pollinations (${model})`);
@@ -341,8 +350,18 @@ Retorne APENAS JSON válido (sem markdown):
     if (!content) throw new Error('Todos os provedores de LLM falharam (Gemini cota esgotada, Pollinations indisponível)');
   }
 
-  const jsonMatch = content.match(/\{[\s\S]*\}/);
-  return jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+  const jsonMatch = content.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
+  const roteiro = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
+
+  // Validar que o roteiro tem os campos essenciais
+  if (!roteiro.titulo) {
+    const hoje2 = new Date();
+    roteiro.titulo = `Resumo do Dia — ${hoje2.toLocaleDateString('pt-BR')} | As Principais Notícias`;
+  }
+  if (!roteiro.noticias || !Array.isArray(roteiro.noticias)) {
+    throw new Error('Roteiro gerado pela IA não contém campo "noticias" válido');
+  }
+  return roteiro;
 }
 
 // ========================================

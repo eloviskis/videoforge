@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>VideoForge — Manual de Início Rápido</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', 'Segoe UI', sans-serif; color: #1e293b; background: #fff; line-height: 1.7; }
+    
+    .cover {
+      background: linear-gradient(135deg, #1a103a, #0a0a1a);
+      color: #fff;
+      padding: 80px 40px;
+      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      page-break-after: always;
+    }
+    .cover h1 { font-size: 48px; font-weight: 800; margin-bottom: 12px; }
+    .cover h1 span { background: linear-gradient(135deg, #8b5cf6, #a855f7, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .cover .subtitle { font-size: 20px; color: #94a3b8; margin-bottom: 40px; }
+    .cover .version { font-size: 14px; color: #64748b; margin-top: 40px; }
+
+    .container { max-width: 700px; margin: 0 auto; padding: 40px 30px; }
+    
+    h2 { font-size: 26px; font-weight: 800; color: #1a103a; margin: 50px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #8b5cf6; }
+    h3 { font-size: 18px; font-weight: 700; color: #4c1d95; margin: 30px 0 12px; }
+    p { margin-bottom: 14px; font-size: 15px; }
+    
+    .download-box {
+      background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+      border: 2px solid #8b5cf6;
+      border-radius: 16px;
+      padding: 30px;
+      text-align: center;
+      margin: 30px 0;
+    }
+    .download-box h3 { color: #7c3aed; margin: 0 0 8px; font-size: 20px; }
+    .download-box p { color: #64748b; font-size: 14px; margin-bottom: 16px; }
+    .download-box .link {
+      display: inline-block;
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+    .download-box .url { font-size: 12px; color: #8b5cf6; word-break: break-all; margin-top: 8px; }
+
+    .step-box {
+      background: #f8fafc;
+      border-left: 4px solid #8b5cf6;
+      border-radius: 0 12px 12px 0;
+      padding: 18px 24px;
+      margin: 16px 0;
+    }
+    .step-box .num { font-size: 24px; font-weight: 800; color: #8b5cf6; margin-bottom: 4px; }
+    .step-box strong { color: #1a103a; }
+
+    .warning {
+      background: #fef3c7;
+      border: 1px solid #f59e0b;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .warning strong { color: #92400e; }
+
+    .info-box {
+      background: #f0fdf4;
+      border: 1px solid #22c55e;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+
+    .credentials {
+      background: #1a103a;
+      color: #fff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin: 20px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 2;
+    }
+    .credentials span { color: #a855f7; }
+
+    ul { padding-left: 24px; margin: 12px 0; }
+    li { margin-bottom: 8px; font-size: 15px; }
+
+    .footer {
+      text-align: center;
+      padding: 40px;
+      color: #94a3b8;
+      font-size: 13px;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 50px;
+    }
+
+    .api-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    .api-table th { background: #f1f5f9; padding: 10px 14px; text-align: left; font-weight: 700; border-bottom: 2px solid #e2e8f0; }
+    .api-table td { padding: 10px 14px; border-bottom: 1px solid #e2e8f0; }
+    .api-table .free { color: #22c55e; font-weight: 700; }
+    .api-table .paid { color: #f59e0b; font-weight: 700; }
+
+    @media print {
+      .cover { min-height: auto; padding: 60px 40px; }
+      body { font-size: 13px; }
+      .download-box .link { background: #8b5cf6; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CAPA -->
+  <div class="cover">
+    <div style="font-size: 72px; margin-bottom: 20px;">🎬</div>
+    <h1><span>VideoForge</span></h1>
+    <p class="subtitle">Manual de Início Rápido</p>
+    <p style="color: #c084fc; font-size: 16px; max-width: 500px;">
+      Criação automática de vídeos com Inteligência Artificial.<br>
+      Roteiro, narração, imagens e edição — tudo em minutos.
+    </p>
+    <p class="version">Versão 1.2.0 — Março 2026</p>
+  </div>
+
+  <div class="container">
+
+    <!-- DOWNLOAD -->
+    <h2>📥 Download do Software</h2>
+    <p>O VideoForge é um software desktop para Windows. Faça o download do instalador abaixo:</p>
+
+    <div class="download-box">
+      <h3>⬇️ Baixar VideoForge para Windows</h3>
+      <p>Instalador .exe — Versão 1.2.0 (~438 MB)</p>
+      <a class="link" href="https://videoforge.tech/downloads/VideoForge%20Setup%201.2.0.exe">
+        🚀 Baixar Instalador
+      </a>
+      <p class="url">https://videoforge.tech/downloads/VideoForge Setup 1.2.0.exe</p>
+    </div>
+
+    <div class="info-box">
+      ✅ <strong>Também disponível online:</strong> Você pode usar o VideoForge diretamente pelo navegador em 
+      <strong><a href="https://videoforge.tech" style="color: #22c55e;">videoforge.tech</a></strong> — sem instalar nada!
+    </div>
+
+    <!-- ACESSO -->
+    <h2>🔑 Seu Acesso</h2>
+    <p>Após a compra, sua conta é criada automaticamente. Você receberá as credenciais por email:</p>
+
+    <div class="credentials">
+      <span>Email:</span> (o email usado na compra)<br>
+      <span>Senha:</span> (gerada automaticamente — veja seu email)<br>
+      <span>Plano:</span> Acesso Vitalício ♾️
+    </div>
+
+    <div class="warning">
+      ⚠️ <strong>Importante:</strong> Caso não encontre o email, verifique a pasta de <strong>spam/lixo eletrônico</strong>. Você pode alterar sua senha a qualquer momento em <strong>⚙️ Minha Conta</strong> dentro da plataforma.
+    </div>
+
+    <!-- PRIMEIROS PASSOS -->
+    <h2>🚀 Primeiros Passos</h2>
+
+    <div class="step-box">
+      <div class="num">1</div>
+      <strong>Acesse o VideoForge</strong><br>
+      Entre em <a href="https://videoforge.tech" style="color: #8b5cf6;">videoforge.tech</a> e faça login com email e senha.
+    </div>
+
+    <div class="step-box">
+      <div class="num">2</div>
+      <strong>Configure suas API Keys</strong><br>
+      Clique em <strong>⚙️ Minha Conta</strong> e adicione pelo menos a chave da <strong>Gemini</strong> (grátis) e <strong>Pexels</strong> (grátis). Veja a tabela abaixo.
+    </div>
+
+    <div class="step-box">
+      <div class="num">3</div>
+      <strong>Crie seu primeiro vídeo</strong><br>
+      Digite um tema (ex: "5 curiosidades sobre o espaço"), escolha o modo <strong>Stock Images</strong> (grátis) e clique em <strong>🎬 Gerar Vídeo</strong>.
+    </div>
+
+    <div class="step-box">
+      <div class="num">4</div>
+      <strong>Aguarde e baixe</strong><br>
+      O vídeo será gerado automaticamente em ~3 minutos. Depois, baixe em 1080p ou publique direto no YouTube.
+    </div>
+
+    <!-- API KEYS -->
+    <h2>🔧 API Keys Necessárias</h2>
+    <p>O VideoForge utiliza APIs externas para gerar conteúdo. Algumas são gratuitas, outras pagas:</p>
+
+    <table class="api-table">
+      <thead>
+        <tr><th>API</th><th>Para quê</th><th>Custo</th><th>Onde obter</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Gemini</strong></td>
+          <td>Roteiro com IA</td>
+          <td class="free">Grátis</td>
+          <td><a href="https://aistudio.google.com/apikey" style="color: #8b5cf6;">aistudio.google.com</a></td>
+        </tr>
+        <tr>
+          <td><strong>Pexels</strong></td>
+          <td>Imagens/vídeos stock</td>
+          <td class="free">Grátis</td>
+          <td><a href="https://www.pexels.com/api/" style="color: #8b5cf6;">pexels.com/api</a></td>
+        </tr>
+        <tr>
+          <td><strong>Edge TTS</strong></td>
+          <td>Narração em áudio</td>
+          <td class="free">Grátis (integrado)</td>
+          <td>Já incluso no VideoForge</td>
+        </tr>
+        <tr>
+          <td><strong>ElevenLabs</strong></td>
+          <td>Narração premium</td>
+          <td class="paid">Pago (opcional)</td>
+          <td><a href="https://elevenlabs.io" style="color: #8b5cf6;">elevenlabs.io</a></td>
+        </tr>
+        <tr>
+          <td><strong>Replicate</strong></td>
+          <td>Vídeos com IA</td>
+          <td class="paid">Pago (opcional)</td>
+          <td><a href="https://replicate.com" style="color: #8b5cf6;">replicate.com</a></td>
+        </tr>
+        <tr>
+          <td><strong>Kling</strong></td>
+          <td>Vídeos com IA</td>
+          <td class="paid">Pago (opcional)</td>
+          <td><a href="https://klingai.com" style="color: #8b5cf6;">klingai.com</a></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="info-box">
+      💡 <strong>Dica:</strong> Com apenas <strong>Gemini + Pexels</strong> (ambos grátis) você já consegue criar vídeos completos usando os modos <strong>Stock Images</strong> e <strong>Stick Animation</strong>.
+    </div>
+
+    <!-- MODOS DE VÍDEO -->
+    <h2>🎬 Modos de Geração de Vídeo</h2>
+    
+    <h3>🆓 Modos Gratuitos</h3>
+    <ul>
+      <li><strong>Stock Images</strong> — Usa imagens do Pexels/Pixabay com efeito Ken Burns + narração</li>
+      <li><strong>Stick Animation</strong> — Animação com bonecos palitinho (estilo humor/viral)</li>
+    </ul>
+
+    <h3>💎 Modos Premium (usam tokens pagos)</h3>
+    <ul>
+      <li><strong>Replicate</strong> — Gera cenas de vídeo com IA (Stable Video Diffusion)</li>
+      <li><strong>Kling</strong> — Vídeo AI de alta qualidade</li>
+      <li><strong>Veo / Gemini</strong> — Vídeo AI do Google</li>
+      <li><strong>Sora</strong> — Vídeo AI da OpenAI</li>
+    </ul>
+
+    <!-- FUNCIONALIDADES -->
+    <h2>📋 Funcionalidades Incluídas</h2>
+    <ul>
+      <li>✅ Geração de roteiro automático com IA (Gemini)</li>
+      <li>✅ Narração com Microsoft Edge TTS (grátis) ou ElevenLabs</li>
+      <li>✅ Imagens automáticas do Pexels + efeito Ken Burns</li>
+      <li>✅ Renderização em 1080p Full HD com FFmpeg</li>
+      <li>✅ Upload direto para o YouTube</li>
+      <li>✅ Compartilhamento para TikTok, Instagram, Twitter, Facebook, LinkedIn</li>
+      <li>✅ Notícias automáticas (coleta RSS + gera vídeo)</li>
+      <li>✅ Cortes de vídeo (transcreve + corta melhores momentos)</li>
+      <li>✅ Animações estilo bonecos palitinho</li>
+      <li>✅ Vídeos ilimitados</li>
+      <li>✅ Muro de Sugestões para feedback direto</li>
+      <li>✅ Atualizações vitalícias</li>
+    </ul>
+
+    <!-- SUPORTE -->
+    <h2>💬 Suporte</h2>
+    <p>Dentro da plataforma, use o <strong>💬 Muro de Sugestões</strong> para enviar dúvidas, bugs ou sugestões. É privado — só você e a equipe veem suas mensagens.</p>
+    
+    <div class="info-box">
+      🌐 <strong>Acesso online:</strong> <a href="https://videoforge.tech" style="color: #22c55e;">videoforge.tech</a><br>
+      📥 <strong>Download:</strong> <a href="https://videoforge.tech/downloads/VideoForge%20Setup%201.2.0.exe" style="color: #22c55e;">Instalador Windows v1.2.0</a>
+    </div>
+
+    <div class="footer">
+      <p>VideoForge © 2026 — Todos os direitos reservados</p>
+      <p>Este documento é parte do produto adquirido. Não distribua.</p>
+    </div>
+
+  </div>
+</body>
+</html>
