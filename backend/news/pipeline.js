@@ -20,6 +20,8 @@ const MEDIA_DIR = resolve(__dirname, '..', '..', 'media');
 // Ler env vars no momento de uso (dotenv.config() roda depois dos imports ESM)
 function getGeminiKey() { return process.env.GEMINI_API_KEY; }
 function getPexelsKey() { return process.env.PEXELS_API_KEY; }
+function getGroqKey() { return process.env.GROQ_API_KEY; }
+function getOpenRouterKey() { return process.env.OPENROUTER_API_KEY; }
 
 // Armazenamento em memória para status (mesmo padrão do server.js)
 export const newsVideosStatus = new Map();
@@ -297,81 +299,60 @@ Retorne APENAS JSON válido (sem markdown):
   } catch (vertexErr) {
     console.warn('⚠️ Vertex falhou, tentando API Key...', vertexErr.message);
 
-    // Tenta Gemini API Key
+    // === Fallback 1: Gemini API Key — múltiplos modelos (quotas separadas) ===
     if (getGeminiKey()) {
-      try {
-        const resp = await axios.post(
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-          { contents: [{ parts: [{ text: prompt }] }] },
-          { headers: { 'Content-Type': 'application/json' }, params: { key: getGeminiKey() }, timeout: 30000 }
-        );
-        content = resp.data.candidates[0].content.parts[0].text;
-        console.log('✅ Roteiro de notícias gerado via API Key');
-      } catch (apiKeyErr) {
-        const status = apiKeyErr.response?.status;
-        console.warn(`⚠️ Gemini API Key falhou (${status || apiKeyErr.message}), tentando Pollinations...`);
-      }
-    }
-
-    // Fallback: Pollinations.ai (gratuito, sem API key)
-    if (!content) {
-      // POST com modelos atualizados
-      const pollinationsModels = ['openai', 'mistral-large', 'deepseek', 'llama', 'mistral'];
-      for (const model of pollinationsModels) {
+      const geminiModels = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
+      for (const model of geminiModels) {
+        if (content) break;
         try {
-          console.log(`  🔄 Pollinations POST (${model})...`);
-          const polResp = await axios.post(
-            'https://text.pollinations.ai/',
-            { messages: [{ role: 'user', content: prompt }], model, jsonMode: false, seed: Date.now() },
-            { headers: { 'Content-Type': 'application/json' }, timeout: 90000, responseType: 'text' }
+          console.log(`  🔄 Gemini API Key (${model})...`);
+          const resp = await axios.post(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+            { contents: [{ parts: [{ text: prompt }] }] },
+            { headers: { 'Content-Type': 'application/json' }, params: { key: getGeminiKey() }, timeout: 60000 }
           );
-          let raw = typeof polResp.data === 'string' ? polResp.data : JSON.stringify(polResp.data);
-          // Pollinations pode retornar {role:'assistant', content:'...'} — extrair o content
-          try {
-            const parsed = typeof polResp.data === 'object' ? polResp.data : JSON.parse(raw);
-            if (parsed.content && typeof parsed.content === 'string') {
-              raw = parsed.content;
-            } else if (parsed.choices?.[0]?.message?.content) {
-              raw = parsed.choices[0].message.content;
+          content = resp.data.candidates[0].content.parts[0].text;
+          console.log(`✅ Roteiro de notícias gerado via Gemini API Key (${model})`);
+        } catch (apiKeyErr) {
+          const status = apiKeyErr.response?.status;
+          console.warn(`  ⚠️ Gemini ${model}: ${status || apiKeyErr.message}`);
+        }
+      }
+    }
+
+    // === Fallback 2: Groq (gratuito com API key — generoso free tier) ===
+    if (!content && getGroqKey()) {
+      const groqModels = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'gemma2-9b-it', 'mixtral-8x7b-32768'];
+      for (const model of groqModels) {
+        try {
+          console.log(`  🔄 Groq (${model})...`);
+          const groqResp = await axios.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            { model, messages: [{ role: 'user', content: prompt }], temperature: 0.7, max_tokens: 4096 },
+            {
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getGroqKey()}` },
+              timeout: 60000,
             }
-          } catch (_) { /* raw já é string, OK */ }
-          // Extrai JSON do roteiro (contém "titulo")
-          const jsonMatch2 = raw.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
-          if (jsonMatch2) {
-            content = raw;
-            console.log(`✅ Roteiro de notícias gerado via Pollinations POST (${model})`);
-            break;
-          } else {
-            console.warn(`  ⚠️ Pollinations ${model}: resposta sem campo titulo`);
+          );
+          const groqContent = groqResp.data?.choices?.[0]?.message?.content;
+          if (groqContent) {
+            const jsonMatch2 = groqContent.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
+            if (jsonMatch2) {
+              content = groqContent;
+              console.log(`✅ Roteiro de notícias gerado via Groq (${model})`);
+              break;
+            } else {
+              console.warn(`  ⚠️ Groq ${model}: resposta sem campo titulo`);
+            }
           }
-        } catch (polErr) {
-          console.warn(`  ⚠️ Pollinations ${model}: ${polErr.response?.status || polErr.message}`);
+        } catch (groqErr) {
+          console.warn(`  ⚠️ Groq ${model}: ${groqErr.response?.status || groqErr.message}`);
         }
       }
     }
 
-    // Fallback: Pollinations GET (endpoint mais simples e estável)
-    if (!content) {
-      try {
-        console.log('  🔄 Pollinations GET...');
-        const encodedPrompt = encodeURIComponent(prompt);
-        const getUrl = `https://text.pollinations.ai/${encodedPrompt}?model=openai&seed=${Date.now()}`;
-        const polGetResp = await axios.get(getUrl, { timeout: 90000, responseType: 'text' });
-        let raw = typeof polGetResp.data === 'string' ? polGetResp.data : JSON.stringify(polGetResp.data);
-        const jsonMatch2 = raw.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
-        if (jsonMatch2) {
-          content = raw;
-          console.log('✅ Roteiro de notícias gerado via Pollinations GET');
-        } else {
-          console.warn('  ⚠️ Pollinations GET: resposta sem campo titulo');
-        }
-      } catch (polGetErr) {
-        console.warn(`  ⚠️ Pollinations GET: ${polGetErr.response?.status || polGetErr.message}`);
-      }
-    }
-
-    // Fallback: OpenRouter (modelos free tier - sem API key necessária para free models)
-    if (!content) {
+    // === Fallback 3: OpenRouter (precisa API key, free tier generoso) ===
+    if (!content && getOpenRouterKey()) {
       const openRouterModels = [
         'deepseek/deepseek-chat-v3-0324:free',
         'google/gemma-3-27b-it:free',
@@ -388,6 +369,7 @@ Retorne APENAS JSON válido (sem markdown):
             {
               headers: {
                 'Content-Type': 'application/json',
+                Authorization: `Bearer ${getOpenRouterKey()}`,
                 'HTTP-Referer': 'https://videoforge.tech',
                 'X-Title': 'VideoForge News',
               },
@@ -411,7 +393,38 @@ Retorne APENAS JSON válido (sem markdown):
       }
     }
 
-    if (!content) throw new Error('Todos os provedores de LLM falharam (Gemini cota esgotada, Pollinations indisponível, OpenRouter indisponível)');
+    // === Fallback 4: Pollinations.ai (gratuito, sem API key) ===
+    if (!content) {
+      const pollinationsModels = ['openai', 'mistral', 'llama'];
+      for (const model of pollinationsModels) {
+        try {
+          console.log(`  🔄 Pollinations (${model})...`);
+          const polResp = await axios.post(
+            'https://text.pollinations.ai/',
+            { messages: [{ role: 'user', content: prompt }], model, seed: Date.now() },
+            { headers: { 'Content-Type': 'application/json' }, timeout: 90000, responseType: 'text' }
+          );
+          let raw = typeof polResp.data === 'string' ? polResp.data : JSON.stringify(polResp.data);
+          try {
+            const parsed = typeof polResp.data === 'object' ? polResp.data : JSON.parse(raw);
+            if (parsed.content && typeof parsed.content === 'string') raw = parsed.content;
+            else if (parsed.choices?.[0]?.message?.content) raw = parsed.choices[0].message.content;
+          } catch (_) {}
+          const jsonMatch2 = raw.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
+          if (jsonMatch2) {
+            content = raw;
+            console.log(`✅ Roteiro de notícias gerado via Pollinations (${model})`);
+            break;
+          } else {
+            console.warn(`  ⚠️ Pollinations ${model}: resposta sem campo titulo`);
+          }
+        } catch (polErr) {
+          console.warn(`  ⚠️ Pollinations ${model}: ${polErr.response?.status || polErr.message}`);
+        }
+      }
+    }
+
+    if (!content) throw new Error('Todos os provedores de LLM falharam. Configure GROQ_API_KEY (grátis em groq.com) como backup confiável.');
   }
 
   const jsonMatch = content.match(/\{[\s\S]*"titulo"[\s\S]*\}/);
