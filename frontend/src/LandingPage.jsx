@@ -405,8 +405,12 @@ export default function LandingPage({ onGoLogin }) {
         borderTop: '1px solid rgba(255,255,255,0.06)',
         color: '#4b5563', fontSize: '13px',
       }}>
-        <p style={{ margin: 0 }}>
+        <p style={{ margin: '0 0 8px' }}>
           © 2026 VideoForge. Todos os direitos reservados.
+        </p>
+        <p style={{ margin: 0 }}>
+          <a href="/privacy" style={{ color: '#8b5cf6', textDecoration: 'none', marginRight: '16px' }}>Política de Privacidade</a>
+          <a href="/terms" style={{ color: '#8b5cf6', textDecoration: 'none' }}>Termos de Uso</a>
         </p>
       </footer>
     </div>
