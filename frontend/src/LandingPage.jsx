@@ -124,7 +124,7 @@ export default function LandingPage({ onGoLogin }) {
             Digite um tema e receba um vídeo completo em 1080p com um clique.
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href="#precos" style={{
+            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" style={{
               padding: '14px 32px', borderRadius: '12px', textDecoration: 'none',
               background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
               fontWeight: 700, fontSize: '16px',
@@ -380,14 +380,14 @@ export default function LandingPage({ onGoLogin }) {
         <p style={{ color: '#64748b', fontSize: '16px', marginBottom: '32px' }}>
           Acesso vitalício por apenas R$ {precos.preco_vitalicio || '59'}. Pague uma vez, use para sempre.
         </p>
-        <button onClick={onGoLogin} style={{
-          padding: '14px 36px', borderRadius: '12px', border: 'none',
+        <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" style={{
+          padding: '14px 36px', borderRadius: '12px', border: 'none', display: 'inline-block',
           background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
-          fontWeight: 700, fontSize: '16px', cursor: 'pointer',
+          fontWeight: 700, fontSize: '16px', cursor: 'pointer', textDecoration: 'none',
           boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
         }}>
           🔥 Garantir acesso vitalício →
-        </button>
+        </a>
       </section>
 
       {/* ═══ FOOTER ═══ */}
