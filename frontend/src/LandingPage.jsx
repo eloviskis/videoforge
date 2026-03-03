@@ -221,7 +221,7 @@ export default function LandingPage({ onGoLogin }) {
         <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '48px', fontSize: '16px' }}>
           Pague uma vez, use para sempre. Sem mensalidade.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px', alignItems: 'start', maxWidth: '750px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', maxWidth: '750px', margin: '0 auto' }}>
           {planos.map(p => (
             <div key={p.nome} style={{
               background: p.badge === '👑'
