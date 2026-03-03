@@ -15,7 +15,7 @@ import { createHmac } from 'crypto';
 
 // News module imports
 import { coletarNoticias, selecionarTopNoticias, listarFontes, criarFonte, atualizarFonte, deletarFonte, listarNoticias, getConfig as getNewsConfig, updateConfig as updateNewsConfig } from './news/collector.js';
-import { executarPipelineNoticias, listarNewsVideos, getNewsVideo, newsVideosStatus, setPublicarYoutubeFn } from './news/pipeline.js';
+import { executarPipelineNoticias, listarNewsVideos, getNewsVideo, newsVideosStatus, setPublicarYoutubeFn, retryNewsVideo } from './news/pipeline.js';
 import newsPool from './news/db.js';
 
 // Gerador de roteiro offline (zero APIs, zero tokens)
@@ -5198,6 +5198,17 @@ app.get('/api/news/videos/:id', async (req, res) => {
     res.json(video);
   } catch (err) {
     console.error('Erro buscar vídeo news:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Retry: retomar pipeline de vídeo que parou no meio
+app.post('/api/news/videos/:id/retry', async (req, res) => {
+  try {
+    const resultado = await retryNewsVideo(req.params.id);
+    res.json(resultado);
+  } catch (err) {
+    console.error('Erro retry vídeo news:', err);
     res.status(500).json({ error: err.message });
   }
 });

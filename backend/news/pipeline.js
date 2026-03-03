@@ -730,3 +730,117 @@ export async function getNewsVideo(id) {
   }
   return rows[0];
 }
+
+// ========================================
+// RETRY: Retomar pipeline de vídeo parado
+// ========================================
+export async function retryNewsVideo(videoId) {
+  const { rows } = await pool.query('SELECT * FROM news_videos WHERE id = $1', [videoId]);
+  if (rows.length === 0) throw new Error('Vídeo não encontrado');
+  const video = rows[0];
+
+  if (video.status === 'RENDERIZADO' || video.status === 'PUBLICADO') {
+    return { videoId, titulo: video.titulo, message: 'Vídeo já está pronto' };
+  }
+
+  console.log(`🔄 Retomando pipeline para ${videoId} (status: ${video.status})`);
+
+  const statusObj = {
+    id: videoId,
+    titulo: video.titulo,
+    status: video.status,
+    progresso: 0,
+    etapa: 'Retomando pipeline...',
+    criado_em: video.created_at,
+  };
+  newsVideosStatus.set(videoId, statusObj);
+
+  const config = await getConfig();
+
+  // Retomar a partir do ponto em que parou
+  _retomarPipeline(videoId, video, statusObj, config).catch((err) => {
+    console.error(`❌ Erro ao retomar pipeline ${videoId}:`, err);
+    statusObj.status = 'ERRO';
+    statusObj.etapa = `Erro: ${err.message}`;
+    pool.query("UPDATE news_videos SET status = 'ERRO' WHERE id = $1", [videoId]);
+  });
+
+  return { videoId, titulo: video.titulo, retomadoDe: video.status };
+}
+
+async function _retomarPipeline(videoId, video, statusObj, config) {
+  try {
+    let roteiro = video.roteiro;
+    if (typeof roteiro === 'string') roteiro = JSON.parse(roteiro);
+
+    // Buscar notícias associadas ao vídeo
+    const { rows: itemRows } = await pool.query(
+      `SELECT ni.* FROM news_items ni 
+       JOIN news_video_items nvi ON ni.id = nvi.news_item_id 
+       WHERE nvi.news_video_id = $1 ORDER BY nvi.ordem`,
+      [videoId]
+    );
+    const noticias = itemRows;
+
+    // Se não tem roteiro, gerar novamente
+    if (!roteiro || !roteiro.noticias) {
+      console.log('  📝 Gerando roteiro...');
+      statusObj.etapa = 'Re-gerando roteiro...';
+      statusObj.progresso = 25;
+      roteiro = await gerarRoteiroNoticias(noticias, 'casual');
+      await pool.query(
+        "UPDATE news_videos SET roteiro = $2, titulo = $3, status = 'ROTEIRO_GERADO' WHERE id = $1",
+        [videoId, JSON.stringify(roteiro), roteiro.titulo]
+      );
+      statusObj.titulo = roteiro.titulo;
+    }
+
+    // Se não tem áudio, gerar narração
+    if (!video.audio_url) {
+      console.log('  🎙️ Gerando narração...');
+      statusObj.status = 'NARRACAO_PRONTA';
+      statusObj.etapa = 'Gerando narração...';
+      statusObj.progresso = 40;
+      const audioPaths = await gerarNarracaoNoticias(videoId, roteiro);
+      await pool.query(
+        "UPDATE news_videos SET audio_url = $2, status = 'NARRACAO_PRONTA' WHERE id = $1",
+        [videoId, audioPaths.host]
+      );
+      video.audio_url = audioPaths.host;
+    }
+
+    // Buscar visuais
+    console.log('  🖼️ Buscando visuais...');
+    statusObj.etapa = 'Buscando material visual...';
+    statusObj.progresso = 55;
+    const visuais = await buscarVisuaisNoticias(roteiro, noticias);
+    console.log(`  ✅ ${visuais.length} visuais encontrados`);
+
+    // Renderizar vídeo
+    console.log('  🎬 Renderizando vídeo...');
+    statusObj.status = 'RENDERIZANDO';
+    statusObj.etapa = 'Renderizando vídeo estilo news...';
+    statusObj.progresso = 65;
+
+    // Reconstituir audioPaths a partir do que temos no banco
+    const audioPaths = { host: video.audio_url };
+    const videoPaths = await renderizarVideoNoticias(videoId, roteiro, audioPaths, visuais);
+
+    await pool.query(
+      "UPDATE news_videos SET video_url = $2, status = 'RENDERIZADO' WHERE id = $1",
+      [videoId, videoPaths.host]
+    );
+
+    statusObj.status = 'RENDERIZADO';
+    statusObj.progresso = 100;
+    statusObj.videoUrl = videoPaths.host;
+    statusObj.etapa = 'Vídeo pronto!';
+    console.log(`✅ Pipeline retomado com sucesso: ${videoId}`);
+
+  } catch (error) {
+    statusObj.status = 'ERRO';
+    statusObj.etapa = `Erro: ${error.message}`;
+    await pool.query("UPDATE news_videos SET status = 'ERRO' WHERE id = $1", [videoId]);
+    throw error;
+  }
+}
