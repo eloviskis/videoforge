@@ -169,3 +169,76 @@ Dica: Os modos Stock Images e Stick Animation são 100% gratuitos!
     return false;
   }
 }
+
+// ─── Enviar notificação de feedback/sugestão para admin ───
+export async function enviarEmailFeedback({ userEmail, userNome, tipo, titulo, mensagem }) {
+  const t = getTransporter();
+  if (!t) {
+    console.warn('⚠️ Email de feedback não enviado (SMTP não configurado)');
+    return false;
+  }
+
+  const fromName = process.env.SMTP_FROM_NAME || 'VideoForge';
+  const fromEmail = process.env.SMTP_USER || 'noreply@videoforge.tech';
+  const adminEmail = process.env.SMTP_USER || 'eloi.santaroza@gmail.com';
+  const appUrl = process.env.APP_BASE_URL || 'https://videoforge.tech';
+
+  const tipoLabel = { sugestao: '💡 Sugestão', bug: '🐛 Bug', elogio: '⭐ Elogio', outro: '📝 Outro' }[tipo] || tipo;
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#0a0a1a;font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <h1 style="color:#8b5cf6;font-size:28px;margin:0;">🎬 VideoForge</h1>
+      <p style="color:#94a3b8;font-size:14px;margin:4px 0 0;">Novo Feedback Recebido</p>
+    </div>
+
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(139,92,246,0.3);border-radius:16px;padding:32px;">
+      <div style="display:flex;align-items:center;margin-bottom:20px;">
+        <span style="background:rgba(139,92,246,0.15);color:#c4b5fd;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:600;">${tipoLabel}</span>
+      </div>
+
+      <h2 style="color:#e2e8f0;font-size:20px;margin:0 0 8px;">${titulo}</h2>
+
+      <div style="background:rgba(255,255,255,0.03);border-left:3px solid #8b5cf6;border-radius:0 8px 8px 0;padding:16px 20px;margin:16px 0;">
+        <p style="color:#cbd5e1;font-size:15px;line-height:1.7;margin:0;white-space:pre-wrap;">${mensagem}</p>
+      </div>
+
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.06);">
+        <p style="color:#94a3b8;font-size:13px;margin:0;">
+          👤 <strong style="color:#e2e8f0;">${userNome || 'Sem nome'}</strong> &nbsp;·&nbsp; ${userEmail}
+        </p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:24px;">
+      <a href="${appUrl}" style="display:inline-block;padding:12px 32px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;border-radius:10px;font-weight:600;font-size:14px;">
+        Abrir Painel Admin →
+      </a>
+    </div>
+
+    <p style="color:#4b5563;font-size:11px;text-align:center;margin-top:24px;">
+      Notificação automática do VideoForge
+    </p>
+  </div>
+</body>
+</html>`;
+
+  try {
+    await t.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: adminEmail,
+      subject: `${tipoLabel} — ${titulo}`,
+      text: `Novo feedback de ${userNome || userEmail} (${tipo}):\n\n${titulo}\n\n${mensagem}`,
+      html: htmlContent,
+    });
+    console.log(`📧 Email de feedback enviado para admin: ${titulo}`);
+    return true;
+  } catch (err) {
+    console.error(`❌ Erro ao enviar email de feedback:`, err.message);
+    return false;
+  }
+}

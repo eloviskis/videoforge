@@ -1,5 +1,6 @@
 import pool from './news/db.js';
 import { verificarToken, buscarUsuarioPorEmail } from './auth.js';
+import { enviarEmailFeedback } from './mailer.js';
 
 // ========================================
 // MIDDLEWARE: extrair usuário do token
@@ -102,6 +103,16 @@ export function registrarRotasFeedback(app) {
          VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
         [req.feedbackUser.id, req.feedbackUser.email, req.feedbackUser.nome || '', tipoFinal, titulo, mensagem]
       );
+
+      // Notificar admin por email (fire & forget)
+      enviarEmailFeedback({
+        userEmail: req.feedbackUser.email,
+        userNome: req.feedbackUser.nome || '',
+        tipo: tipoFinal,
+        titulo,
+        mensagem,
+      }).catch(() => {});
+
       res.status(201).json(rows[0]);
     } catch (e) {
       console.error('Feedback POST:', e.message);
