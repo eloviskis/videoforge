@@ -1,0 +1,171 @@
+import nodemailer from 'nodemailer';
+
+// ═══════════════════════════════════════════
+// MÓDULO DE ENVIO DE EMAIL — VideoForge
+// ═══════════════════════════════════════════
+
+// Configuração do transporter (Gmail por padrão)
+function criarTransporter() {
+  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const secure = port === 465;
+  const user = process.env.SMTP_USER || '';
+  const pass = process.env.SMTP_PASS || '';
+
+  if (!user || !pass) {
+    console.warn('⚠️ SMTP_USER/SMTP_PASS não configurados — emails não serão enviados');
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+  });
+}
+
+let transporter = null;
+
+function getTransporter() {
+  if (!transporter) {
+    transporter = criarTransporter();
+  }
+  return transporter;
+}
+
+// ─── Enviar email de boas-vindas após compra ───
+export async function enviarEmailBoasVindas({ email, nome, senha, plano }) {
+  const t = getTransporter();
+  if (!t) {
+    console.warn('⚠️ Email não enviado (SMTP não configurado):', email);
+    return false;
+  }
+
+  const fromName = process.env.SMTP_FROM_NAME || 'VideoForge';
+  const fromEmail = process.env.SMTP_USER || 'noreply@videoforge.tech';
+  const appUrl = process.env.APP_BASE_URL || 'https://videoforge.tech';
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background:#0a0a1a;font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:600px;margin:0 auto;padding:40px 20px;">
+    
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:32px;">
+      <h1 style="color:#8b5cf6;font-size:32px;margin:0 0 8px;">🎬 VideoForge</h1>
+      <p style="color:#94a3b8;font-size:14px;margin:0;">Automação de Vídeos com IA</p>
+    </div>
+
+    <!-- Card principal -->
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(139,92,246,0.3);border-radius:16px;padding:32px;margin-bottom:24px;">
+      <h2 style="color:#e2e8f0;font-size:24px;margin:0 0 16px;">
+        🎉 Bem-vindo${nome ? `, ${nome}` : ''}!
+      </h2>
+      <p style="color:#cbd5e1;font-size:16px;line-height:1.6;margin:0 0 24px;">
+        Sua compra foi confirmada! Seu acesso <strong style="color:#a855f7;">${plano || 'vitalício'}</strong> ao VideoForge está ativo.
+      </p>
+
+      <!-- Credenciais -->
+      <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:12px;padding:24px;margin-bottom:24px;">
+        <h3 style="color:#c4b5fd;font-size:16px;margin:0 0 16px;">🔐 Seus dados de acesso</h3>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="color:#94a3b8;font-size:14px;padding:8px 0;width:80px;">Email:</td>
+            <td style="color:#fff;font-size:14px;padding:8px 0;font-weight:600;">${email}</td>
+          </tr>
+          <tr>
+            <td style="color:#94a3b8;font-size:14px;padding:8px 0;">Senha:</td>
+            <td style="color:#fcd34d;font-size:16px;padding:8px 0;font-weight:700;font-family:monospace;letter-spacing:2px;">${senha}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Botão -->
+      <div style="text-align:center;">
+        <a href="${appUrl}" style="display:inline-block;padding:14px 40px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;text-decoration:none;border-radius:10px;font-weight:700;font-size:16px;">
+          Acessar VideoForge →
+        </a>
+      </div>
+    </div>
+
+    <!-- Primeiros passos -->
+    <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:24px;margin-bottom:24px;">
+      <h3 style="color:#e2e8f0;font-size:16px;margin:0 0 16px;">🚀 Primeiros passos</h3>
+      <ol style="color:#94a3b8;font-size:14px;line-height:2;margin:0;padding:0 0 0 20px;">
+        <li>Acesse <a href="${appUrl}" style="color:#a855f7;">${appUrl}</a> e faça login</li>
+        <li>Vá em ⚙️ <strong style="color:#e2e8f0;">Minha Conta</strong> e configure sua chave Gemini (grátis)</li>
+        <li>Clique em <strong style="color:#e2e8f0;">Gerar Vídeo</strong> e digite um tema</li>
+        <li>Pronto! Seu vídeo será gerado automaticamente</li>
+      </ol>
+    </div>
+
+    <!-- Dica -->
+    <div style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:12px;padding:20px;margin-bottom:24px;">
+      <p style="color:#86efac;font-size:14px;margin:0;line-height:1.6;">
+        💡 <strong>Dica:</strong> Os modos <strong>Stock Images</strong> e <strong>Stick Animation</strong> são 100% gratuitos! 
+        Use Gemini (gratuito) + Edge TTS (gratuito) para gerar vídeos sem custo adicional.
+      </p>
+    </div>
+
+    <!-- Segurança -->
+    <p style="color:#64748b;font-size:12px;text-align:center;margin:0 0 8px;">
+      ⚠️ Recomendamos alterar sua senha após o primeiro login em ⚙️ Minha Conta.
+    </p>
+
+    <!-- Footer -->
+    <div style="text-align:center;padding-top:24px;border-top:1px solid rgba(255,255,255,0.06);">
+      <p style="color:#4b5563;font-size:12px;margin:0;">
+        © 2026 VideoForge — Automação de Vídeos com IA<br>
+        <a href="${appUrl}/privacy" style="color:#6b7280;text-decoration:none;">Política de Privacidade</a> · 
+        <a href="${appUrl}/terms" style="color:#6b7280;text-decoration:none;">Termos de Uso</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const textContent = `
+🎬 VideoForge — Bem-vindo${nome ? `, ${nome}` : ''}!
+
+Sua compra foi confirmada! Seu acesso ${plano || 'vitalício'} está ativo.
+
+🔐 Seus dados de acesso:
+Email: ${email}
+Senha: ${senha}
+
+Acesse: ${appUrl}
+
+Primeiros passos:
+1. Acesse ${appUrl} e faça login
+2. Configure sua chave Gemini (grátis) em Minha Conta
+3. Clique em Gerar Vídeo e digite um tema
+4. Pronto!
+
+Dica: Os modos Stock Images e Stick Animation são 100% gratuitos!
+
+⚠️ Recomendamos alterar sua senha após o primeiro login.
+
+© 2026 VideoForge
+`;
+
+  try {
+    await t.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to: email,
+      subject: '🎬 VideoForge — Acesso liberado! Aqui estão seus dados de login',
+      text: textContent,
+      html: htmlContent,
+    });
+    console.log(`📧 Email de boas-vindas enviado para: ${email}`);
+    return true;
+  } catch (err) {
+    console.error(`❌ Erro ao enviar email para ${email}:`, err.message);
+    return false;
+  }
+}

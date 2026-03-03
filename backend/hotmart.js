@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import pool from './news/db.js';
 import { criarUsuario, buscarUsuarioPorEmail, atualizarUsuario, hashSenha } from './auth.js';
+import { enviarEmailBoasVindas } from './mailer.js';
 
 // ========================================
 // HOTMART WEBHOOK HANDLER
@@ -80,6 +81,11 @@ export function registrarRotasHotmart(app) {
           console.log(`✅ Usuário criado/atualizado: ${email} (plano: ${plano})`);
           await logWebhook(evento, email, plano, transaction, subscription, 'user_created', { buyer, produto }, ipOrigem);
           
+          // Enviar email com credenciais
+          enviarEmailBoasVindas({ email, nome, senha, plano }).catch(err => {
+            console.error('Erro ao enviar email de boas-vindas:', err.message);
+          });
+
           // Retornar senha para Hotmart exibir na página de obrigado
           return res.json({
             ok: true,
