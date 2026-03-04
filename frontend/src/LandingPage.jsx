@@ -568,6 +568,7 @@ export default function LandingPage({ onGoLogin }) {
               <a href="/privacy" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Política de Privacidade</a>
               <a href="/terms" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Termos de Uso</a>
               <a href="mailto:eloi.santaroza@gmail.com" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Contato</a>
+              <a href="/afiliados" style={{ display: 'block', color: '#fbbf24', textDecoration: 'none', padding: '3px 0', fontSize: '13px', fontWeight: 600 }}>💰 Seja Afiliado</a>
             </div>
           </div>
           <p style={{ margin: '0 0 8px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '20px' }}>
