@@ -29,5 +29,27 @@
     <lastmod>2026-03-03</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
+  </url>  <url>
+    <loc>https://videoforge.tech/blog/</loc>
+    <lastmod>2026-03-03</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
-</urlset>
+  <url>
+    <loc>https://videoforge.tech/blog/como-criar-videos-com-ia.html</loc>
+    <lastmod>2026-03-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://videoforge.tech/blog/automatizar-canal-youtube-com-ia.html</loc>
+    <lastmod>2026-03-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://videoforge.tech/blog/ganhar-dinheiro-youtube-sem-aparecer.html</loc>
+    <lastmod>2026-03-03</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url></urlset>

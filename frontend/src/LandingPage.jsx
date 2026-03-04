@@ -111,6 +111,7 @@ export default function LandingPage({ onGoLogin }) {
 
         {/* Desktop menu */}
         <div className="hide-mobile" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <a href="/blog/" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px', transition: 'color 0.2s' }}>Blog</a>
           <a href="#features" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px', transition: 'color 0.2s' }}>Recursos</a>
           <a href="#precos" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px', transition: 'color 0.2s' }}>Preços</a>
           <a href="#faq" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px', transition: 'color 0.2s' }}>FAQ</a>
@@ -137,6 +138,7 @@ export default function LandingPage({ onGoLogin }) {
           padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: '12px',
           animation: 'fadeInUp 0.3s ease',
         }}>
+          <a href="/blog/" onClick={() => setMobileMenu(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0' }}>📝 Blog</a>
           <a href="#features" onClick={() => setMobileMenu(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0' }}>📋 Recursos</a>
           <a href="#precos" onClick={() => setMobileMenu(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0' }}>💰 Preços</a>
           <a href="#faq" onClick={() => setMobileMenu(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0' }}>❓ FAQ</a>
@@ -543,17 +545,35 @@ export default function LandingPage({ onGoLogin }) {
 
       {/* ═══ FOOTER ═══ */}
       <footer style={{
-        padding: '32px 24px', textAlign: 'center',
+        padding: '48px 24px 32px', textAlign: 'center',
         borderTop: '1px solid rgba(255,255,255,0.06)',
         color: '#4b5563', fontSize: '13px',
       }}>
-        <p style={{ margin: '0 0 8px' }}>
-          © 2026 VideoForge. Todos os direitos reservados.
-        </p>
-        <p style={{ margin: 0 }}>
-          <a href="/privacy" style={{ color: '#8b5cf6', textDecoration: 'none', marginRight: '16px' }}>Política de Privacidade</a>
-          <a href="/terms" style={{ color: '#8b5cf6', textDecoration: 'none' }}>Termos de Uso</a>
-        </p>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '32px', flexWrap: 'wrap', marginBottom: '24px' }}>
+            <div style={{ textAlign: 'left', minWidth: '180px' }}>
+              <h4 style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Produto</h4>
+              <a href="#features" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Recursos</a>
+              <a href="#precos" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Preços</a>
+              <a href="#faq" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>FAQ</a>
+            </div>
+            <div style={{ textAlign: 'left', minWidth: '180px' }}>
+              <h4 style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Blog</h4>
+              <a href="/blog/como-criar-videos-com-ia.html" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Criar vídeos com IA</a>
+              <a href="/blog/automatizar-canal-youtube-com-ia.html" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Automatizar YouTube</a>
+              <a href="/blog/ganhar-dinheiro-youtube-sem-aparecer.html" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>YouTube sem aparecer</a>
+            </div>
+            <div style={{ textAlign: 'left', minWidth: '180px' }}>
+              <h4 style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Legal</h4>
+              <a href="/privacy" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Política de Privacidade</a>
+              <a href="/terms" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Termos de Uso</a>
+              <a href="mailto:eloi.santaroza@gmail.com" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Contato</a>
+            </div>
+          </div>
+          <p style={{ margin: '0 0 8px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '20px' }}>
+            © 2026 VideoForge. Todos os direitos reservados.
+          </p>
+        </div>
       </footer>
     </div>
   )

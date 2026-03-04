@@ -41,10 +41,17 @@
     <link rel="apple-touch-icon" href="/logo.png" />
     <link rel="manifest" href="/manifest.json" />
 
+    <!-- ═══ HREFLANG & ALTERNATES ═══ -->
+    <link rel="alternate" hreflang="pt-BR" href="https://videoforge.tech/" />
+    <link rel="alternate" hreflang="x-default" href="https://videoforge.tech/" />
+    <meta http-equiv="Content-Language" content="pt-BR" />
+
     <!-- ═══ PRECONNECT (Performance) ═══ -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://www.googletagmanager.com" />
     <link rel="dns-prefetch" href="https://pay.hotmart.com" />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
 
     <!-- ═══ JSON-LD STRUCTURED DATA ═══ -->
     <script type="application/ld+json">
@@ -155,6 +162,77 @@
         "target": "https://videoforge.tech/?q={search_term_string}",
         "query-input": "required name=search_term_string"
       }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "VideoForge",
+      "url": "https://videoforge.tech",
+      "logo": "https://videoforge.tech/logo.png",
+      "description": "Plataforma de criação automatizada de vídeos com inteligência artificial.",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "eloi.santaroza@gmail.com",
+        "contactType": "customer service",
+        "availableLanguage": "Portuguese"
+      },
+      "sameAs": []
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Início",
+          "item": "https://videoforge.tech/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Blog",
+          "item": "https://videoforge.tech/blog/"
+        }
+      ]
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      "name": "Como criar um vídeo com IA no VideoForge",
+      "description": "Passo a passo para gerar vídeos automaticamente com inteligência artificial usando o VideoForge.",
+      "totalTime": "PT5M",
+      "estimatedCost": {
+        "@type": "MonetaryAmount",
+        "currency": "BRL",
+        "value": "59"
+      },
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Digite o tema do vídeo",
+          "text": "Escolha um tema como '5 fatos sobre o espaço' ou 'Notícias do dia'. A IA gera o roteiro automaticamente."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "A IA gera tudo automaticamente",
+          "text": "Roteiro, narração com voz neural, imagens e trilha sonora são gerados pela inteligência artificial."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Receba o vídeo pronto",
+          "text": "O vídeo é renderizado em Full HD 1080p. Faça download ou publique direto no YouTube, TikTok e mais."
+        }
+      ]
     }
     </script>
 
