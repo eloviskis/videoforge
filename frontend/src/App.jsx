@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import DocsTab from './DocsTab.jsx'
+import TimelineEditor from './TimelineEditor.jsx'
 
 // VITE_API_URL: configure no Vercel apontando para o backend no Railway
 // Em dev usa localhost:3001, em produção sem VITE_API_URL usa mesma origin
@@ -573,6 +574,9 @@ function App() {
           </button>
           <button className={`tab-btn ${activeTab === 'cortes' ? 'active' : ''}`} onClick={() => setActiveTab('cortes')}>
             ✂️ Cortes
+          </button>
+          <button className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>
+            🎥 Timeline
           </button>
           <button className={`tab-btn ${activeTab === 'docs' ? 'active' : ''}`} onClick={() => setActiveTab('docs')}>
             📚 Tutoriais
@@ -2110,6 +2114,9 @@ function App() {
 
       {/* Aba Tutoriais / Documentação */}
       {activeTab === 'docs' && <DocsTab />}
+
+      {/* Aba Timeline Editor */}
+      {activeTab === 'timeline' && <TimelineEditor token={localStorage.getItem('token')} />}
 
     </>
   )

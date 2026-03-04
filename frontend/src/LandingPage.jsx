@@ -41,9 +41,13 @@ export default function LandingPage({ onGoLogin }) {
     { icon: '🎤', title: 'Narração Automática', desc: 'Voz neural Microsoft Edge TTS ou ElevenLabs. Português e outros idiomas.' },
     { icon: '📸', title: 'Imagens Automáticas', desc: 'Pexels, Pixabay, Stable Diffusion ou DALL-E buscam visuais para cada cena.' },
     { icon: '🎬', title: 'Renderização FFmpeg', desc: 'Ken Burns, transições xfade, overlays de texto — tudo renderizado em 1080p.' },
+    { icon: '🧠', title: 'Edição Inteligente com IA', desc: 'A IA analisa seus clipes com visão computacional e sugere cortes, velocidade, volume e ordem ideal. Um clique e pronto.' },
+    { icon: '🎞️', title: 'Timeline Editor', desc: 'Monte vídeos com seus próprios clipes: arraste, reordene, corte, ajuste volume e velocidade por clipe.' },
+    { icon: '🎵', title: 'Trilha de Áudio', desc: 'Adicione músicas de fundo com controle de volume, fade in/out e posição. Mixe narração + trilha automaticamente.' },
     { icon: '📺', title: 'Upload YouTube', desc: 'Publique direto no YouTube com título, descrição, tags e thumbnail gerados.' },
     { icon: '📰', title: 'Notícias Automáticas', desc: 'Coleta RSS, gera roteiro, narra e renderiza vídeo de notícias do dia.' },
     { icon: '✂️', title: 'Cortes de Vídeo', desc: 'Cole link do YouTube, transcreve com Whisper e corta os melhores momentos.' },
+    { icon: '⚡', title: 'Controle de Velocidade', desc: 'Slow-motion ou time-lapse por clipe. De 0.25x a 3x com precisão no áudio via atempo.' },
     { icon: '🎵', title: 'Multi-Plataforma', desc: 'Publique no YouTube, TikTok, Twitter e Facebook de uma só vez.' },
   ]
 
@@ -57,6 +61,10 @@ export default function LandingPage({ onGoLogin }) {
         'Vídeos ilimitados',
         'Roteiro automático com IA',
         'Narração Edge TTS (grátis)',
+        'Timeline Editor com drag & drop',
+        'Edição Inteligente com IA (corte, volume, velocidade)',
+        'Trilha de áudio com mixagem automática',
+        'Controle de velocidade por clipe (0.25x a 3x)',
         'Notícias automáticas',
         'Cortes de vídeo',
         'Multi-plataforma (YouTube, TikTok, Twitter…)',
@@ -329,6 +337,62 @@ export default function LandingPage({ onGoLogin }) {
             <p style={{ color: '#64748b', fontSize: '13px', marginTop: '12px' }}>
               🔒 7 dias de garantia · Pagamento seguro via Hotmart
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ DESTAQUE: EDIÇÃO INTELIGENTE ═══ */}
+      <section id="ai-editing" data-animate style={{
+        padding: '80px 24px',
+        background: 'linear-gradient(180deg, rgba(139,92,246,0.06), transparent)',
+      }} className={`fade-section ${visibleSections['ai-editing'] ? 'visible' : ''}`}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <div style={{
+              display: 'inline-block', padding: '6px 16px', borderRadius: '99px', fontSize: '13px',
+              background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)',
+              color: '#c4b5fd', fontWeight: 600, marginBottom: '16px',
+            }}>🆕 NOVO no v1.3</div>
+            <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '12px' }}>
+              Edição Inteligente com IA
+            </h2>
+            <p style={{ color: '#94a3b8', fontSize: '16px', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
+              Importe seus clipes e deixe a IA montar o vídeo perfeito. Ela analisa cada frame,
+              sugere cortes, ajusta velocidade e volume — tudo com um clique.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+            {[
+              { icon: '🧠', title: 'Visão Computacional', desc: 'Gemini Vision analisa o conteúdo visual de cada clipe e entende o que está acontecendo na cena.' },
+              { icon: '✂️', title: 'Corte Automático', desc: 'A IA identifica os melhores momentos e corta partes desnecessárias, mantendo apenas o essencial.' },
+              { icon: '⚡', title: 'Velocidade Inteligente', desc: 'Slow-motion em cenas de impacto, aceleração em transições. De 0.25x a 3x com áudio preservado.' },
+              { icon: '🔊', title: 'Mix de Áudio', desc: 'Narração + trilha de fundo + áudio original — tudo mixado automaticamente com volume ideal.' },
+              { icon: '🎯', title: 'Um Clique', desc: 'Clique em "Edição Inteligente" e receba sugestões detalhadas. Aplique todas de uma vez ou ajuste manualmente.' },
+              { icon: '🎞️', title: 'Timeline Visual', desc: 'Arraste clipes, reordene, veja a duração efetiva e exporte em 1080p. Editor completo no navegador.' },
+            ].map(f => (
+              <div key={f.title} className="feature-card" style={{
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(139,92,246,0.15)',
+                borderRadius: '14px', padding: '24px',
+                transition: 'border-color 0.2s, transform 0.2s',
+              }}>
+                <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>{f.icon}</span>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 8px', color: '#e2e8f0' }}>{f.title}</h3>
+                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0, lineHeight: 1.6 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: '40px' }}>
+            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" style={{
+              padding: '14px 36px', borderRadius: '12px', border: 'none', display: 'inline-block',
+              background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
+              fontWeight: 700, fontSize: '16px', cursor: 'pointer', textDecoration: 'none',
+              boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}>
+              Quero a Edição Inteligente →
+            </a>
           </div>
         </div>
       </section>

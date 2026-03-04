@@ -28,6 +28,7 @@ import { registrarRotasAdmin } from './admin.js';
 import { registrarRotasUserSettings } from './user-settings.js';
 import { registrarRotasSocialOAuth } from './social-oauth.js';
 import { registrarRotasFeedback } from './feedback.js';
+import { registrarRotasTimeline } from './timeline.js';
 
 const execAsync = promisify(exec);
 
@@ -138,6 +139,13 @@ const AUTH_ENABLED = process.env.AUTH_ENABLED !== 'false'; // ativo por padrão
 
 app.post('/api/auth/login', async (req, res) => {
   try {
+    // Bypass login quando auth desativado (dev local)
+    if (!AUTH_ENABLED) {
+      return res.json({
+        token: 'dev-token-local',
+        user: { id: 'dev-user', email: 'dev@local', nome: 'Dev Local', plano: 'vitalicio', ativo: true, is_admin: true, videos_mes_limite: 999, videos_mes_usados: 0 }
+      });
+    }
     const { email, senha } = req.body;
     if (!email || !senha) return res.status(400).json({ error: 'Email e senha obrigatórios' });
     const result = await loginUsuario(email, senha);
@@ -178,6 +186,14 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.get('/api/auth/me', async (req, res) => {
   try {
+    // Bypass completo quando auth desativado (dev local sem Postgres)
+    if (!AUTH_ENABLED) {
+      return res.json({
+        id: 'dev-user', email: 'dev@local', nome: 'Dev Local',
+        plano: 'vitalicio', ativo: true, is_admin: true,
+        videos_mes_limite: 999, videos_mes_usados: 0,
+      });
+    }
     const authHeader = req.headers.authorization;
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
     if (!token) return res.status(401).json({ error: 'Não autenticado' });
@@ -223,6 +239,9 @@ if (AUTH_ENABLED) {
 } else {
   console.log('🔓 Auth desativado (AUTH_ENABLED=false)');
 }
+
+// Timeline / Editor de vídeos (após auth — rotas protegidas)
+registrarRotasTimeline(app);
 
 // Servir frontend estático (quando build existe)
 const FRONTEND_DIST = resolve(__dirname, '..', 'frontend', 'dist');
