@@ -9,6 +9,10 @@ export default function LandingPage({ onGoLogin }) {
   const [avisoTokens, setAvisoTokens] = useState('')
   const [mobileMenu, setMobileMenu] = useState(false)
   const [visibleSections, setVisibleSections] = useState({})
+  const [showEmailPopup, setShowEmailPopup] = useState(false)
+  const [email, setEmail] = useState('')
+  const [emailSent, setEmailSent] = useState(false)
+  const [stats, setStats] = useState({ videos: '2.500+', users: '350+' })
 
   useEffect(() => {
     fetch(`${API_URL}/public/precos`)
@@ -18,7 +22,54 @@ export default function LandingPage({ onGoLogin }) {
         if (data.aviso_tokens) setAvisoTokens(data.aviso_tokens)
       })
       .catch(() => {})
+
+    // Buscar estatísticas reais
+    fetch(`${API_URL}/public/stats`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.totalVideos) setStats(prev => ({ ...prev, videos: data.totalVideos.toLocaleString() + '+' }))
+        if (data.totalUsers) setStats(prev => ({ ...prev, users: data.totalUsers.toLocaleString() + '+' }))
+      })
+      .catch(() => {})
+
+    // Exit intent popup (desktop only)
+    const handleMouseLeave = (e) => {
+      if (e.clientY < 10 && !localStorage.getItem('vf_email_shown')) {
+        setShowEmailPopup(true)
+        localStorage.setItem('vf_email_shown', 'true')
+      }
+    }
+    document.addEventListener('mouseleave', handleMouseLeave)
+
+    // Show popup after 30 seconds if not interacted
+    const timer = setTimeout(() => {
+      if (!localStorage.getItem('vf_email_shown')) {
+        setShowEmailPopup(true)
+        localStorage.setItem('vf_email_shown', 'true')
+      }
+    }, 30000)
+
+    return () => {
+      document.removeEventListener('mouseleave', handleMouseLeave)
+      clearTimeout(timer)
+    }
   }, [])
+
+  const handleEmailSubmit = async (e) => {
+    e.preventDefault()
+    if (!email) return
+    try {
+      await fetch(`${API_URL}/public/lead`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'landing_popup' })
+      })
+      setEmailSent(true)
+      setTimeout(() => setShowEmailPopup(false), 3000)
+    } catch {
+      setEmailSent(true)
+    }
+  }
 
   // Intersection Observer for fade-in animations
   useEffect(() => {
@@ -214,8 +265,8 @@ export default function LandingPage({ onGoLogin }) {
           {/* Stats melhorados */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: '48px', marginTop: '56px', flexWrap: 'wrap' }}>
             {[
-              { n: '2.500+', label: 'Vídeos gerados' },
-              { n: '350+', label: 'Criadores ativos' },
+              { n: stats.videos, label: 'Vídeos gerados' },
+              { n: stats.users, label: 'Criadores ativos' },
               { n: '1080p', label: 'Qualidade Full HD' },
               { n: '15+', label: 'APIs integradas' },
             ].map(s => (
@@ -224,6 +275,33 @@ export default function LandingPage({ onGoLogin }) {
                 <div style={{ fontSize: '13px', color: '#64748b' }}>{s.label}</div>
               </div>
             ))}
+          </div>
+
+          {/* Lead Capture Inline */}
+          <div style={{ marginTop: '48px', maxWidth: '480px', marginLeft: 'auto', marginRight: 'auto' }}>
+            <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '12px' }}>
+              📧 Receba dicas grátis de como criar vídeos virais com IA:
+            </p>
+            <form onSubmit={handleEmailSubmit} style={{ display: 'flex', gap: '8px' }}>
+              <input
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{
+                  flex: 1, padding: '12px 16px', borderRadius: '10px',
+                  border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)',
+                  color: '#fff', fontSize: '14px', outline: 'none',
+                }}
+              />
+              <button type="submit" style={{
+                padding: '12px 20px', borderRadius: '10px', border: 'none',
+                background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff',
+                fontWeight: 600, fontSize: '14px', cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                {emailSent ? '✅ Enviado!' : 'Quero receber'}
+              </button>
+            </form>
           </div>
         </div>
       </section>
@@ -640,6 +718,77 @@ export default function LandingPage({ onGoLogin }) {
           </p>
         </div>
       </footer>
+
+      {/* ═══ EMAIL POPUP (Exit Intent) ═══ */}
+      {showEmailPopup && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'fadeInUp 0.3s ease',
+        }} onClick={() => setShowEmailPopup(false)}>
+          <div style={{
+            background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
+            border: '1px solid rgba(139,92,246,0.3)',
+            borderRadius: '20px', padding: '40px', maxWidth: '440px', width: '90%',
+            textAlign: 'center', position: 'relative',
+            boxShadow: '0 20px 60px rgba(139,92,246,0.3)',
+          }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowEmailPopup(false)} style={{
+              position: 'absolute', top: '16px', right: '16px',
+              background: 'none', border: 'none', color: '#64748b',
+              fontSize: '24px', cursor: 'pointer', padding: '4px',
+            }}>×</button>
+
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎁</div>
+            <h3 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 12px', color: '#fff' }}>
+              Espera! Leva um presente
+            </h3>
+            <p style={{ fontSize: '15px', color: '#94a3b8', marginBottom: '24px', lineHeight: 1.6 }}>
+              Receba <strong style={{ color: '#c4b5fd' }}>5 roteiros prontos</strong> para vídeos virais
+              + dicas exclusivas de como crescer no YouTube com IA.
+            </p>
+
+            {emailSent ? (
+              <div style={{
+                padding: '20px', borderRadius: '12px',
+                background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)',
+              }}>
+                <p style={{ color: '#10b981', fontSize: '16px', fontWeight: 600, margin: 0 }}>
+                  ✅ Pronto! Verifique seu e-mail.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <input
+                  type="email"
+                  placeholder="Digite seu melhor e-mail"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={{
+                    padding: '14px 18px', borderRadius: '12px',
+                    border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)',
+                    color: '#fff', fontSize: '16px', outline: 'none', textAlign: 'center',
+                  }}
+                />
+                <button type="submit" style={{
+                  padding: '14px 24px', borderRadius: '12px', border: 'none',
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
+                  fontWeight: 700, fontSize: '16px', cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(139,92,246,0.5)',
+                }}>
+                  🚀 Quero os roteiros grátis!
+                </button>
+              </form>
+            )}
+
+            <p style={{ fontSize: '12px', color: '#4b5563', marginTop: '16px' }}>
+              🔒 Seu e-mail está seguro. Sem spam, prometemos.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

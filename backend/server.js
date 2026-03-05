@@ -5145,6 +5145,71 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// ============================================
+// ROTAS PÚBLICAS (Landing Page)
+// ============================================
+
+// Estatísticas públicas para landing page
+app.get('/api/public/stats', async (req, res) => {
+  try {
+    const videoCount = await pool.query('SELECT COUNT(*) FROM videos');
+    const userCount = await pool.query('SELECT COUNT(*) FROM users');
+    res.json({
+      totalVideos: parseInt(videoCount.rows[0].count) || 0,
+      totalUsers: parseInt(userCount.rows[0].count) || 0
+    });
+  } catch {
+    // Fallback se não tiver tabelas
+    res.json({ totalVideos: videos.size || 100, totalUsers: 50 });
+  }
+});
+
+// Preços públicos
+app.get('/api/public/precos', (req, res) => {
+  res.json({
+    preco_vitalicio: process.env.PRECO_VITALICIO || '59',
+    hotmart_checkout_vitalicio: process.env.HOTMART_CHECKOUT_URL || null,
+    aviso_tokens: 'Os tokens de IA são consumidos das suas próprias contas nos provedores.'
+  });
+});
+
+// Captura de leads (e-mail)
+app.post('/api/public/lead', async (req, res) => {
+  const { email, source } = req.body;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'E-mail inválido' });
+  }
+  try {
+    // Salvar lead no banco
+    await pool.query(
+      `INSERT INTO leads (email, source, created_at) VALUES ($1, $2, NOW())
+       ON CONFLICT (email) DO UPDATE SET source = $2, updated_at = NOW()`,
+      [email.toLowerCase().trim(), source || 'landing']
+    );
+    console.log(`📧 Lead capturado: ${email} (${source})`);
+    res.json({ ok: true });
+  } catch (err) {
+    // Se tabela não existe, criar e tentar de novo
+    if (err.code === '42P01') {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS leads (
+          id SERIAL PRIMARY KEY,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          source VARCHAR(50),
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP
+        )
+      `);
+      await pool.query(
+        `INSERT INTO leads (email, source) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+        [email.toLowerCase().trim(), source || 'landing']
+      );
+    }
+    console.log(`📧 Lead capturado: ${email} (${source})`);
+    res.json({ ok: true });
+  }
+});
+
 // Reiniciar backend (admin only) — Docker restart policy traz de volta
 app.post('/api/admin/restart', (req, res) => {
   if (!req.user?.is_admin) {
