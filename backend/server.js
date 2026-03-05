@@ -1807,8 +1807,33 @@ async function gerarNarracao(videoId, roteiro) {
     : 'edge';
   console.log(`🎙️ TTS provider: ${ttsProvider}`);
 
+  // Limpar texto para TTS - remove pontuações que são lidas em voz alta
+  const limparTextoParaTTS = (texto) => {
+    if (!texto) return '';
+    return texto
+      .replace(/\.\.\./g, ', ')       // Reticências → pausa
+      .replace(/…/g, ', ')            // Reticências unicode → pausa
+      .replace(/\//g, ' ')            // Barras → espaço
+      .replace(/\\/g, ' ')            // Barras invertidas → espaço
+      .replace(/\|/g, ' ')            // Pipes → espaço
+      .replace(/\*/g, '')             // Asteriscos → remove
+      .replace(/#/g, '')              // Hashtags → remove
+      .replace(/_/g, ' ')             // Underscores → espaço
+      .replace(/\[/g, '')             // Colchetes → remove
+      .replace(/\]/g, '')
+      .replace(/\{/g, '')             // Chaves → remove
+      .replace(/\}/g, '')
+      .replace(/<[^>]*>/g, '')        // Tags HTML → remove
+      .replace(/&nbsp;/g, ' ')        // HTML entities
+      .replace(/&amp;/g, 'e')
+      .replace(/(\d+)\.(\d+)/g, '$1 vírgula $2')  // 3.14 → "3 vírgula 14"
+      .replace(/(\d+)\/(\d+)/g, '$1 de $2')       // 1/2 → "1 de 2"
+      .replace(/\s+/g, ' ')           // Normaliza espaços
+      .trim();
+  };
+
   // Salvar textos das cenas em JSON para o script Python
-  const cenasTexto = roteiro.cenas.map(c => c.texto_narracao);
+  const cenasTexto = roteiro.cenas.map(c => limparTextoParaTTS(c.texto_narracao));
   const cenasPath = resolve(MEDIA_DIR, 'temp', `${videoId}_cenas_texto.json`);
   await fs.writeFile(cenasPath, JSON.stringify(cenasTexto), 'utf-8');
 
