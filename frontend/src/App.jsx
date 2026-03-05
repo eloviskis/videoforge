@@ -1262,9 +1262,29 @@ function App() {
                 {video.status === 'concluido' && video.videoUrl && (
                   <div style={{ marginTop: '10px' }}>
                     <p style={{ fontSize: '12px', marginBottom: '8px' }}>
-                      ✅ Vídeo pronto em: <code>{video.videoUrl}</code>
+                      ✅ Vídeo pronto!
                     </p>
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <a
+                        href={`${API_URL.replace('/api', '')}${video.videoUrl}`}
+                        download
+                        style={{
+                          background: '#10b981',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 14px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '12px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        ⬇️ Baixar Vídeo
+                      </a>
                       {config.youtube_connected && !video.youtubeId && (
                         <button
                           onClick={async () => {
@@ -1316,7 +1336,7 @@ function App() {
                 {video.status === 'publicado' && video.youtubeId && (
                   <div style={{ marginTop: '12px' }}>
                     <p style={{ fontSize: '13px', marginBottom: '8px' }}>
-                      🎉 <a 
+                      🎉 <a
                         href={`https://youtube.com/watch?v=${video.youtubeId}`}
                         target="_blank"
                         style={{ color: '#667eea', fontWeight: 600 }}
@@ -1324,6 +1344,56 @@ function App() {
                         Ver no YouTube →
                       </a>
                     </p>
+
+                    {/* Botões de ação: Baixar e Republicar */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                      {video.videoUrl && (
+                        <a
+                          href={`${API_URL.replace('/api', '')}${video.videoUrl}`}
+                          download
+                          style={{
+                            background: '#10b981',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '8px 14px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          ⬇️ Baixar Vídeo
+                        </a>
+                      )}
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Republicar este vídeo no YouTube? (será feito um novo upload)')) return
+                          try {
+                            const r = await axios.post(`${API_URL}/videos/${video.id}/publish-youtube`)
+                            alert(`✅ Republicado no YouTube! Novo ID: ${r.data.youtubeId}`)
+                            carregarVideos()
+                          } catch (err) {
+                            alert('❌ Erro ao republicar: ' + (err.response?.data?.error || err.message))
+                          }
+                        }}
+                        style={{
+                          background: '#FF0000',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '8px 14px',
+                          cursor: 'pointer',
+                          fontWeight: '600',
+                          fontSize: '12px'
+                        }}
+                      >
+                        🔄 Republicar YouTube
+                      </button>
+                    </div>
                     
                     {/* Compartilhamentos automáticos realizados */}
                     {video.compartilhamentos && video.compartilhamentos.length > 0 && (
