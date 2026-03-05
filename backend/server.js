@@ -4957,7 +4957,11 @@ app.get('/api/config', (req, res) => {
 // ============================================
 // ROTAS: Gerenciar chaves de API (.env)
 // ============================================
-const ENV_PATH = envFilePath; // Usar o mesmo path determinado no início
+// Em produção (NO_DOCKER/cloud) o filesystem /app é read-only.
+// Escrevemos em /tmp/videoforge.env (sempre gravável) e process.env.
+const ENV_PATH = (NO_DOCKER || process.env.NODE_ENV === 'production')
+  ? '/tmp/videoforge.env'
+  : envFilePath;
 
 // Definição de todas as chaves editáveis
 const API_KEY_DEFINITIONS = [
@@ -5010,21 +5014,31 @@ function maskValue(val) {
 // Listar todas as chaves com valores mascarados
 app.get('/api/config/keys', async (req, res) => {
   try {
-    const envContent = await fs.readFile(ENV_PATH, 'utf-8');
+    // Em produção, ler do process.env diretamente (Railway injeta as vars no ambiente)
+    // Em desktop, ler do arquivo .env
     const envVars = {};
-    for (const line of envContent.split('\n')) {
-      const trimmed = line.trim();
-      const match = trimmed.match(/^([A-Z][A-Z0-9_]*)=(.*)$/);
-      if (match) envVars[match[1]] = match[2].trim();
+    try {
+      const envContent = await fs.readFile(ENV_PATH, 'utf-8');
+      for (const line of envContent.split('\n')) {
+        const trimmed = line.trim();
+        const match = trimmed.match(/^([A-Z][A-Z0-9_]*)=(.*)$/);
+        if (match) envVars[match[1]] = match[2].trim();
+      }
+    } catch {
+      // Arquivo não existe ainda — usar process.env como fonte de verdade
     }
-    
+    // Mesclar com process.env (process.env tem prioridade em produção)
+    for (const def of API_KEY_DEFINITIONS) {
+      if (process.env[def.key]) envVars[def.key] = process.env[def.key];
+    }
+
     const keys = API_KEY_DEFINITIONS.map(def => ({
       ...def,
       value: envVars[def.key] || '',
       maskedValue: maskValue(envVars[def.key] || ''),
       configured: !!(envVars[def.key] && envVars[def.key] !== 'sua_chave_aqui' && envVars[def.key] !== 'seu_client_id_aqui')
     }));
-    
+
     res.json(keys);
   } catch (err) {
     console.error('Erro ao ler chaves:', err);
@@ -5037,25 +5051,25 @@ app.put('/api/config/keys', async (req, res) => {
   try {
     const { key, value } = req.body;
     if (!key) return res.status(400).json({ error: 'Chave obrigatória' });
-    
-    // Validar que é uma chave conhecida
+
     const def = API_KEY_DEFINITIONS.find(d => d.key === key);
     if (!def) return res.status(400).json({ error: 'Chave desconhecida' });
-    
-    let envContent = await fs.readFile(ENV_PATH, 'utf-8');
+
+    let envContent = '';
+    try { envContent = await fs.readFile(ENV_PATH, 'utf-8'); } catch { /* arquivo não existe ainda */ }
+
     const regex = new RegExp(`^${key}=.*$`, 'm');
-    
     if (regex.test(envContent)) {
       envContent = envContent.replace(regex, `${key}=${value || ''}`);
     } else {
       envContent += `\n${key}=${value || ''}`;
     }
-    
+
     await fs.writeFile(ENV_PATH, envContent, 'utf-8');
-    
+
     // Atualizar process.env em tempo real
     process.env[key] = value || '';
-    
+
     console.log(`✅ Chave ${key} atualizada`);
     res.json({ success: true, message: `${def.label} atualizado com sucesso` });
   } catch (err) {
@@ -5072,13 +5086,14 @@ app.delete('/api/config/keys/:key', async (req, res) => {
     const def = API_KEY_DEFINITIONS.find(d => d.key === key);
     if (!def) return res.status(400).json({ error: 'Chave desconhecida' });
     
-    let envContent = await fs.readFile(ENV_PATH, 'utf-8');
+    let envContent = '';
+    try { envContent = await fs.readFile(ENV_PATH, 'utf-8'); } catch { /* arquivo não existe ainda */ }
     const regex = new RegExp(`^${key}=.*$`, 'm');
-    
+
     if (regex.test(envContent)) {
       envContent = envContent.replace(regex, `${key}=`);
     }
-    
+
     await fs.writeFile(ENV_PATH, envContent, 'utf-8');
     
     // Limpar process.env
