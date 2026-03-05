@@ -5108,13 +5108,26 @@ app.delete('/api/config/keys/:key', async (req, res) => {
 });
 
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'ok',
     gemini: !!GEMINI_API_KEY && GEMINI_API_KEY !== 'sua_chave_aqui',
     pexels: !!PEXELS_API_KEY && PEXELS_API_KEY !== 'sua_chave_aqui',
     youtube: youtubeTokens.has('default'),
-    videos: videos.size 
+    videos: videos.size
   });
+});
+
+// Reiniciar backend (admin only) — Docker restart policy traz de volta
+app.post('/api/admin/restart', (req, res) => {
+  if (!req.user?.is_admin) {
+    return res.status(403).json({ error: 'Acesso negado — somente administradores' });
+  }
+  console.log('🔄 Reinício solicitado por:', req.user.email);
+  res.json({ ok: true, message: 'Reiniciando backend em 1 segundo...' });
+  setTimeout(() => {
+    console.log('🔄 Reiniciando processo...');
+    process.exit(0); // Docker restart policy traz de volta
+  }, 1000);
 });
 
 // ============================================

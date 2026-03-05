@@ -48,6 +48,7 @@ function App() {
   const [youtubeSelectedChannel, setYoutubeSelectedChannel] = useState(null)
   const [showPaidModal, setShowPaidModal] = useState(false)
   const [paidModalInfo, setPaidModalInfo] = useState(null)
+  const [restartingBackend, setRestartingBackend] = useState(false)
   const [modoRoteiro, setModoRoteiro] = useState('ia') // 'ia' | 'manual'
   const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '' })
   const [monitorVideoId, setMonitorVideoId] = useState(null)
@@ -259,6 +260,19 @@ function App() {
       alert('🗑️ Chave removida com sucesso!')
     } catch (error) {
       alert('❌ Erro ao apagar: ' + (error.response?.data?.error || error.message))
+    }
+  }
+
+  const reiniciarBackend = async () => {
+    if (!confirm('Tem certeza que deseja reiniciar o backend? O sistema ficará fora por ~3 segundos.')) return
+    setRestartingBackend(true)
+    try {
+      await axios.post(`${API_URL}/admin/restart`)
+      alert('✅ Backend reiniciando... Aguarde 5 segundos e recarregue a página.')
+      setTimeout(() => { setRestartingBackend(false); window.location.reload() }, 5000)
+    } catch (error) {
+      setRestartingBackend(false)
+      alert('❌ Erro ao reiniciar: ' + (error.response?.data?.error || error.message))
     }
   }
 
@@ -729,6 +743,34 @@ function App() {
               </div>
             )
           })}
+
+          {/* Botão Reiniciar Backend (admin) */}
+          <div style={{ marginBottom: '20px', padding: '12px 16px', background: '#fef3c7', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <div>
+                <strong>🔄 Reiniciar Backend</strong>
+                <p style={{ fontSize: '12px', color: '#78716c', margin: '4px 0 0' }}>
+                  Use após modificar chaves de API para aplicar as mudanças
+                </p>
+              </div>
+              <button
+                onClick={reiniciarBackend}
+                disabled={restartingBackend}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  background: restartingBackend ? '#9ca3af' : '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: restartingBackend ? 'not-allowed' : 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                {restartingBackend ? '⏳ Reiniciando...' : '🔄 Reiniciar'}
+              </button>
+            </div>
+          </div>
 
           {/* YouTube - Conexão e Canal */}
           {config.youtube_configured && (
