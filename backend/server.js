@@ -2603,12 +2603,22 @@ async function gerarVideoAvatar(videoId, roteiro, audioPaths) {
   const authHeader = `Basic ${Buffer.from(process.env.DID_API_KEY + ':').toString('base64')}`;
 
   // 1. Fazer upload do áudio para obter URL acessível pelo D-ID
-  const audioContent = await fs.readFile(audioPaths.host);
-  const uploadResp = await axios.post('https://api.d-id.com/audios',
-    { data: audioContent.toString('base64'), name: `${videoId}.mp3`, content_type: 'audio/mpeg' },
-    { headers: { Authorization: authHeader, 'Content-Type': 'application/json' } }
-  );
+  // D-ID exige multipart/form-data para o upload de áudio
+  const FormData = (await import('form-data')).default;
+  const form = new FormData();
+  form.append('audio', createReadStream(audioPaths.host), {
+    filename: `${videoId}.mp3`,
+    contentType: 'audio/mpeg'
+  });
+
+  const uploadResp = await axios.post('https://api.d-id.com/audios', form, {
+    headers: {
+      Authorization: authHeader,
+      ...form.getHeaders()
+    }
+  });
   const audioUrl = uploadResp.data.url;
+  console.log(`🎧 D-ID audio upload: ${audioUrl}`);
 
   // 2. Criar o talk
   const talkResp = await axios.post('https://api.d-id.com/talks', {
