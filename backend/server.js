@@ -697,7 +697,7 @@ async function processarVideoCompleto(videoId, video) {
         duracao_total: video.duracao || 1,
         cenas: [{
           numero: 1,
-          texto_narrado: textoNarracao,
+          texto_narracao: textoNarracao,
           descricao_visual: 'Apresentador falando para câmera',
           prompt_visual: 'person speaking to camera',
           duracao: Math.min(video.duracao || 1, 2) // max 2 min para D-ID
