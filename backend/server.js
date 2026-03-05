@@ -679,12 +679,30 @@ async function processarVideoCompleto(videoId, video) {
     // Dark Stickman usa gerador offline (zero tokens, zero API)
     if (video.tipoVideo === 'darkStickman') {
       logStep(video, '📝 Gerando roteiro dark offline (zero APIs)...');
-      const temaDetectado = video.titulo.toLowerCase().includes('roanoke') || 
+      const temaDetectado = video.titulo.toLowerCase().includes('roanoke') ||
                             video.titulo.toLowerCase().includes('croatoan') ||
                             video.detalhes.toLowerCase().includes('roanoke')
-                            ? 'roanoke' 
+                            ? 'roanoke'
                             : video.titulo;
       roteiro = gerarRoteiroDark(temaDetectado, video.duracao, video.detalhes);
+    } else if (video.tipoVideo === 'didAvatar') {
+      // D-ID Avatar: NÃO usar Gemini para expandir em cenas múltiplas
+      // O áudio deve ser curto (D-ID tem limite de ~10MB / ~2 min de áudio)
+      // Usar o texto de `detalhes` diretamente como narração única
+      logStep(video, '📝 Preparando roteiro simples para D-ID Avatar...');
+      const textoNarracao = video.detalhes?.trim() || video.titulo;
+      roteiro = {
+        titulo: video.titulo,
+        nicho: video.nicho || 'geral',
+        duracao_total: video.duracao || 1,
+        cenas: [{
+          numero: 1,
+          texto_narrado: textoNarracao,
+          descricao_visual: 'Apresentador falando para câmera',
+          prompt_visual: 'person speaking to camera',
+          duracao: Math.min(video.duracao || 1, 2) // max 2 min para D-ID
+        }]
+      };
     } else {
       logStep(video, '🤖 Gerando roteiro com Gemini AI...');
       roteiro = await gerarRoteiro({
