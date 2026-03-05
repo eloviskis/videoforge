@@ -686,23 +686,64 @@ async function processarVideoCompleto(videoId, video) {
                             : video.titulo;
       roteiro = gerarRoteiroDark(temaDetectado, video.duracao, video.detalhes);
     } else if (video.tipoVideo === 'didAvatar') {
-      // D-ID Avatar: NÃO usar Gemini para expandir em cenas múltiplas
-      // O áudio deve ser curto (D-ID tem limite de ~10MB / ~2 min de áudio)
-      // Usar o texto de `detalhes` diretamente como narração única
-      logStep(video, '📝 Preparando roteiro simples para D-ID Avatar...');
-      const textoNarracao = video.detalhes?.trim() || video.titulo;
+      // D-ID Avatar: Usar Gemini para criar história CURTA (máx 2 min de áudio)
+      // Limitamos a ~300 palavras para caber no limite de upload do D-ID
+      logStep(video, '🤖 Gerando história com IA para D-ID Avatar...');
+
+      let textoNarracao = '';
+      const tema = video.detalhes?.trim() || video.titulo;
+
+      // Se o texto parece ser uma história pronta (mais de 100 palavras), usa direto
+      if (tema.split(' ').length > 100) {
+        textoNarracao = tema;
+      } else {
+        // Gerar história curta com Gemini
+        try {
+          const prompt = `Crie uma história ou texto narrado sobre o tema: "${tema}"
+
+REGRAS IMPORTANTES:
+- Máximo 300 palavras (para caber em 2 minutos de áudio)
+- Estilo envolvente e bem humorado
+- SEM títulos, SEM formatação, SEM marcadores
+- Apenas o texto corrido da narração
+- Use português brasileiro simples e natural
+- Evite palavras difíceis ou termos técnicos
+- Crie uma narrativa completa com começo, meio e fim
+
+Retorne APENAS o texto da narração, nada mais.`;
+
+          textoNarracao = await chamarGemini(prompt, 1500);
+          textoNarracao = textoNarracao.trim();
+
+          // Limpar formatação indesejada
+          textoNarracao = textoNarracao
+            .replace(/^#+\s*/gm, '') // Remove headers markdown
+            .replace(/^\*+\s*/gm, '') // Remove bullets
+            .replace(/^\d+\.\s*/gm, '') // Remove numbered lists
+            .replace(/\*\*/g, '') // Remove bold
+            .replace(/\n{3,}/g, '\n\n') // Normaliza quebras
+            .trim();
+
+        } catch (err) {
+          console.error('❌ Erro ao gerar história com Gemini:', err.message);
+          // Fallback: usa o tema direto
+          textoNarracao = tema;
+        }
+      }
+
       roteiro = {
         titulo: video.titulo,
         nicho: video.nicho || 'geral',
-        duracao_total: video.duracao || 1,
+        duracao_total: video.duracao || 2,
         cenas: [{
           numero: 1,
           texto_narracao: textoNarracao,
           descricao_visual: 'Apresentador falando para câmera',
           prompt_visual: 'person speaking to camera',
-          duracao: Math.min(video.duracao || 1, 2) // max 2 min para D-ID
+          duracao: Math.min(video.duracao || 2, 3)
         }]
       };
+      logStep(video, `✅ História gerada! ${textoNarracao.split(' ').length} palavras`);
     } else {
       logStep(video, '🤖 Gerando roteiro com Gemini AI...');
       roteiro = await gerarRoteiro({
