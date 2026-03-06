@@ -28,6 +28,7 @@ import { registrarRotasAdmin } from './admin.js';
 import { registrarRotasUserSettings } from './user-settings.js';
 import { registrarRotasSocialOAuth } from './social-oauth.js';
 import { registrarRotasFeedback } from './feedback.js';
+import { enviarEmailLead } from './mailer.js';
 import { registrarRotasTimeline } from './timeline.js';
 
 const execAsync = promisify(exec);
@@ -5253,6 +5254,10 @@ app.post('/api/public/lead', async (req, res) => {
       [email.toLowerCase().trim(), source || 'landing']
     );
     console.log(`📧 Lead capturado: ${email} (${source})`);
+    // Enviar email com roteiros grátis (fire-and-forget)
+    enviarEmailLead({ email: email.toLowerCase().trim() }).catch(err => {
+      console.error('❌ Erro ao enviar email de lead:', err.message);
+    });
     res.json({ ok: true });
   } catch (err) {
     // Se tabela não existe, criar e tentar de novo
@@ -5272,6 +5277,7 @@ app.post('/api/public/lead', async (req, res) => {
       );
     }
     console.log(`📧 Lead capturado: ${email} (${source})`);
+    enviarEmailLead({ email: email.toLowerCase().trim() }).catch(() => {});
     res.json({ ok: true });
   }
 });
