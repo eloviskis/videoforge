@@ -797,7 +797,7 @@ export default function LandingPage({ onGoLogin }) {
             padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 600,
             background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac',
           }}>
-            ✅ Grátis para testar
+            🛡️ 7 dias de garantia
           </span>
         </div>
       )}
