@@ -159,9 +159,7 @@ export default function AuthWrapper() {
             }}>
               {user.plano || 'vitalicio'}
             </span>
-            <span style={{ color: '#64748b' }}>
-              {user.videos_mes_usados ?? 0}/{user.videos_mes_limite ?? 5} vídeos
-            </span>
+
             <span style={{ flex: 1 }} />
 
             {/* Download button */}

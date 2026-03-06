@@ -1,0 +1,1 @@
+SELECT is_admin,plano,videos_mes_usados,videos_mes_limite FROM users WHERE email='eloi.santaroza@gmail.com';

@@ -5359,11 +5359,12 @@ Retorne APENAS um JSON válido:
 });
 
 // Reiniciar backend (admin only) — Docker restart policy traz de volta
-app.post('/api/admin/restart', (req, res) => {
-  if (!req.user?.is_admin) {
+app.post('/api/admin/restart', async (req, res) => {
+  const user = req.userEmail ? await buscarUsuarioPorEmail(req.userEmail) : null;
+  if (!user?.is_admin) {
     return res.status(403).json({ error: 'Acesso negado — somente administradores' });
   }
-  console.log('🔄 Reinício solicitado por:', req.user.email);
+  console.log('🔄 Reinício solicitado por:', user.email);
   res.json({ ok: true, message: 'Reiniciando backend em 1 segundo...' });
   setTimeout(() => {
     console.log('🔄 Reiniciando processo...');
