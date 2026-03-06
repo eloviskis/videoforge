@@ -88,6 +88,10 @@
         "Narração com voz neural",
         "Imagens automáticas (Pexels, Pixabay, IA)",
         "Renderização FFmpeg 1080p",
+        "Edição Inteligente com IA (visão computacional)",
+        "Timeline Editor com drag & drop",
+        "Trilha de áudio com mixagem automática",
+        "Controle de velocidade por clipe",
         "Upload direto para YouTube",
         "Multi-plataforma (TikTok, Twitter, Facebook)",
         "Notícias automáticas RSS",
@@ -243,6 +247,35 @@
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', 'G-6TEHSNBW3J');
+
+      // ═══ CONVERSION TRACKING ═══
+      // Track CTA clicks
+      window.trackCTA = function(label) {
+        gtag('event', 'cta_click', { event_category: 'conversion', event_label: label });
+      };
+      // Track lead capture
+      window.trackLead = function(source) {
+        gtag('event', 'generate_lead', { event_category: 'conversion', event_label: source });
+      };
+      // Scroll depth tracking
+      (function() {
+        var milestones = [25, 50, 75, 100], fired = {};
+        window.addEventListener('scroll', function() {
+          var pct = Math.round((window.scrollY + window.innerHeight) / document.body.scrollHeight * 100);
+          milestones.forEach(function(m) {
+            if (pct >= m && !fired[m]) {
+              fired[m] = true;
+              gtag('event', 'scroll_depth', { event_category: 'engagement', event_label: m + '%', value: m });
+            }
+          });
+        }, { passive: true });
+      })();
+      // Time on page milestones
+      [15, 30, 60, 120].forEach(function(sec) {
+        setTimeout(function() {
+          gtag('event', 'time_on_page', { event_category: 'engagement', event_label: sec + 's', value: sec });
+        }, sec * 1000);
+      });
     </script>
   </head>
   <body>

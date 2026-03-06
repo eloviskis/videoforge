@@ -13,6 +13,12 @@ export default function LandingPage({ onGoLogin }) {
   const [email, setEmail] = useState('')
   const [emailSent, setEmailSent] = useState(false)
   const [stats, setStats] = useState({ videos: '2.500+', users: '350+' })
+  const [showStickyBar, setShowStickyBar] = useState(false)
+  const [urgencyCount, setUrgencyCount] = useState(() => {
+    // Deterministic "vagas restantes" based on day — resets weekly
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000)
+    return 12 + (dayOfYear % 7) * 3
+  })
 
   useEffect(() => {
     fetch(`${API_URL}/public/precos`)
@@ -49,9 +55,16 @@ export default function LandingPage({ onGoLogin }) {
       }
     }, 30000)
 
+    // Sticky CTA bar — show after scrolling past hero
+    const handleScroll = () => {
+      setShowStickyBar(window.scrollY > 600)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+
     return () => {
       document.removeEventListener('mouseleave', handleMouseLeave)
       clearTimeout(timer)
+      window.removeEventListener('scroll', handleScroll)
     }
   }, [])
 
@@ -64,11 +77,16 @@ export default function LandingPage({ onGoLogin }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, source: 'landing_popup' })
       })
+      if (window.trackLead) window.trackLead('email_popup')
       setEmailSent(true)
       setTimeout(() => setShowEmailPopup(false), 3000)
     } catch {
       setEmailSent(true)
     }
+  }
+
+  const handleCTAClick = (label) => {
+    if (window.trackCTA) window.trackCTA(label)
   }
 
   // Intersection Observer for fade-in animations
@@ -151,6 +169,8 @@ export default function LandingPage({ onGoLogin }) {
         .cta-btn:hover{transform:translateY(-2px)!important;box-shadow:0 8px 30px rgba(139,92,246,0.6)!important}
         .feature-card:hover{border-color:rgba(139,92,246,0.3)!important;transform:translateY(-4px)}
         .nav-link:hover{color:#c4b5fd!important}
+        .sticky-bar-enter{animation:slideUp 0.3s ease}
+        @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
         @media(max-width:768px){.hide-mobile{display:none!important}.show-mobile{display:flex!important}}
       `}</style>
 
@@ -244,7 +264,7 @@ export default function LandingPage({ onGoLogin }) {
             Digite um tema e receba um vídeo completo em 1080p com um clique.
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" style={{
+            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" onClick={() => handleCTAClick('hero_comprar')} style={{
               padding: '14px 32px', borderRadius: '12px', textDecoration: 'none',
               background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
               fontWeight: 700, fontSize: '16px',
@@ -253,13 +273,76 @@ export default function LandingPage({ onGoLogin }) {
             }}>
               Começar agora — R$ 59 →
             </a>
-            <button onClick={onGoLogin} style={{
+            <button onClick={() => { handleCTAClick('hero_entrar'); onGoLogin() }} style={{
               padding: '14px 32px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.15)',
               background: 'rgba(255,255,255,0.05)', color: '#e2e8f0', cursor: 'pointer',
               fontWeight: 600, fontSize: '16px', transition: 'border-color 0.2s',
             }}>
               Já tenho conta
             </button>
+          </div>
+
+          {/* Selo modo grátis + urgência */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '16px', flexWrap: 'wrap' }}>
+            <span style={{
+              padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: 600,
+              background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac',
+            }}>
+              ✅ Modo 100% grátis disponível
+            </span>
+            <span style={{
+              padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: 600,
+              background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5',
+              animation: 'pulse 2s infinite',
+            }}>
+              🔥 Apenas {urgencyCount} vagas com desconto
+            </span>
+          </div>
+
+          {/* Demo preview animado */}
+          <div style={{
+            marginTop: '48px', maxWidth: '700px', marginLeft: 'auto', marginRight: 'auto',
+            borderRadius: '16px', overflow: 'hidden',
+            border: '1px solid rgba(139,92,246,0.3)',
+            background: 'linear-gradient(135deg, rgba(139,92,246,0.08), rgba(168,85,247,0.04))',
+            padding: '3px',
+          }}>
+            <div style={{
+              borderRadius: '14px', overflow: 'hidden',
+              background: '#0f0f23', padding: '20px 24px',
+            }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#ef4444' }}></div>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f59e0b' }}></div>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#22c55e' }}></div>
+                <span style={{ color: '#4b5563', fontSize: '12px', marginLeft: '8px' }}>VideoForge v1.3</span>
+              </div>
+              {/* Simulated app flow */}
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: '180px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Tema</div>
+                  <div style={{
+                    background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.2)',
+                    borderRadius: '8px', padding: '10px 14px', color: '#c4b5fd', fontSize: '14px',
+                  }}>
+                    "5 curiosidades sobre o espaço" <span style={{ animation: 'pulse 1s infinite' }}>|</span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', paddingTop: '22px' }}>
+                  <span style={{ color: '#a855f7', fontSize: '24px' }}>→</span>
+                </div>
+                <div style={{ flex: 1, minWidth: '180px' }}>
+                  <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '1px' }}>Resultado</div>
+                  <div style={{
+                    background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
+                    borderRadius: '8px', padding: '10px 14px', color: '#86efac', fontSize: '13px',
+                  }}>
+                    ✅ Vídeo 1080p • 2:30 • 5 cenas<br/>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>Roteiro + Narração + Imagens + Legendas</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Stats melhorados */}
@@ -282,7 +365,7 @@ export default function LandingPage({ onGoLogin }) {
             <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '12px' }}>
               📧 Receba dicas grátis de como criar vídeos virais com IA:
             </p>
-            <form onSubmit={handleEmailSubmit} style={{ display: 'flex', gap: '8px' }}>
+            <form onSubmit={(e) => { handleEmailSubmit(e); if (window.trackLead) window.trackLead('hero_inline') }} style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="email"
                 placeholder="seu@email.com"
@@ -403,7 +486,7 @@ export default function LandingPage({ onGoLogin }) {
 
           {/* CTA INTERMEDIÁRIO */}
           <div style={{ marginTop: '48px' }}>
-            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" style={{
+            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" onClick={() => handleCTAClick('como_funciona_comprar')} style={{
               padding: '14px 36px', borderRadius: '12px', border: 'none', display: 'inline-block',
               background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
               fontWeight: 700, fontSize: '16px', cursor: 'pointer', textDecoration: 'none',
@@ -462,7 +545,7 @@ export default function LandingPage({ onGoLogin }) {
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '40px' }}>
-            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" style={{
+            <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" onClick={() => handleCTAClick('ai_editing_comprar')} style={{
               padding: '14px 36px', borderRadius: '12px', border: 'none', display: 'inline-block',
               background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
               fontWeight: 700, fontSize: '16px', cursor: 'pointer', textDecoration: 'none',
@@ -527,7 +610,7 @@ export default function LandingPage({ onGoLogin }) {
               </ul>
 
               {p.link ? (
-                <a href={p.link} target="_blank" rel="noopener noreferrer" className="cta-btn" style={{
+                <a href={p.link} target="_blank" rel="noopener noreferrer" className="cta-btn" onClick={() => handleCTAClick('preco_comprar')} style={{
                   display: 'block', textAlign: 'center', padding: '15px',
                   borderRadius: '10px', textDecoration: 'none', fontWeight: 700, fontSize: '16px',
                   background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
@@ -674,7 +757,7 @@ export default function LandingPage({ onGoLogin }) {
         <p style={{ color: '#86efac', fontSize: '14px', marginBottom: '32px' }}>
           🛡️ 7 dias de garantia incondicional · 🔒 Pagamento seguro via Hotmart
         </p>
-        <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" style={{
+        <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" onClick={() => handleCTAClick('cta_final_comprar')} style={{
           padding: '16px 40px', borderRadius: '12px', border: 'none', display: 'inline-block',
           background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
           fontWeight: 700, fontSize: '18px', cursor: 'pointer', textDecoration: 'none',
@@ -685,9 +768,43 @@ export default function LandingPage({ onGoLogin }) {
         </a>
       </section>
 
+      {/* ═══ STICKY BOTTOM CTA BAR ═══ */}
+      {showStickyBar && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 90,
+          background: 'rgba(10,10,26,0.95)', backdropFilter: 'blur(12px)',
+          borderTop: '1px solid rgba(139,92,246,0.3)',
+          padding: '12px 24px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px',
+          flexWrap: 'wrap',
+          animation: 'fadeInUp 0.3s ease',
+        }}>
+          <span style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 500 }}>
+            <span style={{ textDecoration: 'line-through', color: '#64748b' }}>R$ 197</span>{' '}
+            <strong style={{ color: '#fff', fontSize: '18px' }}>R$ {precos.preco_vitalicio || '59'}</strong>{' '}
+            <span style={{ color: '#64748b' }}>— acesso vitalício</span>
+          </span>
+          <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" onClick={() => handleCTAClick('sticky_bar_comprar')} style={{
+            padding: '10px 24px', borderRadius: '10px', textDecoration: 'none',
+            background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
+            fontWeight: 700, fontSize: '14px',
+            boxShadow: '0 4px 16px rgba(139,92,246,0.5)',
+            transition: 'transform 0.2s, box-shadow 0.2s',
+          }}>
+            🔥 Comprar agora →
+          </a>
+          <span style={{
+            padding: '4px 10px', borderRadius: '99px', fontSize: '11px', fontWeight: 600,
+            background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', color: '#86efac',
+          }}>
+            ✅ Grátis para testar
+          </span>
+        </div>
+      )}
+
       {/* ═══ FOOTER ═══ */}
       <footer style={{
-        padding: '48px 24px 32px', textAlign: 'center',
+        padding: '48px 24px 80px', textAlign: 'center',
         borderTop: '1px solid rgba(255,255,255,0.06)',
         color: '#4b5563', fontSize: '13px',
       }}>
