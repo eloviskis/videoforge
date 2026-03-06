@@ -821,6 +821,7 @@ export default function LandingPage({ onGoLogin }) {
               <a href="/blog/como-criar-videos-com-ia.html" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Criar vídeos com IA</a>
               <a href="/blog/automatizar-canal-youtube-com-ia.html" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>Automatizar YouTube</a>
               <a href="/blog/ganhar-dinheiro-youtube-sem-aparecer.html" style={{ display: 'block', color: '#64748b', textDecoration: 'none', padding: '3px 0', fontSize: '13px' }}>YouTube sem aparecer</a>
+              <a href="/gerador-roteiro" style={{ display: 'block', color: '#a855f7', textDecoration: 'none', padding: '3px 0', fontSize: '13px', fontWeight: 600 }}>🤖 Gerador de Roteiro Grátis</a>
             </div>
             <div style={{ textAlign: 'left', minWidth: '180px' }}>
               <h4 style={{ color: '#94a3b8', fontSize: '13px', fontWeight: 700, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Legal</h4>

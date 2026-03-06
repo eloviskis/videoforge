@@ -5282,6 +5282,82 @@ app.post('/api/public/lead', async (req, res) => {
   }
 });
 
+// ═══ GERADOR DE ROTEIRO GRÁTIS (funil de leads) ═══
+const freeScriptLimiter = new Map(); // IP -> { count, resetAt }
+app.post('/api/public/gerar-roteiro-gratis', async (req, res) => {
+  const { tema, email } = req.body;
+  if (!tema || tema.trim().length < 3) {
+    return res.status(400).json({ error: 'Digite um tema com pelo menos 3 caracteres' });
+  }
+
+  // Rate limit: 3 por IP por hora
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
+  const now = Date.now();
+  const limiter = freeScriptLimiter.get(ip);
+  if (limiter && limiter.resetAt > now && limiter.count >= 3) {
+    return res.status(429).json({ error: 'Limite atingido. Tente novamente em 1 hora.' });
+  }
+  if (!limiter || limiter.resetAt <= now) {
+    freeScriptLimiter.set(ip, { count: 1, resetAt: now + 3600000 });
+  } else {
+    limiter.count++;
+  }
+
+  // Salvar lead se email fornecido
+  if (email && email.includes('@')) {
+    try {
+      await pool.query(
+        `INSERT INTO leads (email, source, created_at) VALUES ($1, $2, NOW())
+         ON CONFLICT (email) DO UPDATE SET source = $2, updated_at = NOW()`,
+        [email.toLowerCase().trim(), 'gerador_roteiro']
+      );
+      enviarEmailLead({ email: email.toLowerCase().trim() }).catch(() => {});
+    } catch { /* tabela pode não existir ainda */ }
+  }
+
+  // Gerar roteiro com Gemini
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'sua_chave_aqui') {
+    return res.status(503).json({ error: 'Serviço temporariamente indisponível' });
+  }
+
+  try {
+    const prompt = `Você é um roteirista profissional de vídeos para YouTube em português brasileiro.
+
+Crie um roteiro COMPLETO e DETALHADO para um vídeo sobre: "${tema.trim().substring(0, 200)}"
+
+REGRAS:
+1. Crie exatamente 5 cenas curtas
+2. Cada cena deve ter 2-3 frases de narração envolventes
+3. Inclua prompt visual em inglês para cada cena
+4. Duração alvo: ~2 minutos
+5. Tom: informativo e envolvente
+
+Retorne APENAS um JSON válido:
+{
+  "titulo": "Título chamativo (máx 60 chars)",
+  "descricao": "Descrição SEO curta",
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+  "cenas": [
+    { "numero": 1, "texto_narracao": "Narração em PT-BR", "prompt_visual": "visual description in English", "duracao_estimada": 25 }
+  ]
+}`;
+
+    const content = await chamarGemini(prompt, 30000);
+    let jsonStr = content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) jsonStr = jsonMatch[0];
+    jsonStr = jsonStr.replace(/,\s*([\]}])/g, '$1');
+    jsonStr = jsonStr.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+    
+    const roteiro = JSON.parse(jsonStr);
+    console.log(`📝 Roteiro grátis gerado: "${tema}" (${ip})`);
+    res.json({ ok: true, roteiro });
+  } catch (err) {
+    console.error('❌ Erro gerador grátis:', err.message);
+    res.status(500).json({ error: 'Erro ao gerar roteiro. Tente outro tema.' });
+  }
+});
+
 // Reiniciar backend (admin only) — Docker restart policy traz de volta
 app.post('/api/admin/restart', (req, res) => {
   if (!req.user?.is_admin) {
