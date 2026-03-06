@@ -1846,8 +1846,8 @@ video_id = sys.argv[1]
 output_path = sys.argv[2]
 cenas_path = sys.argv[3]
 
-API_KEY = os.environ.get('ELEVENLABS_API_KEY', '')
-VOICE_ID = os.environ.get('ELEVENLABS_VOICE_ID', 'pNInz6obpgDQGcFmaJgB')  # Adam (multilingual)
+API_KEY = '${process.env.ELEVENLABS_API_KEY || ''}'
+VOICE_ID = '${process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB'}'  # Adam (multilingual)
 cenas = json.load(open(cenas_path))
 temp_dir = f'/media/temp/{video_id}'
 os.makedirs(temp_dir, exist_ok=True)
@@ -1913,7 +1913,7 @@ video_id = sys.argv[1]
 output_path = sys.argv[2]
 cenas_path = sys.argv[3]
 
-API_KEY = os.environ.get('OPENAI_API_KEY', '')
+API_KEY = '${process.env.OPENAI_API_KEY || ''}'
 cenas = json.load(open(cenas_path))
 temp_dir = f'/media/temp/{video_id}'
 os.makedirs(temp_dir, exist_ok=True)
