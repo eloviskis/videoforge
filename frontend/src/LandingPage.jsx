@@ -148,12 +148,17 @@ export default function LandingPage({ onGoLogin }) {
   ]
 
   const faqs = [
-    { q: 'Preciso saber programar?', a: 'Não! A interface é 100% visual. Basta digitar o tema e clicar em gerar.' },
-    { q: 'Quais APIs preciso configurar?', a: 'No mínimo: Gemini (grátis) e Pexels (grátis). Após o login, clique em ⚙️ Minha Conta para configurar suas chaves.' },
-    { q: 'Funciona para qualquer nicho?', a: 'Sim! Curiosidades, notícias, motivacional, dark, educacional, gaming e qualquer outro.' },
-    { q: 'Como funciona o pagamento?', a: 'Pagamento único de R$ 59 via Hotmart (boleto, PIX, cartão). Após o pagamento, sua conta é ativada automaticamente com acesso vitalício.' },
-    { q: 'Os tokens de IA estão inclusos?', a: 'Não. Os R$ 59 são pelo acesso à plataforma. Os tokens de IA (Replicate, Kling, ElevenLabs, etc.) São consumidos das suas próprias contas nesses provedores. Porém, os modos Stock Images e Stick Animation são 100% gratuitos!' },
-    { q: 'E se eu já tiver meu próprio servidor?', a: 'O VideoForge roda em qualquer VPS Linux com Docker. Você tem controle total.' },
+    { q: 'Preciso saber programar?', a: 'Não! A interface é 100% visual. Basta digitar o tema e clicar em gerar. Se você sabe usar o YouTube, sabe usar o VideoForge.' },
+    { q: 'Quais APIs preciso configurar?', a: 'No mínimo: Gemini (grátis) e Pexels (grátis). Após o login, clique em ⚙️ Minha Conta para configurar suas chaves. Leva menos de 5 minutos.' },
+    { q: 'Funciona para qualquer nicho?', a: 'Sim! Curiosidades, notícias, motivacional, dark, educacional, gaming, finanças, saúde, tecnologia e qualquer outro.' },
+    { q: 'Como funciona o pagamento?', a: 'Pagamento único de R$ 59 via Hotmart (boleto, PIX, cartão). Após o pagamento, sua conta é ativada automaticamente com acesso vitalício. Sem mensalidades, sem surpresas.' },
+    { q: 'Os tokens de IA estão inclusos?', a: 'Não. Os R$ 59 são pelo acesso à plataforma. Os tokens de IA (Replicate, Kling, ElevenLabs, etc.) são consumidos das suas próprias contas nesses provedores. Porém, os modos Stock Images e Stick Animation são 100% gratuitos!' },
+    { q: 'E se eu já tiver meu próprio servidor?', a: 'O VideoForge roda em qualquer VPS Linux com Docker. Você tem controle total da infraestrutura.' },
+    { q: 'Os vídeos ficam com marca d\'água?', a: 'Não! Os vídeos são 100% seus, sem marca d\'água, sem logo do VideoForge. Você pode monetizar livremente.' },
+    { q: 'A narração parece robótica?', a: 'Não! Usamos vozes neurais de última geração (Edge TTS gratuito ou ElevenLabs premium). O resultado é natural e profissional.' },
+    { q: 'Funciona em Mac / Linux?', a: 'Sim! O VideoForge roda no navegador — funciona em qualquer sistema operacional. Você também pode instalar o app desktop no Windows.' },
+    { q: 'Preciso de um computador potente?', a: 'Não! Todo o processamento pesado (renderização, IA) é feito no servidor. Qualquer computador com navegador funciona.' },
+    { q: 'E se eu não gostar?', a: 'Você tem 7 dias de garantia incondicional via Hotmart. Se não gostar, basta solicitar o reembolso — sem perguntas, sem burocracia.' },
   ]
 
   return (
@@ -257,11 +262,11 @@ export default function LandingPage({ onGoLogin }) {
             background: 'linear-gradient(135deg, #fff, #ddd6fe, #c084fc)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
           }}>
-            Crie vídeos prontos para o YouTube em minutos
+            Publique vídeos no YouTube todo dia — sem gravar, sem editar, sem aparecer
           </h1>
           <p style={{ fontSize: '18px', color: '#94a3b8', lineHeight: 1.6, margin: '0 0 36px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto' }}>
-            Roteiro, narração, imagens e renderização — tudo automático.
-            Digite um tema e receba um vídeo completo em 1080p com um clique.
+            Você digita o tema. A IA escreve o roteiro, narra, gera imagens e renderiza o vídeo pronto em 1080p.
+            Enquanto outros gastam horas editando, você publica no automático.
           </p>
           <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href={precos.hotmart_checkout_vitalicio || '#precos'} target={precos.hotmart_checkout_vitalicio ? '_blank' : undefined} rel="noopener noreferrer" className="cta-btn" onClick={() => handleCTAClick('hero_comprar')} style={{
@@ -589,6 +594,71 @@ export default function LandingPage({ onGoLogin }) {
         </div>
       </section>
 
+      {/* ═══ COMPARAÇÃO DE CUSTOS ═══ */}
+      <section data-animate style={{ padding: '80px 24px', background: 'rgba(255,255,255,0.02)' }}
+        className={`fade-section ${visibleSections['precos'] ? 'visible' : ''}`}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '12px' }}>
+            Quanto custa criar vídeos hoje?
+          </h2>
+          <p style={{ color: '#94a3b8', marginBottom: '40px', fontSize: '16px' }}>
+            Compare e veja por que o VideoForge é o melhor investimento
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+            {/* Editor humano */}
+            <div style={{
+              background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)',
+              borderRadius: '16px', padding: '28px 20px', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>👨‍💻</div>
+              <div style={{ fontWeight: 700, fontSize: '16px', color: '#fca5a5', marginBottom: '4px' }}>Contratar Editor</div>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: '#ef4444', marginBottom: '8px' }}>R$ 500<span style={{ fontSize: '14px', color: '#94a3b8' }}>/mês</span></div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#94a3b8', lineHeight: 2 }}>
+                <li>❌ Depende de terceiros</li>
+                <li>❌ Prazo de dias</li>
+                <li>❌ Custo recorrente</li>
+              </ul>
+            </div>
+            {/* Ferramentas SaaS */}
+            <div style={{
+              background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)',
+              borderRadius: '16px', padding: '28px 20px', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔧</div>
+              <div style={{ fontWeight: 700, fontSize: '16px', color: '#fcd34d', marginBottom: '4px' }}>Ferramentas SaaS</div>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: '#f59e0b', marginBottom: '8px' }}>R$ 100<span style={{ fontSize: '14px', color: '#94a3b8' }}>/mês</span></div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#94a3b8', lineHeight: 2 }}>
+                <li>⚠️ Marca d'água na maioria</li>
+                <li>⚠️ Limites mensais</li>
+                <li>❌ Custo recorrente</li>
+              </ul>
+            </div>
+            {/* VideoForge */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(168,85,247,0.08))',
+              border: '2px solid rgba(139,92,246,0.4)',
+              borderRadius: '16px', padding: '28px 20px', textAlign: 'center',
+              position: 'relative', overflow: 'hidden',
+              boxShadow: '0 0 40px rgba(139,92,246,0.15)',
+            }}>
+              <div style={{
+                position: 'absolute', top: '12px', right: '-28px', transform: 'rotate(45deg)',
+                background: 'linear-gradient(135deg, #7c3aed, #a855f7)', padding: '4px 36px',
+                fontSize: '10px', fontWeight: 700, color: '#fff',
+              }}>MELHOR</div>
+              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🚀</div>
+              <div style={{ fontWeight: 700, fontSize: '16px', color: '#c4b5fd', marginBottom: '4px' }}>VideoForge</div>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: '#a855f7', marginBottom: '8px' }}>R$ 59<span style={{ fontSize: '14px', color: '#94a3b8' }}> uma vez</span></div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#94a3b8', lineHeight: 2 }}>
+                <li>✅ Sem marca d'água</li>
+                <li>✅ Vídeos ilimitados</li>
+                <li>✅ Pagamento único</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ═══ PREÇOS ═══ */}
       <section id="precos" data-animate style={{ padding: '80px 24px', maxWidth: '1100px', margin: '0 auto' }}
         className={`fade-section ${visibleSections['precos'] ? 'visible' : ''}`}>
@@ -739,6 +809,30 @@ export default function LandingPage({ onGoLogin }) {
               O VideoForge <strong>não cobra</strong> pelos tokens — você usa suas próprias chaves de API.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* ═══ GARANTIA ═══ */}
+      <section data-animate style={{
+        padding: '80px 24px',
+        background: 'radial-gradient(ellipse at center, rgba(34,197,94,0.08), transparent 60%)',
+      }} className={`fade-section ${visibleSections['faq'] ? 'visible' : ''}`}>
+        <div style={{
+          maxWidth: '600px', margin: '0 auto', textAlign: 'center',
+          background: 'rgba(34,197,94,0.06)', border: '2px solid rgba(34,197,94,0.25)',
+          borderRadius: '20px', padding: '48px 32px',
+        }}>
+          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🛡️</div>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, marginBottom: '12px', color: '#86efac' }}>
+            Garantia de 7 dias
+          </h2>
+          <p style={{ fontSize: '18px', color: '#e2e8f0', lineHeight: 1.7, marginBottom: '8px' }}>
+            Teste o VideoForge por 7 dias.<br />
+            Se não gostar, devolvemos seu dinheiro — <strong>sem perguntas</strong>.
+          </p>
+          <p style={{ fontSize: '14px', color: '#64748b' }}>
+            Garantia processada automaticamente via Hotmart. Zero burocracia.
+          </p>
         </div>
       </section>
 
