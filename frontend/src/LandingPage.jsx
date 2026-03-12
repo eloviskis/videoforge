@@ -299,6 +299,37 @@ export default function LandingPage({ onGoLogin }) {
             </span>
           </div>
 
+          {/* Vídeo Demo */}
+          <div style={{ marginTop: '36px', textAlign: 'center' }}>
+            <div style={{
+              display: 'inline-block', padding: '5px 14px', borderRadius: '99px', fontSize: '12px',
+              background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)',
+              color: '#c4b5fd', fontWeight: 600, marginBottom: '14px',
+            }}>▶️ Veja um vídeo feito 100% por IA</div>
+            <div style={{
+              position: 'relative', borderRadius: '16px', overflow: 'hidden',
+              border: '2px solid rgba(139,92,246,0.4)',
+              boxShadow: '0 8px 40px rgba(139,92,246,0.25), 0 0 100px rgba(139,92,246,0.1)',
+              maxWidth: '680px', margin: '0 auto',
+              aspectRatio: '16/9',
+            }}>
+              <iframe
+                width="100%" height="100%"
+                src="https://www.youtube.com/embed/LX3Wi-Lwa9E?si=YoYtejlK13JFbs_2&controls=0"
+                title="VideoForge - Amostra de vídeo gerado por IA"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                allowFullScreen
+                loading="lazy"
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
+            <p style={{ color: '#64748b', fontSize: '12px', marginTop: '12px' }}>
+              ☝️ Roteiro, narração e imagens — tudo gerado automaticamente
+            </p>
+          </div>
+
           {/* Demo preview animado */}
           <div style={{
             marginTop: '48px', maxWidth: '700px', marginLeft: 'auto', marginRight: 'auto',
@@ -499,46 +530,6 @@ export default function LandingPage({ onGoLogin }) {
               🔒 7 dias de garantia · Pagamento seguro via Hotmart
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* ═══ VÍDEO DEMO ═══ */}
-      <section data-animate style={{ padding: '80px 24px', background: 'linear-gradient(180deg, rgba(139,92,246,0.06) 0%, transparent 100%)' }}
-        className={`fade-section ${visibleSections['como-funciona'] ? 'visible' : ''}`}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-block', padding: '6px 16px', borderRadius: '99px', fontSize: '13px',
-            background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)',
-            color: '#86efac', fontWeight: 600, marginBottom: '16px',
-          }}>🎬 Vídeo gerado 100% por IA</div>
-          <h2 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '12px' }}>
-            Veja o que o VideoForge produz
-          </h2>
-          <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '32px', maxWidth: '600px', margin: '0 auto 32px' }}>
-            Este vídeo foi criado automaticamente usando uma das IAs disponíveis na ferramenta — roteiro, narração e imagens gerados sem nenhuma edição manual.
-          </p>
-          <div style={{
-            position: 'relative', borderRadius: '16px', overflow: 'hidden',
-            border: '2px solid rgba(139,92,246,0.3)',
-            boxShadow: '0 8px 40px rgba(139,92,246,0.2), 0 0 80px rgba(139,92,246,0.08)',
-            maxWidth: '720px', margin: '0 auto',
-            aspectRatio: '16/9',
-          }}>
-            <iframe
-              width="100%" height="100%"
-              src="https://www.youtube.com/embed/LX3Wi-Lwa9E?si=YoYtejlK13JFbs_2&controls=0"
-              title="VideoForge - Amostra de vídeo gerado por IA"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-              loading="lazy"
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-            />
-          </div>
-          <p style={{ color: '#64748b', fontSize: '12px', marginTop: '16px' }}>
-            ☝️ Narração, roteiro e imagens gerados automaticamente pelo VideoForge
-          </p>
         </div>
       </section>
 
