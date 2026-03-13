@@ -30,6 +30,8 @@ function App() {
     duracao: 10,
     detalhes: '',
     publicarYoutube: false,
+    legendas: true,
+    estiloLegenda: 'classic',
     tipoVideo: 'stickAnimation' // 'stockImages' ou 'stickAnimation'
   })
 
@@ -51,6 +53,7 @@ function App() {
   const [restartingBackend, setRestartingBackend] = useState(false)
   const [modoRoteiro, setModoRoteiro] = useState('ia') // 'ia' | 'manual'
   const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '' })
+  const [editorCenas, setEditorCenas] = useState({}) // { videoId: { cenas: [], loading: false, open: false } }
   const [monitorVideoId, setMonitorVideoId] = useState(null)
   const [monitorVideo, setMonitorVideo] = useState(null)
   const [monitorMinimized, setMonitorMinimized] = useState(false)
@@ -325,6 +328,8 @@ function App() {
         duracao: 10,
         detalhes: '',
         publicarYoutube: false,
+        legendas: true,
+        estiloLegenda: 'classic',
         tipoVideo: 'stickAnimation'
       })
       
@@ -347,6 +352,31 @@ function App() {
       ...formData,
       [e.target.name]: value
     })
+  }
+
+  const toggleEditorCenas = async (videoId) => {
+    const estado = editorCenas[videoId]
+    if (estado?.open) {
+      setEditorCenas(prev => ({ ...prev, [videoId]: { ...prev[videoId], open: false } }))
+      return
+    }
+    setEditorCenas(prev => ({ ...prev, [videoId]: { cenas: [], loading: true, open: true } }))
+    try {
+      const r = await axios.get(`${API_URL}/videos/${videoId}/cenas`)
+      setEditorCenas(prev => ({ ...prev, [videoId]: { cenas: r.data.cenas, loading: false, open: true } }))
+    } catch {
+      setEditorCenas(prev => ({ ...prev, [videoId]: { cenas: [], loading: false, open: true, error: 'Não foi possível carregar cenas' } }))
+    }
+  }
+
+  const trocarMidiaCena = async (videoId, numCena, novaUrl, tipo) => {
+    try {
+      await axios.put(`${API_URL}/videos/${videoId}/cenas/${numCena}/media`, { url: novaUrl, tipo: tipo || 'imagem' })
+      const r = await axios.get(`${API_URL}/videos/${videoId}/cenas`)
+      setEditorCenas(prev => ({ ...prev, [videoId]: { ...prev[videoId], cenas: r.data.cenas } }))
+    } catch (err) {
+      alert('Erro ao trocar mídia: ' + (err.response?.data?.error || err.message))
+    }
   }
 
   const conectarYoutube = async () => {
@@ -983,6 +1013,7 @@ function App() {
               <select value={roteiroManual.tipoVideo} onChange={e => setRoteiroManual(p => ({ ...p, tipoVideo: e.target.value }))}>
                 <optgroup label="✅ Gratuitos">
                   <option value="stockImages">📸 Imagens Stock (Pexels) 🟢</option>
+                  <option value="stockVideos">🎬 Vídeos Stock (Pexels) 🟢</option>
                   <option value="aiImageGeneration">🖼️ Imagens IA — Flux.1/DALL-E se configurado 🟢/🟡</option>
                   <option value="stickAnimation">🎨 Animação de Palitinho (IA) 🟢</option>
                   <option value="darkStickman">🖤 Dark Stickman (Texto Animado) 🟢</option>
@@ -1110,6 +1141,7 @@ function App() {
             <select name="tipoVideo" value={formData.tipoVideo} onChange={handleChange}>
               <optgroup label="✅ Gratuitos">
                 <option value="stockImages">📸 Imagens Stock (Pexels) 🟢</option>
+                <option value="stockVideos">🎬 Vídeos Stock (Pexels) 🟢</option>
                 <option value="aiImageGeneration">🖼️ Imagens IA — Flux.1/DALL-E se configurado, senão Grátis 🟢/🟡</option>
                 <option value="stickAnimation">🎨 Animação de Palitinho (IA) 🟢</option>
                 <option value="darkStickman">🖤 Dark Stickman (Texto Animado) 🟢</option>
@@ -1132,6 +1164,8 @@ function App() {
                 ? '✨ A IA vai gerar código de animação personalizado para cada cena!'
                 : formData.tipoVideo === 'darkStickman'
                 ? '🖤 Cenas com texto animado estilo canais dark — zoom, shake, efeitos dramáticos. Zero IA, 100% local e rápido!'
+                : formData.tipoVideo === 'stockVideos'
+                ? '🎬 Vídeos reais do Pexels em vez de imagens — mais dinâmico e profissional! 100% gratuito.'
                                 : formData.tipoVideo === 'klingGeneration'
                 ? '🎥 Kling AI gera vídeos realistas por IA (~$0.01-0.04/cena). Requer chaves em platform.klingai.com'
                 : formData.tipoVideo === 'veoGeneration'
@@ -1152,6 +1186,27 @@ function App() {
                 ? '🎭 Apresentador virtual animado lendo a narração. Requer DID_API_KEY + DID_PRESENTER_URL nas Configurações 🟡'
                 : '📷 Busca imagens reais do Pexels. Com PIXABAY_API_KEY adiciona música de fundo 🟢 | Legendas Whisper automáticas 🟢'}
             </small>
+            {PAID_TYPES[formData.tipoVideo] && (
+              <div style={{ marginTop: '8px', padding: '10px 14px', background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '8px', fontSize: '12px' }}>
+                <strong>💰 Custo estimado:</strong> {PAID_TYPES[formData.tipoVideo].calcCost(formData.duracao).total}
+                <br />
+                <span style={{ color: '#856404' }}>{PAID_TYPES[formData.tipoVideo].calcCost(formData.duracao).detalhe}</span>
+                <br />
+                <span style={{ color: '#856404', fontSize: '11px' }}>⚠️ {PAID_TYPES[formData.tipoVideo].warning}</span>
+              </div>
+            )}
+            {!PAID_TYPES[formData.tipoVideo] && (
+              <div style={{ marginTop: '8px', padding: '8px 14px', background: '#d4edda', border: '1px solid #28a745', borderRadius: '8px', fontSize: '12px', color: '#155724' }}>
+                ✅ <strong>Gratuito</strong> — Este tipo de vídeo não consome APIs pagas.
+                {formData.tipoVideo === 'stockImages' || formData.tipoVideo === 'stockVideos'
+                  ? ' Usa Pexels (gratuito, ilimitado).'
+                  : formData.tipoVideo === 'geminiVeoGeneration'
+                  ? ' Usa Google AI Studio (gratuito com limites diários).'
+                  : formData.tipoVideo === 'localAIGeneration'
+                  ? ' Roda modelos open source na sua máquina.'
+                  : ''}
+              </div>
+            )}
           </div>
 
           <div className="form-group">
@@ -1190,6 +1245,32 @@ function App() {
                 <span style={{ fontSize: '12px', color: '#999' }}>(conecte o YouTube nas configurações)</span>
               )}
             </label>
+          </div>
+
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                name="legendas"
+                checked={formData.legendas}
+                onChange={handleChange}
+                style={{ width: 'auto' }}
+              />
+              <span>💬 Legendas automáticas (Whisper)</span>
+            </label>
+            {formData.legendas && (
+              <div style={{ marginTop: '8px' }}>
+                <label style={{ fontSize: '0.9em', color: '#666' }}>Estilo da legenda:</label>
+                <select name="estiloLegenda" value={formData.estiloLegenda} onChange={handleChange} style={{ marginLeft: '8px' }}>
+                  <option value="classic">📝 Clássico (branco com contorno)</option>
+                  <option value="bold">💪 Bold (grande e grosso)</option>
+                  <option value="neon">💜 Neon (ciano com contorno roxo)</option>
+                  <option value="minimal">✨ Minimal (sutil e elegante)</option>
+                  <option value="cinematic">🎬 Cinematográfico (centralizado embaixo)</option>
+                  <option value="yellow">💛 Amarelo (destaque amarelo)</option>
+                </select>
+              </div>
+            )}
           </div>
 
           <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -1369,6 +1450,50 @@ function App() {
                           ⬇️ Baixar Vídeo
                         </a>
                       )}
+                      {video.roteiro && (
+                        <a
+                          href={`${API_URL}/videos/${video.id}/roteiro`}
+                          download
+                          style={{
+                            background: '#6366f1',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '8px 14px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          📝 Exportar Roteiro
+                        </a>
+                      )}
+                      {video.subtitlePath && (
+                        <a
+                          href={`${API_URL}/videos/${video.id}/srt`}
+                          download
+                          style={{
+                            background: '#8b5cf6',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '8px 14px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          💬 Exportar SRT
+                        </a>
+                      )}
                       <button
                         onClick={async () => {
                           if (!confirm('Republicar este vídeo no YouTube? (será feito um novo upload)')) return
@@ -1431,6 +1556,80 @@ function App() {
                         ))}
                       </div>
                     </div>
+
+                    {/* Editor de Cenas */}
+                    {video.status === 'pronto' && (
+                      <div style={{ marginTop: '10px' }}>
+                        <button
+                          onClick={() => toggleEditorCenas(video.id)}
+                          style={{
+                            background: 'none', border: '1px solid #667eea', color: '#667eea',
+                            borderRadius: '6px', padding: '6px 12px', cursor: 'pointer',
+                            fontSize: '12px', fontWeight: 600
+                          }}
+                        >
+                          {editorCenas[video.id]?.open ? '✕ Fechar Editor de Cenas' : '🎬 Editor de Cenas'}
+                        </button>
+                        {editorCenas[video.id]?.open && (
+                          <div style={{ marginTop: '10px', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '12px', background: '#fafafa' }}>
+                            {editorCenas[video.id]?.loading ? (
+                              <p style={{ fontSize: '12px', color: '#888' }}>Carregando cenas...</p>
+                            ) : editorCenas[video.id]?.error ? (
+                              <p style={{ fontSize: '12px', color: '#dc2626' }}>{editorCenas[video.id].error}</p>
+                            ) : (
+                              <div>
+                                <p style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                                  Altere a mídia de cada cena individualmente. Cole a URL da nova imagem ou vídeo.
+                                </p>
+                                {editorCenas[video.id]?.cenas?.map((cena, idx) => (
+                                  <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px', borderBottom: idx < editorCenas[video.id].cenas.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
+                                    <div style={{ minWidth: '30px', fontWeight: 700, color: '#667eea', fontSize: '14px' }}>
+                                      #{cena.numero}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                      <p style={{ fontSize: '11px', color: '#333', margin: '0 0 4px 0' }}>
+                                        {cena.texto_narracao?.substring(0, 100)}{cena.texto_narracao?.length > 100 ? '...' : ''}
+                                      </p>
+                                      {cena.media && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                          <span style={{ fontSize: '10px', background: cena.media.tipo === 'video' ? '#7c3aed' : '#059669', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>
+                                            {cena.media.tipo === 'video' ? '🎬 Vídeo' : '📸 Imagem'}
+                                          </span>
+                                          <span style={{ fontSize: '10px', color: '#999', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                                            {cena.media.url}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                        <input
+                                          type="text"
+                                          placeholder="Cole URL da nova mídia..."
+                                          id={`media-input-${video.id}-${cena.numero}`}
+                                          style={{ flex: 1, fontSize: '11px', padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: '4px' }}
+                                        />
+                                        <button
+                                          onClick={() => {
+                                            const input = document.getElementById(`media-input-${video.id}-${cena.numero}`)
+                                            if (input?.value) {
+                                              const tipo = input.value.match(/\.(mp4|webm|mov)/i) ? 'video' : 'imagem'
+                                              trocarMidiaCena(video.id, cena.numero, input.value, tipo)
+                                              input.value = ''
+                                            }
+                                          }}
+                                          style={{ fontSize: '11px', padding: '4px 10px', background: '#667eea', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                        >
+                                          Trocar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

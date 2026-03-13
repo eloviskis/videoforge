@@ -359,7 +359,7 @@ const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
 // Rota manual — usa roteiro fornecido pelo usuário, pula o Gemini
 app.post('/api/videos/manual', async (req, res) => {
   try {
-    const { titulo, tipoVideo, publicarYoutube, texto } = req.body;
+    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda } = req.body;
     if (!titulo?.trim()) return res.status(400).json({ error: 'Título obrigatório' });
     if (!texto?.trim()) return res.status(400).json({ error: 'Roteiro (texto) obrigatório' });
 
@@ -389,6 +389,8 @@ app.post('/api/videos/manual', async (req, res) => {
       detalhes: '',
       publicarYoutube: publicarYoutube || false,
       tipoVideo: tipoVideo || 'stickAnimation',
+      legendas: legendas !== false,
+      estiloLegenda: estiloLegenda || 'classic',
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando com roteiro manual...',
@@ -460,6 +462,15 @@ app.post('/api/videos/manual', async (req, res) => {
           video.status = 'gerando_kling';
           logStep(video, '🎥 Gerando vídeo com Kling AI...');
           const videoPaths = await gerarVideoKling(videoId, roteiro, audioPaths);
+          video.videoUrl = videoPaths.host;
+        } else if (video.tipoVideo === 'stockVideos') {
+          video.status = 'buscando_visuais';
+          logStep(video, '🎬 Buscando vídeos stock (Pexels 🟢)...');
+          const visuais = await buscarVisuaisVideo(roteiro.cenas);
+          video.progresso = 65;
+          video.status = 'renderizando';
+          logStep(video, '🎬 Renderizando vídeo com clips stock...');
+          const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
           video.videoUrl = videoPaths.host;
         } else {
           video.status = 'buscando_visuais';
@@ -620,7 +631,7 @@ app.post('/api/videos/demo', async (req, res) => {
 
 app.post('/api/videos', async (req, res) => {
   try {
-    const { titulo, nicho, duracao, detalhes, publicarYoutube, tipoVideo } = req.body;
+    const { titulo, nicho, duracao, detalhes, publicarYoutube, tipoVideo, legendas, estiloLegenda } = req.body;
     
     console.log(`📋 Novo vídeo recebido - tipoVideo: ${tipoVideo || 'NÃO DEFINIDO'}`);
     
@@ -633,7 +644,9 @@ app.post('/api/videos', async (req, res) => {
       duracao: duracao || 10,
       detalhes: detalhes || '',
       publicarYoutube: publicarYoutube || false,
-      tipoVideo: tipoVideo || 'stockImages', // 'stockImages' ou 'stickAnimation'
+      tipoVideo: tipoVideo || 'stockImages',
+      legendas: legendas !== false,
+      estiloLegenda: estiloLegenda || 'classic',
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando pipeline...',
@@ -771,11 +784,16 @@ Retorne APENAS o texto da narração, nada mais.`;
     logStep(video, '🎙️ Narração criada!');
 
     // ETAPA 2.5: Legendas automáticas com Whisper (GRÁTIS - não bloqueia)
-    video.status = 'gerando_legendas';
-    logStep(video, '💬 Gerando legendas automáticas (Whisper)...');
-    const subtitlePaths = await gerarSubtitulos(videoId, audioPaths);
-    video.subtitlePath = subtitlePaths?.host || null;
-    if (subtitlePaths) logStep(video, '💬 Legendas geradas!');
+    let subtitlePaths = null;
+    if (video.legendas !== false) {
+      video.status = 'gerando_legendas';
+      logStep(video, '💬 Gerando legendas automáticas (Whisper)...');
+      subtitlePaths = await gerarSubtitulos(videoId, audioPaths);
+      video.subtitlePath = subtitlePaths?.host || null;
+      if (subtitlePaths) logStep(video, '💬 Legendas geradas!');
+    } else {
+      logStep(video, '💬 Legendas desativadas pelo usuário');
+    }
     video.progresso = 45;
 
     // ETAPA 3 e 4: Visuais + Renderização (depende do tipo)
@@ -861,7 +879,8 @@ Retorne APENAS o texto da narração, nada mais.`;
       video.progresso = 65;
       video.status = 'renderizando';
       logStep(video, `🎬 Renderizando vídeo com ${visuais.length} imagens IA...`);
-      const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths);
+      video.visuais = visuais;
+      const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths, null, video.estiloLegenda);
       video.videoUrl = videoPaths.host;
       video.progresso = 90;
       
@@ -893,6 +912,32 @@ Retorne APENAS o texto da narração, nada mais.`;
       video.videoUrl = videoPaths.host;
       video.progresso = 90;
       
+    } else if (video.tipoVideo === 'stockVideos') {
+      // Pipeline Stock Videos (Pexels Video API 🟢)
+      video.status = 'buscando_visuais';
+      logStep(video, '🎬 Buscando vídeos stock (Pexels 🟢)...');
+      const visuais = await buscarVisuaisVideo(roteiro.cenas);
+      video.progresso = 65;
+
+      let musicaPaths = null;
+      if (process.env.PIXABAY_API_KEY) {
+        logStep(video, '🎵 Buscando música de fundo (Pixabay 🟢)...');
+        const duracaoTotal = audioPaths.duracoesCenas?.reduce((a, b) => a + b, 0) || 60;
+        musicaPaths = await gerarMusicaFundo(videoId, roteiro.nicho || video.nicho, duracaoTotal);
+        if (musicaPaths) logStep(video, '🎵 Música de fundo encontrada!');
+      }
+
+      logStep(video, '🎬 Renderizando vídeo com clips stock...');
+      video.status = 'renderizando';
+      video.visuais = visuais;
+      const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths, musicaPaths, video.estiloLegenda);
+      video.videoUrl = videoPaths.host;
+      video.progresso = 90;
+
+      logStep(video, '🖼️ Gerando thumbnail...');
+      const thumbPaths = await gerarThumbnail(videoId, roteiro, visuais);
+      video.thumbnailPath = thumbPaths?.host || null;
+
     } else {
       // Pipeline padrão: Stock Images (Pexels 🟢)
       video.status = 'buscando_visuais';
@@ -911,7 +956,8 @@ Retorne APENAS o texto da narração, nada mais.`;
 
       logStep(video, '🎬 Renderizando vídeo...');
       video.status = 'renderizando';
-      const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths, musicaPaths);
+      video.visuais = visuais;
+      const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths, musicaPaths, video.estiloLegenda);
       video.videoUrl = videoPaths.host;
       video.progresso = 90;
 
@@ -2171,6 +2217,93 @@ Palavras-chave:`;
     url: 'https://images.pexels.com/photos/1146134/pexels-photo-1146134.jpeg',
     tipo: 'imagem'
   }));
+}
+
+// ============================================
+// FUNÇÃO: Buscar Vídeos Stock do Pexels (API de vídeos)
+// ============================================
+async function buscarVisuaisVideo(cenas) {
+  if (!PEXELS_API_KEY || PEXELS_API_KEY === 'sua_chave_aqui') {
+    console.warn('⚠️ Pexels API Key não configurada para vídeos, caindo em imagens');
+    return buscarVisuais(cenas);
+  }
+
+  const visuais = [];
+  const usedVideos = new Set();
+
+  for (const cena of cenas) {
+    try {
+      let queryPexels = '';
+      try {
+        const keywordPrompt = `Baseado nesta cena de vídeo, gere EXATAMENTE 3-4 palavras-chave em INGLÊS para buscar um vídeo stock no Pexels que represente visualmente o que está sendo narrado.
+
+Narração: "${cena.texto_narracao}"
+Descrição visual: "${cena.prompt_visual || ''}"
+
+Retorne APENAS as palavras-chave separadas por espaço, sem explicação.
+Palavras-chave:`;
+        const kwText = await chamarGemini(keywordPrompt, 10000);
+        queryPexels = kwText?.trim()?.replace(/["'\n]/g, '')?.substring(0, 60) || '';
+      } catch {}
+
+      if (!queryPexels) {
+        const queryOriginal = cena.prompt_visual || cena.texto_narracao;
+        queryPexels = queryOriginal
+          .replace(/cinematic|high quality|professional|4k|documentary|dramatic|style|related|imagery/gi, '')
+          .replace(/\s+/g, ' ').trim().substring(0, 60);
+      }
+
+      const response = await axios.get('https://api.pexels.com/videos/search', {
+        params: { query: queryPexels, per_page: 5, orientation: 'landscape', size: 'medium' },
+        headers: { Authorization: PEXELS_API_KEY }
+      });
+
+      if (response.data.videos && response.data.videos.length > 0) {
+        const vid = response.data.videos.find(v => !usedVideos.has(v.id)) || response.data.videos[0];
+        usedVideos.add(vid.id);
+        // Pegar o arquivo HD ou o melhor disponível
+        const files = vid.video_files || [];
+        const hdFile = files.find(f => f.quality === 'hd' && f.width >= 1280)
+          || files.find(f => f.quality === 'hd')
+          || files.find(f => f.width >= 1280)
+          || files[0];
+
+        if (hdFile) {
+          visuais.push({
+            cena: cena.numero,
+            url: hdFile.link,
+            tipo: 'video',
+            descricao: queryPexels,
+            duracao_video: vid.duration || 10
+          });
+          console.log(`✅ Vídeo stock cena ${cena.numero}: "${queryPexels}" → ${vid.duration}s`);
+        }
+      }
+
+      if (!visuais.find(v => v.cena === cena.numero)) {
+        // Fallback: buscar imagem se não achou vídeo
+        const imgResp = await axios.get('https://api.pexels.com/v1/search', {
+          params: { query: queryPexels, per_page: 3, orientation: 'landscape' },
+          headers: { Authorization: PEXELS_API_KEY }
+        });
+        if (imgResp.data.photos?.[0]) {
+          visuais.push({
+            cena: cena.numero,
+            url: imgResp.data.photos[0].src.large2x,
+            tipo: 'imagem',
+            descricao: imgResp.data.photos[0].alt || queryPexels
+          });
+          console.log(`📸 Fallback imagem cena ${cena.numero}: "${queryPexels}"`);
+        }
+      }
+
+      await new Promise(r => setTimeout(r, 200));
+    } catch (error) {
+      console.error(`❌ Erro ao buscar vídeo para cena ${cena.numero}:`, error.message);
+    }
+  }
+
+  return visuais.length > 0 ? visuais : buscarVisuais(cenas);
 }
 
 // ============================================
@@ -3996,7 +4129,7 @@ ${cena.acao || ''}. ${cena.texto_narracao || ''}`.trim().substring(0, 500);
 // ============================================
 // FUNÇÃO: Renderizar Vídeo com FFmpeg (via Docker) - sincronizado por cena
 // ============================================
-async function renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths = null, musicaPaths = null) {
+async function renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths = null, musicaPaths = null, estiloLegenda = 'classic') {
   const dockerVideoPath = `/media/videos/${videoId}.mp4`;
   const hostVideoPath = resolve(MEDIA_DIR, 'videos', `${videoId}.mp4`);
   
@@ -4037,123 +4170,134 @@ duracoes = json.load(open(duracoes_path))
 temp_dir = f'/media/temp/{video_id}'
 os.makedirs(temp_dir, exist_ok=True)
 
-# Baixar imagens e PRE-REDIMENSIONAR para 1920x1080
-imagens = []
-for i, v in enumerate(visuais):
-    raw_path = f'{temp_dir}/cena_{i+1}_raw.jpg'
-    img_path = f'{temp_dir}/cena_{i+1}.jpg'
-    try:
-        # Se tem localPath (imagem IA já salva), usar direto
-        if v.get('localPath') and os.path.exists(v['localPath']):
-            import shutil
-            shutil.copy2(v['localPath'], raw_path)
-            print(f'Imagem {i+1} copiada de arquivo local: {v.get("descricao", "")[:50]}')
-        else:
-            r = requests.get(v['url'], timeout=60)
-            r.raise_for_status()
-            with open(raw_path, 'wb') as f:
-                f.write(r.content)
-            print(f'Imagem {i+1} baixada: {v.get("descricao", "")[:50]}')
-        
-        # Pre-redimensionar para 1920x1080 (zoompan fica MUITO mais rapido)
-        resize = subprocess.run([
-            'ffmpeg', '-y', '-i', raw_path,
-            '-vf', 'scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080',
-            '-q:v', '2', img_path
-        ], capture_output=True, timeout=30)
-        
-        if resize.returncode == 0:
-            os.remove(raw_path)
-            imagens.append(img_path)
-            print(f'Imagem {i+1} redimensionada OK: {v.get("descricao", "")[:50]}')
-        else:
-            # Se redimensionar falhar, usar a original
-            os.rename(raw_path, img_path)
-            imagens.append(img_path)
-            print(f'Imagem {i+1} baixada (sem resize): {v.get("descricao", "")[:50]}')
-    except Exception as e:
-        print(f'Erro imagem {i+1}: {e}')
-
-if not imagens:
-    print('ERRO: Nenhuma imagem baixada')
-    sys.exit(1)
-
-# Garantir que temos durações para cada imagem
-while len(duracoes) < len(imagens):
+# Garantir que temos durações para cada visual
+while len(duracoes) < len(visuais):
     duracoes.append(8.0)
 
-import random
-
-# Renderizar cada cena com efeito Ken Burns (zoom/pan alternado) + fade in/out
+# Baixar e preparar visuais (imagens e vídeos)
 clips = []
 effects = ['zoom_in', 'zoom_out', 'zoom_in_left', 'zoom_out_right']
-total_cenas = len(imagens)
-print(f'Renderizando {total_cenas} cenas com Ken Burns...')
+total_cenas = len(visuais)
+print(f'Processando {total_cenas} cenas...')
 
-for i, img in enumerate(imagens):
+for i, v in enumerate(visuais):
     dur = max(duracoes[i] + 0.5, 3.0)
-    frames = int(dur * 25)
     clip_path = f'{temp_dir}/clip_{i+1}.mp4'
     fade_out_start = max(dur - 0.6, 0.5)
-    
-    effect = effects[i % len(effects)]
-    zoom_speed = 0.12 / frames  # zoom suave de 12%
-    
-    # Ken Burns com efeitos seguros (zoom + centro/canto) - sem pan puro
-    if effect == 'zoom_in':
-        zp = f"zoompan=z='min(zoom+{zoom_speed:.6f},1.12)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=1920x1080:fps=25"
-    elif effect == 'zoom_out':
-        zp = f"zoompan=z='if(lte(on,1),1.12,max(zoom-{zoom_speed:.6f},1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=1920x1080:fps=25"
-    elif effect == 'zoom_in_left':
-        # Zoom in partindo do canto superior esquerdo
-        zp = f"zoompan=z='min(zoom+{zoom_speed:.6f},1.12)':x='iw*0.15-(iw*0.15/zoom)':y='ih*0.15-(ih*0.15/zoom)':d={frames}:s=1920x1080:fps=25"
-    else:  # zoom_out_right
-        # Zoom out revelando a partir do canto inferior direito
-        zp = f"zoompan=z='if(lte(on,1),1.12,max(zoom-{zoom_speed:.6f},1.0))':x='iw*0.85-(iw/zoom/2)':y='ih*0.85-(ih/zoom/2)':d={frames}:s=1920x1080:fps=25"
-    
-    # Pre-scale para dar margem ao zoompan + fade suave
-    vf = f"scale=2208:1242,{zp},fade=t=in:st=0:d=0.4,fade=t=out:st={fade_out_start}:d=0.6"
-    
-    cmd = [
-        'ffmpeg', '-y',
-        '-loop', '1', '-t', str(dur), '-i', img,
-        '-vf', vf,
-        '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
-        '-pix_fmt', 'yuv420p', '-r', '25', '-t', str(dur),
-        clip_path
-    ]
-    
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
-    if result.returncode == 0:
-        # Verificar se o clip tem tamanho razoavel (>10KB)
-        clip_size = os.path.getsize(clip_path)
-        if clip_size > 10000:
-            clips.append(clip_path)
-            print(f'Clip {i+1}/{total_cenas}: {dur:.1f}s OK ({effect}) [{clip_size//1024}KB]')
+    tipo = v.get('tipo', 'imagem')
+
+    if tipo == 'video':
+        # === VÍDEO STOCK ===
+        video_raw = f'{temp_dir}/cena_{i+1}_raw.mp4'
+        try:
+            r = requests.get(v['url'], timeout=120, stream=True)
+            r.raise_for_status()
+            with open(video_raw, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            print(f'Vídeo {i+1} baixado: {v.get("descricao", "")[:50]}')
+
+            # Cortar/ajustar vídeo stock para duração da cena, escalar para 1920x1080
+            cmd = [
+                'ffmpeg', '-y', '-i', video_raw,
+                '-t', str(dur),
+                '-vf', f'scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1:1,fade=t=in:st=0:d=0.4,fade=t=out:st={fade_out_start}:d=0.6',
+                '-an',
+                '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
+                '-pix_fmt', 'yuv420p', '-r', '25', '-t', str(dur),
+                clip_path
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            if result.returncode == 0 and os.path.getsize(clip_path) > 10000:
+                clips.append(clip_path)
+                print(f'Clip {i+1}/{total_cenas}: {dur:.1f}s OK (video stock)')
+            else:
+                print(f'Clip video {i+1} falhou, tentando como imagem fallback...')
+                tipo = 'imagem'  # fallback para tratar como imagem
+        except Exception as e:
+            print(f'Erro download video {i+1}: {e}')
+            tipo = 'imagem'  # fallback
+
+    if tipo == 'imagem':
+        # === IMAGEM STOCK / IA ===
+        raw_path = f'{temp_dir}/cena_{i+1}_raw.jpg'
+        img_path = f'{temp_dir}/cena_{i+1}.jpg'
+        try:
+            # Se tem localPath (imagem IA já salva), usar direto
+            if v.get('localPath') and os.path.exists(v['localPath']):
+                import shutil
+                shutil.copy2(v['localPath'], raw_path)
+                print(f'Imagem {i+1} copiada de arquivo local: {v.get("descricao", "")[:50]}')
+            else:
+                r = requests.get(v['url'], timeout=60)
+                r.raise_for_status()
+                with open(raw_path, 'wb') as f:
+                    f.write(r.content)
+                print(f'Imagem {i+1} baixada: {v.get("descricao", "")[:50]}')
+
+            # Pre-redimensionar para 1920x1080 (zoompan fica MUITO mais rapido)
+            resize = subprocess.run([
+                'ffmpeg', '-y', '-i', raw_path,
+                '-vf', 'scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080',
+                '-q:v', '2', img_path
+            ], capture_output=True, timeout=30)
+
+            if resize.returncode == 0:
+                try: os.remove(raw_path)
+                except: pass
+            else:
+                os.rename(raw_path, img_path)
+        except Exception as e:
+            print(f'Erro imagem {i+1}: {e}')
+            continue
+
+        # Aplicar Ken Burns (zoom/pan) na imagem
+        frames = int(dur * 25)
+        effect = effects[i % len(effects)]
+        zoom_speed = 0.12 / frames
+
+        if effect == 'zoom_in':
+            zp = f"zoompan=z='min(zoom+{zoom_speed:.6f},1.12)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=1920x1080:fps=25"
+        elif effect == 'zoom_out':
+            zp = f"zoompan=z='if(lte(on,1),1.12,max(zoom-{zoom_speed:.6f},1.0))':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=1920x1080:fps=25"
+        elif effect == 'zoom_in_left':
+            zp = f"zoompan=z='min(zoom+{zoom_speed:.6f},1.12)':x='iw*0.15-(iw*0.15/zoom)':y='ih*0.15-(ih*0.15/zoom)':d={frames}:s=1920x1080:fps=25"
         else:
-            print(f'Clip {i+1} muito pequeno ({clip_size}B), usando fallback...')
-            result = type('', (), {'returncode': 1})()  # forcar fallback
-    
-    if result.returncode != 0:
-        # Fallback: escala simples + fade (sem zoompan)
-        print(f'Zoompan falhou cena {i+1}, usando fallback simples...')
-        cmd_simple = [
+            zp = f"zoompan=z='if(lte(on,1),1.12,max(zoom-{zoom_speed:.6f},1.0))':x='iw*0.85-(iw/zoom/2)':y='ih*0.85-(ih/zoom/2)':d={frames}:s=1920x1080:fps=25"
+
+        vf = f"scale=2208:1242,{zp},fade=t=in:st=0:d=0.4,fade=t=out:st={fade_out_start}:d=0.6"
+        cmd = [
             'ffmpeg', '-y',
-            '-loop', '1', '-t', str(dur), '-i', img,
-            '-vf',
-            f'scale=1920:1080:force_original_aspect_ratio=increase,'
-            f'crop=1920:1080,setsar=1:1,'
-            f'fade=t=in:st=0:d=0.4,fade=t=out:st={fade_out_start}:d=0.5',
+            '-loop', '1', '-t', str(dur), '-i', img_path,
+            '-vf', vf,
             '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
             '-pix_fmt', 'yuv420p', '-r', '25', '-t', str(dur),
             clip_path
         ]
-        result2 = subprocess.run(cmd_simple, capture_output=True, text=True, timeout=120)
-        if result2.returncode == 0 and os.path.getsize(clip_path) > 10000:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        if result.returncode == 0 and os.path.getsize(clip_path) > 10000:
             clips.append(clip_path)
-            print(f'Clip {i+1}/{total_cenas}: {dur:.1f}s OK (fallback)')
+            print(f'Clip {i+1}/{total_cenas}: {dur:.1f}s OK ({effect})')
         else:
-            print(f'ERRO clip {i+1}: pulando cena')
+            # Fallback: escala simples + fade (sem zoompan)
+            print(f'Ken Burns falhou cena {i+1}, usando fallback simples...')
+            cmd_simple = [
+                'ffmpeg', '-y',
+                '-loop', '1', '-t', str(dur), '-i', img_path,
+                '-vf',
+                f'scale=1920:1080:force_original_aspect_ratio=increase,'
+                f'crop=1920:1080,setsar=1:1,'
+                f'fade=t=in:st=0:d=0.4,fade=t=out:st={fade_out_start}:d=0.5',
+                '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
+                '-pix_fmt', 'yuv420p', '-r', '25', '-t', str(dur),
+                clip_path
+            ]
+            result2 = subprocess.run(cmd_simple, capture_output=True, text=True, timeout=120)
+            if result2.returncode == 0 and os.path.getsize(clip_path) > 10000:
+                clips.append(clip_path)
+                print(f'Clip {i+1}/{total_cenas}: {dur:.1f}s OK (fallback)')
+            else:
+                print(f'ERRO clip {i+1}: pulando cena')
 
 if not clips:
     print('ERRO: Nenhum clip renderizado')
@@ -4226,9 +4370,22 @@ if result.returncode != 0:
 if has_srt:
     output_final = output_path.replace('.mp4', '_leg.mp4')
     srt_escaped = srt_path.replace('\\\\', '/').replace(':', '\\\\:')
+    
+    # Estilos de legenda
+    estilo_leg = sys.argv[8] if len(sys.argv) > 8 else 'classic'
+    estilos = {
+        'classic': "FontSize=20,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2,Bold=1,Alignment=2",
+        'bold': "FontSize=26,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=3,Bold=1,Alignment=2,Shadow=2",
+        'neon': "FontSize=22,PrimaryColour=&H00FFFF,OutlineColour=&HFF00FF,Outline=2,Bold=1,Alignment=2,Shadow=1",
+        'minimal': "FontSize=18,PrimaryColour=&HFFFFFF,OutlineColour=&H80000000,Outline=1,Alignment=2",
+        'cinematic': "FontSize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2,Bold=1,Alignment=2,MarginV=40",
+        'yellow': "FontSize=22,PrimaryColour=&H00FFFF,OutlineColour=&H000000,Outline=2,Bold=1,Alignment=2",
+    }
+    force_style = estilos.get(estilo_leg, estilos['classic'])
+    
     cmd_srt = [
         'ffmpeg', '-y', '-i', output_path,
-        '-vf', f"subtitles={srt_path}:force_style='FontSize=20,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2,Bold=1,Alignment=2'",
+        '-vf', f"subtitles={srt_path}:force_style='{force_style}'",
         '-c:a', 'copy', '-movflags', '+faststart',
         output_final
     ]
@@ -4253,7 +4410,7 @@ print(f'Video pronto: {output_path} ({size // 1024 // 1024}MB)')
   const dockerDuracoesPath = `/media/temp/${videoId}_duracoes.json`;
   const dockerAudioPath = audioPaths.docker;
 
-  const cmd = makeExecCmd(`python ${dockerScriptPath} "${videoId}" "${dockerAudioPath}" "${dockerVisuaisPath}" "${dockerVideoPath}" "${dockerDuracoesPath}" "${dockerSrtPath}" "${dockerMusicPath}"`);
+  const cmd = makeExecCmd(`python ${dockerScriptPath} "${videoId}" "${dockerAudioPath}" "${dockerVisuaisPath}" "${dockerVideoPath}" "${dockerDuracoesPath}" "${dockerSrtPath}" "${dockerMusicPath}" "${estiloLegenda || 'classic'}"`);
 
   try {
     const { stdout, stderr } = await execAsync(cmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
@@ -4999,6 +5156,85 @@ app.get('/api/videos/:id', (req, res) => {
 });
 
 // Publicar vídeo individual no YouTube (pós-render)
+// ============================================
+// EDITOR DE CENAS
+// ============================================
+app.get('/api/videos/:id/cenas', (req, res) => {
+  const video = videos.get(req.params.id);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado' });
+  if (!video.roteiro) return res.status(400).json({ error: 'Roteiro não disponível' });
+  
+  const cenas = video.roteiro.cenas.map((cena, i) => ({
+    numero: cena.numero || i + 1,
+    texto_narracao: cena.texto_narracao,
+    prompt_visual: cena.prompt_visual,
+    duracao_estimada: cena.duracao_estimada || cena.duracao || 8,
+    media: video.visuais?.[i] || null
+  }));
+  
+  res.json({ videoId: video.id, titulo: video.titulo, status: video.status, cenas });
+});
+
+app.put('/api/videos/:id/cenas/:num/media', async (req, res) => {
+  const video = videos.get(req.params.id);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado' });
+  
+  const num = parseInt(req.params.num);
+  const { url, tipo } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL da mídia é obrigatória' });
+  
+  if (!video.visuais || !video.visuais[num - 1]) {
+    return res.status(400).json({ error: `Cena ${num} não encontrada nos visuais` });
+  }
+  
+  video.visuais[num - 1].url = url;
+  if (tipo) video.visuais[num - 1].tipo = tipo;
+  video.visuais[num - 1].descricao = `Mídia substituída manualmente`;
+  
+  res.json({ success: true, message: `Mídia da cena ${num} atualizada`, cena: video.visuais[num - 1] });
+});
+
+// ============================================
+// EXPORTAR ROTEIRO / LEGENDAS
+// ============================================
+app.get('/api/videos/:id/roteiro', (req, res) => {
+  const video = videos.get(req.params.id);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado' });
+  if (!video.roteiro) return res.status(400).json({ error: 'Roteiro não disponível' });
+  
+  const texto = video.roteiro.cenas.map((c, i) => 
+    `[Cena ${c.numero || i + 1}]\n${c.texto_narracao}`
+  ).join('\n\n---\n\n');
+  
+  const conteudo = `Título: ${video.roteiro.titulo || video.titulo}\n` +
+    `Descrição: ${video.roteiro.descricao || ''}\n` +
+    `Tags: ${(video.roteiro.tags || []).join(', ')}\n` +
+    `Cenas: ${video.roteiro.cenas.length}\n` +
+    `\n${'='.repeat(50)}\n\n${texto}`;
+  
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${video.id}_roteiro.txt"`);
+  res.send(conteudo);
+});
+
+app.get('/api/videos/:id/srt', async (req, res) => {
+  const video = videos.get(req.params.id);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado' });
+  
+  const srtPath = video.subtitlePath;
+  if (!srtPath) return res.status(400).json({ error: 'Legendas SRT não disponíveis para este vídeo' });
+  
+  try {
+    await fs.access(srtPath);
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${video.id}_legendas.srt"`);
+    const content = await fs.readFile(srtPath, 'utf-8');
+    res.send(content);
+  } catch {
+    res.status(404).json({ error: 'Arquivo SRT não encontrado no servidor' });
+  }
+});
+
 app.post('/api/videos/:id/publish-youtube', async (req, res) => {
   try {
     const video = videos.get(req.params.id);
