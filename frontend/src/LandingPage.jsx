@@ -485,7 +485,12 @@ export default function LandingPage({ onGoLogin }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '48px' }}>
             {[
               {
-                icon: '🎙️', title: '400+ Vozes Neurais',
+                icon: '�', title: 'Avatar Studio AI',
+                desc: 'Crie avatares com IA, ative a webcam e grave vídeos com seu avatar personalizado apresentando conteúdo. Estilos: 2D Cartoon, 3D e Realista.',
+                color: '#ec4899'
+              },
+              {
+                icon: '�🎙️', title: '400+ Vozes Neurais',
                 desc: 'Escolha entre 400+ vozes em 100+ idiomas com preview ao vivo. Masculino, feminino, qualquer sotaque — tudo Edge TTS, 100% gratuito.',
                 color: '#10b981'
               },

@@ -28,6 +28,7 @@ import { registrarRotasAdmin } from './admin.js';
 import { registrarRotasUserSettings } from './user-settings.js';
 import { registrarRotasSocialOAuth } from './social-oauth.js';
 import { registrarRotasFeedback } from './feedback.js';
+import { registrarRotasAvatar } from './avatar.js';
 import { enviarEmailLead } from './mailer.js';
 import { registrarRotasTimeline } from './timeline.js';
 import { registrarRotasVoiceLibrary, buscarVozClonada } from './voice-library.js';
@@ -233,6 +234,9 @@ registrarRotasSocialOAuth(app);
 
 // Feedback / Muro de sugestões
 registrarRotasFeedback(app);
+
+// Avatar Studio (webcam AI avatar)
+registrarRotasAvatar(app);
 
 // Auth middleware (protege rotas /api/* exceto as públicas)
 if (AUTH_ENABLED) {

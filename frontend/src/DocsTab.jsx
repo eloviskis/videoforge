@@ -746,6 +746,24 @@ export default function DocsTab() {
               badge: '🟢 Grátis',
               badgeColor: '#166534',
             },
+            {
+              titulo: '🎭 Avatar Studio AI',
+              desc: 'Crie avatares personalizados com IA e grave vídeos com eles usando sua webcam.',
+              passos: [
+                'Clique em "🎭 Avatar Studio" na barra superior da aplicação',
+                'Autorize o uso da webcam (o vídeo é 100% local, nunca sai do dispositivo)',
+                'Escolha o estilo: 2D Cartoon, 3D Avatar ou Realista',
+                'Digite uma descrição do avatar que deseja (ex: "jovem apresentador casual")',
+                'Ou use um dos 5 Presets Prontos para começar rápido',
+                'Clique "Gerar Avatar" — a IA cria a imagem em ~5 segundos',
+                'O avatar aparece no preview sobre sua webcam',
+                'Clique "⏺ Iniciar Gravação" para gravar o vídeo com avatar',
+                'Seus avatares ficam salvos na biblioteca (máx 5 no free)',
+              ],
+              requisito: 'Requer OPENAI_API_KEY configurada em ⚙️ Minha Conta (usa DALL-E 3 para gerar)',
+              badge: '🟡 Requer OpenAI',
+              badgeColor: '#92400e',
+            },
           ].map((tut, i) => (
             <TutorialCard key={i} tutorial={tut} />
           ))}

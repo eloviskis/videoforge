@@ -6,6 +6,7 @@ import LandingPage from './LandingPage.jsx'
 import AdminPanel from './AdminPanel.jsx'
 import MinhaConta from './MinhaConta.jsx'
 import FeedbackWall from './FeedbackWall.jsx'
+import AvatarStudio from './AvatarStudio.jsx'
 import ThankYouPage from './ThankYouPage.jsx'
 import AfiliadosPage from './AfiliadosPage.jsx'
 
@@ -150,6 +151,10 @@ export default function AuthWrapper() {
     return <FeedbackWall onBack={() => setPage('app')} user={user} />
   }
 
+  if (page === 'avatar') {
+    return <AvatarStudio onBack={() => setPage('app')} user={user} />
+  }
+
   /* page === 'app' */
   return (
     <div>
@@ -182,6 +187,18 @@ export default function AuthWrapper() {
               }}
             >
               📥 Download App
+            </button>
+
+            {/* Avatar Studio button */}
+            <button
+              onClick={() => setPage('avatar')}
+              style={{
+                padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(244,114,182,0.3)',
+                background: 'rgba(244,114,182,0.1)', color: '#f9a8d4', cursor: 'pointer', fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              🎭 Avatar Studio
             </button>
 
             {/* Feedback button */}
