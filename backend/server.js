@@ -521,7 +521,7 @@ Gere EXATAMENTE este JSON (sem markdown, sem explicações):
       return {
         titulo: (seo.titulo || roteiro.titulo).substring(0, 100),
         descricao: (seo.descricao || roteiro.descricao || '').substring(0, 5000),
-        tags: Array.isArray(seo.tags) ? seo.tags.slice(0, 30) : roteiro.tags || ['videoforge'],
+        tags: Array.isArray(seo.tags) ? seo.tags.map(t => String(t).replace(/[<>"#]/g, '').trim()).filter(t => t.length > 0).slice(0, 30) : roteiro.tags || ['videoforge'],
         categoriaId: String(seo.categoriaId || '22'),
         hashtags: Array.isArray(seo.hashtags) ? seo.hashtags.slice(0, 3) : []
       };
@@ -5271,7 +5271,13 @@ async function publicarNoYoutube(videoId, videoPaths, roteiro) {
 
     const tituloYT = (seo?.titulo || roteiro.titulo || videos.get(videoId)?.titulo || 'Vídeo VideoForge').substring(0, 100).trim() || 'Vídeo VideoForge';
     const descricaoYT = (seo?.descricao || roteiro.descricao || '').substring(0, 5000).trim();
-    const tagsYT = (seo?.tags?.length > 0 ? seo.tags : (Array.isArray(roteiro.tags) && roteiro.tags.length > 0 ? roteiro.tags : ['videoforge']));
+    const rawTags = (seo?.tags?.length > 0 ? seo.tags : (Array.isArray(roteiro.tags) && roteiro.tags.length > 0 ? roteiro.tags : ['videoforge']));
+    // Sanitizar tags: YouTube rejeita < > # e tags vazias/muito longas
+    const tagsYT = rawTags
+      .map(t => String(t).replace(/[<>"#]/g, '').replace(/\s+/g, ' ').trim())
+      .filter(t => t.length > 0 && t.length <= 100)
+      .slice(0, 30);
+    if (tagsYT.length === 0) tagsYT.push('videoforge');
     const categoriaId = seo?.categoriaId || '22';
     const snippet = {
       title: tituloYT,
