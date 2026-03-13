@@ -932,7 +932,7 @@ function App() {
         <h2>✨ Criar Novo Vídeo</h2>
 
         {/* Toggle modo */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: '#f0f0f0', borderRadius: '10px', padding: '4px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: '#f0f0f0', borderRadius: '10px', padding: '4px', flexWrap: 'wrap' }}>
           <button type="button" onClick={() => setModoRoteiro('ia')} style={{
             flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88em',
             background: modoRoteiro === 'ia' ? '#8b5cf6' : 'transparent',
@@ -2017,7 +2017,7 @@ function App() {
     {/* ==== PAINEL DE MONITORAMENTO EM TEMPO REAL ==== */}
     {monitorVideoId && monitorVideo && (
       <div style={{
-        position: 'fixed', bottom: '20px', right: '20px', width: monitorMinimized ? '280px' : '380px',
+        position: 'fixed', bottom: '10px', right: '10px', width: monitorMinimized ? '280px' : '380px', maxWidth: 'calc(100vw - 20px)',
         background: '#1a1a2e', border: '1px solid #8b5cf6', borderRadius: '12px',
         boxShadow: '0 8px 32px rgba(139,92,246,0.35)', zIndex: 9999, color: '#e2e8f0',
         fontFamily: 'monospace', fontSize: '13px', overflow: 'hidden', transition: 'all 0.3s'
@@ -2470,7 +2470,7 @@ function App() {
               setReviewLoading(false)
             }
           }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group">
                 <label>📦 Nome do Produto *</label>
                 <input
@@ -2511,7 +2511,7 @@ function App() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group">
                 <label>👍 Pontos Positivos</label>
                 <textarea
@@ -2532,7 +2532,7 @@ function App() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+            <div className="responsive-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
               <div className="form-group">
                 <label>⭐ Nota Geral (0-10)</label>
                 <select value={reviewForm.notaGeral} onChange={e => setReviewForm(p => ({ ...p, notaGeral: e.target.value }))}>
@@ -2561,7 +2561,7 @@ function App() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="responsive-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <div className="form-group">
                 <label>🎬 Tipo de Vídeo</label>
                 <select value={reviewForm.tipoVideo} onChange={e => setReviewForm(p => ({ ...p, tipoVideo: e.target.value }))}>

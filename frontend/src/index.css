@@ -194,16 +194,92 @@ body {
 
 /* Responsivo */
 @media (max-width: 768px) {
+  #root {
+    padding: 10px;
+  }
+
   .header h1 {
-    font-size: 2rem;
+    font-size: 1.8rem;
+  }
+
+  .header p {
+    font-size: 0.95rem;
   }
   
   .main-card {
-    padding: 20px;
+    padding: 16px;
+    border-radius: 14px;
   }
   
   .videos-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tabs-nav {
+    max-width: 100%;
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .tab-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .btn {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+
+  /* Review/form inline grids → stack on mobile */
+  .responsive-grid-2,
+  .responsive-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .news-videos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  #root {
+    padding: 6px;
+  }
+
+  .header {
+    padding: 20px 0;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .main-card {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .tabs-nav {
+    flex-wrap: wrap;
+    gap: 2px;
+  }
+
+  .tab-btn {
+    flex: 0 1 auto;
+    padding: 7px 8px;
+    font-size: 11px;
+  }
+
+  .video-card {
+    padding: 14px;
   }
 }
 
@@ -270,20 +346,24 @@ body {
   border-radius: 12px;
   padding: 4px;
   margin: 20px auto 0;
-  max-width: 500px;
+  max-width: 700px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .tab-btn {
-  flex: 1;
-  padding: 10px 20px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 14px;
   border: none;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
   background: transparent;
   color: rgba(255,255,255,0.7);
+  white-space: nowrap;
 }
 
 .tab-btn:hover {

@@ -672,12 +672,14 @@ export default function TimelineEditor({ token }) {
       </div>
 
       {/* ── CORPO: 2 colunas ──────────────── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: window.innerWidth <= 768 ? 'column' : 'row' }}>
 
         {/* ── COLUNA ESQUERDA: Preview + Roteiro ── */}
         <div style={{
-          width: '45%', maxWidth: '550px', display: 'flex', flexDirection: 'column',
-          borderRight: `1px solid ${COLORS.border}`, background: COLORS.bg
+          width: window.innerWidth <= 768 ? '100%' : '45%', maxWidth: window.innerWidth <= 768 ? 'none' : '550px', display: 'flex', flexDirection: 'column',
+          borderRight: window.innerWidth <= 768 ? 'none' : `1px solid ${COLORS.border}`, 
+          borderBottom: window.innerWidth <= 768 ? `1px solid ${COLORS.border}` : 'none',
+          background: COLORS.bg
         }}>
 
           {/* ─ Preview ─ */}
