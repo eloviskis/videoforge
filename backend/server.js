@@ -1828,7 +1828,7 @@ ESTRUTURA OBRIGATÓRIA DO REVIEW:
 REGRAS IMPORTANTES:
 1. TOM/ESTILO: ${instrucaoTom}
 2. CADA CENA DEVE TER 4-6 FRASES DE NARRAÇÃO (para durar ~20 segundos cada)
-3. O "prompt_visual" deve ser em INGLÊS e descrever um VÍDEO REAL para banco de vídeos stock (Pexels). FOQUE em cenas com PESSOAS: pessoa usando computador, pessoa editando vídeo, pessoa digitando no teclado, pessoa sorrindo olhando tela, mãos no mouse, tela de laptop com software, pessoa filmando com câmera, pessoa assistindo vídeo no celular, escritório moderno com telas. Use termos como: "person working on laptop", "man editing video on computer screen", "woman typing keyboard smiling", "hands using mouse computer desk", "person watching video smartphone", "content creator filming studio". NUNCA use termos abstratos como "quality" ou "cost-effective" sozinhos.
+3. O "prompt_visual" DEVE ser em INGLÊS com NO MÁXIMO 5 PALAVRAS SIMPLES que descrevam uma cena REAL filmável. Será usado DIRETAMENTE como busca no Pexels. Use APENAS substantivos e verbos concretos. EXEMPLOS BONS: "person editing video laptop", "woman typing computer office", "man filming camera studio", "hands keyboard close up", "smartphone screen video playing", "team meeting office computers", "happy customer using app", "money coins credit card". EXEMPLOS RUINS (NUNCA USE): "high quality professional", "cinematic dramatic scene", "cost effective solution", "premium experience". O prompt deve SEMPRE conter pelo menos um substantivo concreto (person, computer, phone, office, camera, screen, laptop, keyboard, etc).
 4. CRIE EXATAMENTE ${cenasNecessarias} CENAS. Isso é OBRIGATÓRIO.
 5. Narração toda em português brasileiro
 6. Inclua transições naturais entre as seções
@@ -2958,51 +2958,68 @@ async function buscarVisuaisVideo(cenas) {
 
   for (const cena of cenas) {
     try {
+      // Estratégia: usar prompt_visual diretamente (já em inglês), sem depender de IA intermediária
+      // Isso evita o problema de quotas/fallbacks gerarem keywords genéricas irrelevantes
       let queryPexels = '';
-      try {
-        const keywordPrompt = `Baseado nesta cena de vídeo, gere EXATAMENTE 3-4 palavras-chave em INGLÊS para buscar um vídeo stock no Pexels que represente visualmente o que está sendo narrado.
-
-Narração: "${cena.texto_narracao}"
-Descrição visual: "${cena.prompt_visual || ''}"
-
-Retorne APENAS as palavras-chave separadas por espaço, sem explicação.
-Palavras-chave:`;
-        const kwText = await chamarGemini(keywordPrompt, 10000);
-        queryPexels = kwText?.trim()?.replace(/["'\n]/g, '')?.substring(0, 60) || '';
-      } catch {}
-
-      if (!queryPexels) {
-        const queryOriginal = cena.prompt_visual || cena.texto_narracao;
-        queryPexels = queryOriginal
-          .replace(/cinematic|high quality|professional|4k|documentary|dramatic|style|related|imagery/gi, '')
-          .replace(/\s+/g, ' ').trim().substring(0, 60);
+      
+      if (cena.prompt_visual) {
+        // Limpar o prompt_visual: remover adjetivos cinematográficos que atrapalham a busca
+        queryPexels = cena.prompt_visual
+          .replace(/cinematic|high quality|professional|4k|documentary|dramatic|style|related|imagery|realistic|close-up|wide shot|medium shot|establishing shot|camera|lighting|bokeh|detailed|vibrant|moody|atmospheric/gi, '')
+          .replace(/\s+/g, ' ').trim().substring(0, 80);
+      }
+      
+      // Se o prompt_visual ficou vazio ou muito curto, extrair do texto
+      if (!queryPexels || queryPexels.length < 8) {
+        queryPexels = (cena.descricao_visual || cena.texto_narracao || '')
+          .split('.')[0] // Pegar só a primeira frase
+          .replace(/[^\w\s]/g, '').trim().substring(0, 60);
       }
 
-      const response = await axios.get('https://api.pexels.com/videos/search', {
-        params: { query: queryPexels, per_page: 5, orientation: 'landscape', size: 'medium' },
-        headers: { Authorization: PEXELS_API_KEY }
-      });
+      // Busca principal
+      let found = false;
+      const queries = [queryPexels];
+      
+      // Adicionar fallbacks de busca mais simples (2-3 palavras-chave)
+      const words = queryPexels.split(' ').filter(w => w.length > 3);
+      if (words.length > 3) {
+        queries.push(words.slice(0, 3).join(' ')); // Primeiras 3 palavras
+      }
+      if (words.length > 2) {
+        queries.push(words.slice(0, 2).join(' ')); // Primeiras 2 palavras
+      }
 
-      if (response.data.videos && response.data.videos.length > 0) {
-        const vid = response.data.videos.find(v => !usedVideos.has(v.id)) || response.data.videos[0];
-        usedVideos.add(vid.id);
-        // Pegar o arquivo HD ou o melhor disponível
-        const files = vid.video_files || [];
-        const hdFile = files.find(f => f.quality === 'hd' && f.width >= 1280)
-          || files.find(f => f.quality === 'hd')
-          || files.find(f => f.width >= 1280)
-          || files[0];
-
-        if (hdFile) {
-          visuais.push({
-            cena: cena.numero,
-            url: hdFile.link,
-            tipo: 'video',
-            descricao: queryPexels,
-            duracao_video: vid.duration || 10
+      for (const q of queries) {
+        if (found) break;
+        try {
+          const response = await axios.get('https://api.pexels.com/videos/search', {
+            params: { query: q, per_page: 8, orientation: 'landscape', size: 'medium' },
+            headers: { Authorization: PEXELS_API_KEY }
           });
-          console.log(`✅ Vídeo stock cena ${cena.numero}: "${queryPexels}" → ${vid.duration}s`);
-        }
+
+          if (response.data.videos && response.data.videos.length > 0) {
+            const vid = response.data.videos.find(v => !usedVideos.has(v.id)) || response.data.videos[0];
+            usedVideos.add(vid.id);
+            const files = vid.video_files || [];
+            const hdFile = files.find(f => f.quality === 'hd' && f.width >= 1280)
+              || files.find(f => f.quality === 'hd')
+              || files.find(f => f.width >= 1280)
+              || files[0];
+
+            if (hdFile) {
+              visuais.push({
+                cena: cena.numero,
+                url: hdFile.link,
+                tipo: 'video',
+                descricao: q,
+                duracao_video: vid.duration || 10
+              });
+              console.log(`✅ Vídeo stock cena ${cena.numero}: "${q}" → ${vid.duration}s`);
+              found = true;
+            }
+          }
+        } catch {}
+        await new Promise(r => setTimeout(r, 150));
       }
 
       if (!visuais.find(v => v.cena === cena.numero)) {
