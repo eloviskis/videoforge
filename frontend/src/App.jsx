@@ -33,7 +33,8 @@ function App() {
     legendas: true,
     estiloLegenda: 'classic',
     tipoVideo: 'stickAnimation',
-    voz: 'pt-BR-AntonioNeural'
+    voz: 'pt-BR-AntonioNeural',
+    vozClonada: null
   })
 
   // === NEWS STATE ===
@@ -71,7 +72,8 @@ function App() {
     estiloLegenda: 'classic',
     publicarYoutube: false,
     duracao: 8,
-    voz: 'pt-BR-AntonioNeural'
+    voz: 'pt-BR-AntonioNeural',
+    vozClonada: null
   })
   const [reviewLoading, setReviewLoading] = useState(false) // { videoId: { cenas: [], loading: false, open: false } }
   const [monitorVideoId, setMonitorVideoId] = useState(null)
@@ -96,6 +98,12 @@ function App() {
   const [availableVoices, setAvailableVoices] = useState(null)
   const [voiceFilter, setVoiceFilter] = useState('')
   const [playingPreview, setPlayingPreview] = useState(null)
+
+  // === VOICE LIBRARY (clonagem) ===
+  const [voiceLibrary, setVoiceLibrary] = useState([])
+  const [voiceLibLoading, setVoiceLibLoading] = useState(false)
+  const [voiceCloneUploading, setVoiceCloneUploading] = useState(false)
+  const [voiceCloneForm, setVoiceCloneForm] = useState({ nome: '', descricao: '', idioma: 'pt-BR', genero: '' })
 
   // === INTELLIGENCE STATE ===
   const [intelQuery, setIntelQuery] = useState('')
@@ -365,7 +373,9 @@ function App() {
         publicarYoutube: false,
         legendas: true,
         estiloLegenda: 'classic',
-        tipoVideo: 'stickAnimation'
+        tipoVideo: 'stickAnimation',
+        voz: 'pt-BR-AntonioNeural',
+        vozClonada: null
       })
       
       await carregarVideos()
@@ -491,6 +501,75 @@ function App() {
     } catch (e) {
       setPlayingPreview(null)
       console.error('Erro preview voz:', e)
+    }
+  }
+
+  // === BIBLIOTECA DE VOZES CLONADAS ===
+  const carregarVoiceLibrary = async () => {
+    setVoiceLibLoading(true)
+    try {
+      const resp = await axios.get(`${API_URL}/voices/library`)
+      setVoiceLibrary(resp.data.voices || [])
+    } catch (e) {
+      console.error('Erro ao carregar biblioteca de vozes:', e)
+    } finally {
+      setVoiceLibLoading(false)
+    }
+  }
+
+  const clonarVoz = async (file) => {
+    if (!file || !voiceCloneForm.nome.trim()) return alert('Preencha o nome da voz e selecione um arquivo de áudio.')
+    setVoiceCloneUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('audio', file)
+      fd.append('nome', voiceCloneForm.nome.trim())
+      fd.append('descricao', voiceCloneForm.descricao)
+      fd.append('idioma', voiceCloneForm.idioma)
+      fd.append('genero', voiceCloneForm.genero)
+      const resp = await axios.post(`${API_URL}/voices/clone`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      if (resp.data.success) {
+        alert('Upload recebido! A clonagem está sendo processada...')
+        setVoiceCloneForm({ nome: '', descricao: '', idioma: 'pt-BR', genero: '' })
+        // Poll para atualizar a lista
+        setTimeout(() => carregarVoiceLibrary(), 3000)
+        setTimeout(() => carregarVoiceLibrary(), 10000)
+        setTimeout(() => carregarVoiceLibrary(), 30000)
+      }
+    } catch (e) {
+      const msg = e.response?.data?.error || e.message
+      if (e.response?.data?.needsApiKey) {
+        alert('Para usar clonagem de voz, configure sua ElevenLabs API Key em Configurações > API Keys.')
+      } else {
+        alert('Erro ao clonar voz: ' + msg)
+      }
+    } finally {
+      setVoiceCloneUploading(false)
+    }
+  }
+
+  const deletarVozClonada = async (voiceId) => {
+    if (!confirm('Tem certeza que deseja deletar esta voz?')) return
+    try {
+      await axios.delete(`${API_URL}/voices/library/${voiceId}`)
+      setVoiceLibrary(prev => prev.filter(v => v.id !== voiceId))
+    } catch (e) {
+      alert('Erro ao deletar: ' + (e.response?.data?.error || e.message))
+    }
+  }
+
+  const previewVozClonada = async (voiceId) => {
+    if (playingPreview) return
+    setPlayingPreview(voiceId)
+    try {
+      const resp = await axios.post(`${API_URL}/voices/preview/${voiceId}`, {}, { responseType: 'blob' })
+      const url = URL.createObjectURL(resp.data)
+      const audio = new Audio(url)
+      audio.onended = () => { setPlayingPreview(null); URL.revokeObjectURL(url) }
+      audio.play()
+    } catch (e) {
+      setPlayingPreview(null)
+      alert('Erro no preview: ' + (e.response?.data?.error || e.message))
     }
   }
 
@@ -1318,7 +1397,21 @@ function App() {
 
           <div className="form-group">
             <label>🎙️ Voz da Narração</label>
-            <select name="voz" value={formData.voz} onChange={handleChange} onFocus={carregarVozes}>
+            <select name="voz" value={formData.vozClonada ? '__cloned__' : formData.voz} onChange={(e) => {
+              if (e.target.value === '__cloned__') return
+              if (e.target.value.startsWith('clone:')) {
+                setFormData(prev => ({ ...prev, vozClonada: e.target.value.replace('clone:', ''), voz: prev.voz }))
+              } else {
+                setFormData(prev => ({ ...prev, voz: e.target.value, vozClonada: null }))
+              }
+            }} onFocus={() => { carregarVozes(); if (voiceLibrary.length === 0) carregarVoiceLibrary() }}>
+              {voiceLibrary.filter(v => v.status === 'ready').length > 0 && (
+                <optgroup label="🎤 Minhas Vozes Clonadas">
+                  {voiceLibrary.filter(v => v.status === 'ready').map(v => (
+                    <option key={v.id} value={`clone:${v.id}`}>🎤 {v.nome} {v.genero === 'masculino' ? '♂' : v.genero === 'feminino' ? '♀' : ''}</option>
+                  ))}
+                </optgroup>
+              )}
               <optgroup label="⭐ Populares">
                 <option value="pt-BR-AntonioNeural">🇧🇷 Antonio (Masculino)</option>
                 <option value="pt-BR-FranciscaNeural">🇧🇷 Francisca (Feminino)</option>
@@ -1341,12 +1434,99 @@ function App() {
                 ))
               }
             </select>
-            {availableVoices && <small style={{ color: '#888', fontSize: '0.8em' }}>{availableVoices.total} vozes neurais disponíveis</small>}
-            <button type="button" onClick={() => previewVoz(formData.voz)} disabled={!!playingPreview}
-              style={{ marginTop: '4px', padding: '4px 12px', fontSize: '12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', background: playingPreview ? '#eee' : '#fff' }}>
-              {playingPreview === formData.voz ? '🔊 Reproduzindo...' : '▶️ Ouvir voz'}
-            </button>
+            {formData.vozClonada && (
+              <div style={{ marginTop: '4px', padding: '6px 10px', background: '#e8f5e9', borderRadius: '6px', fontSize: '12px', color: '#2e7d32' }}>
+                🎤 Usando voz clonada: <strong>{voiceLibrary.find(v => v.id === formData.vozClonada)?.nome || 'Carregando...'}</strong>
+                <button type="button" onClick={() => setFormData(prev => ({ ...prev, vozClonada: null }))}
+                  style={{ marginLeft: '8px', background: 'none', border: 'none', color: '#c62828', cursor: 'pointer', fontSize: '12px' }}>✕ Remover</button>
+              </div>
+            )}
+            {availableVoices && <small style={{ color: '#888', fontSize: '0.8em' }}>{availableVoices.total} vozes neurais + {voiceLibrary.filter(v => v.status === 'ready').length} clonadas</small>}
+            <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+              <button type="button" onClick={() => formData.vozClonada ? previewVozClonada(formData.vozClonada) : previewVoz(formData.voz)} disabled={!!playingPreview}
+                style={{ padding: '4px 12px', fontSize: '12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', background: playingPreview ? '#eee' : '#fff' }}>
+                {playingPreview ? '🔊 Reproduzindo...' : '▶️ Ouvir voz'}
+              </button>
+            </div>
           </div>
+
+          {/* === BIBLIOTECA DE VOZES CLONADAS === */}
+          <details style={{ marginBottom: '16px', border: '1px solid #e0e0e0', borderRadius: '10px', padding: '0', overflow: 'hidden' }}
+            onToggle={(e) => { if (e.target.open) carregarVoiceLibrary() }}>
+            <summary style={{ padding: '12px 16px', cursor: 'pointer', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: '#fff', fontWeight: 'bold', fontSize: '14px', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🎤 Biblioteca de Vozes Clonadas
+              {voiceLibrary.length > 0 && <span style={{ background: 'rgba(255,255,255,0.3)', borderRadius: '12px', padding: '2px 8px', fontSize: '11px' }}>{voiceLibrary.filter(v => v.status === 'ready').length} vozes</span>}
+            </summary>
+            <div style={{ padding: '16px', background: '#fafafa' }}>
+              <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+                Faça upload de um áudio (MP3, WAV) com a voz desejada. A IA irá clonar a voz e você poderá usá-la em todas as suas narrações.
+              </p>
+
+              {/* Upload form */}
+              <div style={{ display: 'grid', gap: '8px', marginBottom: '16px', background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+                <input type="text" placeholder="Nome da voz (ex: Minha Voz, Narrador João)" value={voiceCloneForm.nome}
+                  onChange={e => setVoiceCloneForm(prev => ({ ...prev, nome: e.target.value }))}
+                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }} />
+                <input type="text" placeholder="Descrição (opcional)" value={voiceCloneForm.descricao}
+                  onChange={e => setVoiceCloneForm(prev => ({ ...prev, descricao: e.target.value }))}
+                  style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }} />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select value={voiceCloneForm.idioma} onChange={e => setVoiceCloneForm(prev => ({ ...prev, idioma: e.target.value }))}
+                    style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }}>
+                    <option value="pt-BR">🇧🇷 Português</option>
+                    <option value="en-US">🇺🇸 Inglês</option>
+                    <option value="es-ES">🇪🇸 Espanhol</option>
+                    <option value="multi">🌍 Multilíngue</option>
+                  </select>
+                  <select value={voiceCloneForm.genero} onChange={e => setVoiceCloneForm(prev => ({ ...prev, genero: e.target.value }))}
+                    style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }}>
+                    <option value="">Gênero</option>
+                    <option value="masculino">♂ Masculino</option>
+                    <option value="feminino">♀ Feminino</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input type="file" accept=".mp3,.wav,.ogg,.webm,.m4a,audio/*" id="voice-upload-input"
+                    style={{ flex: 1, fontSize: '12px' }}
+                    onChange={e => { if (e.target.files[0]) clonarVoz(e.target.files[0]) }} disabled={voiceCloneUploading} />
+                  {voiceCloneUploading && <span style={{ fontSize: '12px', color: '#667eea' }}>⏳ Enviando...</span>}
+                </div>
+                <small style={{ color: '#999', fontSize: '11px' }}>Formatos: MP3, WAV, OGG, M4A • Máx 25MB • Mínimo ~30s de áudio claro para melhor resultado</small>
+              </div>
+
+              {/* Voice library list */}
+              {voiceLibLoading && <p style={{ textAlign: 'center', color: '#999' }}>Carregando biblioteca...</p>}
+              {!voiceLibLoading && voiceLibrary.length === 0 && (
+                <p style={{ textAlign: 'center', color: '#999', fontSize: '13px', padding: '20px 0' }}>
+                  Nenhuma voz clonada ainda. Faça upload de um áudio acima para começar!
+                </p>
+              )}
+              {voiceLibrary.length > 0 && (
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {voiceLibrary.map(v => (
+                    <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: '#fff', borderRadius: '8px', border: `1px solid ${formData.vozClonada === v.id ? '#667eea' : '#e0e0e0'}`, cursor: v.status === 'ready' ? 'pointer' : 'default' }}
+                      onClick={() => v.status === 'ready' && setFormData(prev => ({ ...prev, vozClonada: v.id }))}>
+                      <span style={{ fontSize: '24px' }}>{v.status === 'ready' ? '🎤' : v.status === 'processing' ? '⏳' : '❌'}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{v.nome}</div>
+                        <div style={{ fontSize: '11px', color: '#999' }}>
+                          {v.status === 'ready' ? `${v.idioma || 'pt-BR'} • ${v.genero || ''}` : v.status === 'processing' ? 'Processando clonagem...' : v.descricao || 'Erro na clonagem'}
+                        </div>
+                      </div>
+                      {v.status === 'ready' && (
+                        <button type="button" onClick={(e) => { e.stopPropagation(); previewVozClonada(v.id) }} disabled={!!playingPreview}
+                          style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', background: playingPreview === v.id ? '#eee' : '#fff' }}>
+                          {playingPreview === v.id ? '🔊...' : '▶️'}
+                        </button>
+                      )}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); deletarVozClonada(v.id) }}
+                        style={{ padding: '4px 8px', fontSize: '11px', cursor: 'pointer', border: '1px solid #ffcdd2', borderRadius: '6px', background: '#fff', color: '#c62828' }}>🗑️</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </details>
 
           <div className="form-group">
             <label>Detalhes adicionais (opcional)</label>
@@ -2735,7 +2915,21 @@ function App() {
             <div className="form-group" style={{ marginTop: '8px' }}>
               <label>🎙️ Voz da Narração</label>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <select value={reviewForm.voz} onChange={e => setReviewForm(p => ({ ...p, voz: e.target.value }))} onFocus={carregarVozes} style={{ flex: 1 }}>
+                <select value={reviewForm.vozClonada ? '__cloned__' : reviewForm.voz} onChange={e => {
+                  if (e.target.value === '__cloned__') return
+                  if (e.target.value.startsWith('clone:')) {
+                    setReviewForm(p => ({ ...p, vozClonada: e.target.value.replace('clone:', ''), voz: p.voz }))
+                  } else {
+                    setReviewForm(p => ({ ...p, voz: e.target.value, vozClonada: null }))
+                  }
+                }} onFocus={() => { carregarVozes(); if (voiceLibrary.length === 0) carregarVoiceLibrary() }} style={{ flex: 1 }}>
+                  {voiceLibrary.filter(v => v.status === 'ready').length > 0 && (
+                    <optgroup label="🎤 Minhas Vozes Clonadas">
+                      {voiceLibrary.filter(v => v.status === 'ready').map(v => (
+                        <option key={v.id} value={`clone:${v.id}`}>🎤 {v.nome}</option>
+                      ))}
+                    </optgroup>
+                  )}
                   <optgroup label="⭐ Populares">
                     <option value="pt-BR-AntonioNeural">🇧🇷 Antonio (Masc.)</option>
                     <option value="pt-BR-FranciscaNeural">🇧🇷 Francisca (Fem.)</option>
@@ -2754,11 +2948,18 @@ function App() {
                     ))
                   }
                 </select>
-                <button type="button" onClick={() => previewVoz(reviewForm.voz)} disabled={!!playingPreview}
+                <button type="button" onClick={() => reviewForm.vozClonada ? previewVozClonada(reviewForm.vozClonada) : previewVoz(reviewForm.voz)} disabled={!!playingPreview}
                   style={{ padding: '6px 10px', fontSize: '12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', whiteSpace: 'nowrap' }}>
-                  {playingPreview === reviewForm.voz ? '🔊...' : '▶️ Ouvir'}
+                  {playingPreview ? '🔊...' : '▶️ Ouvir'}
                 </button>
               </div>
+              {reviewForm.vozClonada && (
+                <div style={{ marginTop: '4px', padding: '4px 8px', background: '#e8f5e9', borderRadius: '4px', fontSize: '11px', color: '#2e7d32' }}>
+                  🎤 Voz clonada: <strong>{voiceLibrary.find(v => v.id === reviewForm.vozClonada)?.nome || '...'}</strong>
+                  <button type="button" onClick={() => setReviewForm(p => ({ ...p, vozClonada: null }))}
+                    style={{ marginLeft: '6px', background: 'none', border: 'none', color: '#c62828', cursor: 'pointer', fontSize: '11px' }}>✕</button>
+                </div>
+              )}
               {availableVoices && <small style={{ color: '#888', fontSize: '0.8em' }}>{availableVoices.total}+ vozes</small>}
             </div>
 

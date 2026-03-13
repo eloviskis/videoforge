@@ -30,6 +30,7 @@ import { registrarRotasSocialOAuth } from './social-oauth.js';
 import { registrarRotasFeedback } from './feedback.js';
 import { enviarEmailLead } from './mailer.js';
 import { registrarRotasTimeline } from './timeline.js';
+import { registrarRotasVoiceLibrary, buscarVozClonada } from './voice-library.js';
 
 const execAsync = promisify(exec);
 
@@ -243,6 +244,9 @@ if (AUTH_ENABLED) {
 
 // Timeline / Editor de vídeos (após auth — rotas protegidas)
 registrarRotasTimeline(app);
+
+// Biblioteca de vozes clonadas (após auth — rotas protegidas)
+registrarRotasVoiceLibrary(app);
 
 // Servir frontend estático (quando build existe)
 const FRONTEND_DIST = resolve(__dirname, '..', 'frontend', 'dist');
@@ -708,7 +712,7 @@ app.get('/api/youtube/analyze-channel', async (req, res) => {
 // Rota manual — usa roteiro fornecido pelo usuário, pula o Gemini
 app.post('/api/videos/manual', async (req, res) => {
   try {
-    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda, voz } = req.body;
+    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda, voz, vozClonada } = req.body;
     if (!titulo?.trim()) return res.status(400).json({ error: 'Título obrigatório' });
     if (!texto?.trim()) return res.status(400).json({ error: 'Roteiro (texto) obrigatório' });
 
@@ -741,6 +745,7 @@ app.post('/api/videos/manual', async (req, res) => {
       legendas: legendas !== false,
       estiloLegenda: estiloLegenda || 'classic',
       voz: voz || null,
+      vozClonada: vozClonada || null,
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando com roteiro manual...',
@@ -758,10 +763,16 @@ app.post('/api/videos/manual', async (req, res) => {
         video.progresso = 25;
         logStep(video, `✅ Roteiro carregado (${roteiro.cenas.length} cenas). Gerando narração...`);
 
-        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz);
+        // Resolver voz clonada se selecionada
+        let clonedVoiceId = null;
+        if (video.vozClonada) {
+          const vozInfo = await buscarVozClonada(video.vozClonada, req.userId);
+          if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+        }
+        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
         video.audioUrl = audioPaths.host;
         video.progresso = 45;
-        logStep(video, '🎙️ Narração gerada! Iniciando visuais...');
+        logStep(video, `🎙️ Narração gerada${clonedVoiceId ? ' (voz clonada)' : ''}! Iniciando visuais...`);
 
         if (video.tipoVideo === 'stickAnimation') {
           video.status = 'gerando_animacao';
@@ -870,7 +881,7 @@ app.post('/api/videos/manual', async (req, res) => {
 app.post('/api/videos/review', async (req, res) => {
   try {
     const { nomeProduto, categoria, linkProduto, pontosPositivos, pontosNegativos, notaGeral,
-            publicoAlvo, faixaPreco, tipoVideo, legendas, estiloLegenda, publicarYoutube, duracao, voz, tom } = req.body;
+            publicoAlvo, faixaPreco, tipoVideo, legendas, estiloLegenda, publicarYoutube, duracao, voz, vozClonada, tom } = req.body;
     
     if (!nomeProduto?.trim()) return res.status(400).json({ error: 'Nome do produto é obrigatório' });
 
@@ -886,6 +897,7 @@ app.post('/api/videos/review', async (req, res) => {
       legendas: legendas !== false,
       estiloLegenda: estiloLegenda || 'classic',
       voz: voz || null,
+      vozClonada: vozClonada || null,
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando review...',
@@ -926,10 +938,15 @@ app.post('/api/videos/review', async (req, res) => {
           : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
           : 'Edge TTS 🟢';
         logStep(video, `🎙️ Gerando narração (${ttsProvider})...`);
-        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz);
+        let clonedVoiceId = null;
+        if (video.vozClonada) {
+          const vozInfo = await buscarVozClonada(video.vozClonada, req.userId);
+          if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+        }
+        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
         video.audioUrl = audioPaths.host;
         video.progresso = 40;
-        logStep(video, '🎙️ Narração criada!');
+        logStep(video, `🎙️ Narração criada${clonedVoiceId ? ' (voz clonada)' : ''}!`);
 
         // ETAPA 2.5: Legendas
         let subtitlePaths = null;
@@ -1142,7 +1159,7 @@ app.post('/api/videos/demo', async (req, res) => {
 
 app.post('/api/videos', async (req, res) => {
   try {
-    const { titulo, nicho, duracao, detalhes, publicarYoutube, tipoVideo, legendas, estiloLegenda, voz } = req.body;
+    const { titulo, nicho, duracao, detalhes, publicarYoutube, tipoVideo, legendas, estiloLegenda, voz, vozClonada } = req.body;
     
     console.log(`📋 Novo vídeo recebido - tipoVideo: ${tipoVideo || 'NÃO DEFINIDO'}`);
     
@@ -1159,6 +1176,8 @@ app.post('/api/videos', async (req, res) => {
       legendas: legendas !== false,
       estiloLegenda: estiloLegenda || 'classic',
       voz: voz || null,
+      vozClonada: vozClonada || null,
+      _userId: req.userId,
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando pipeline...',
@@ -1290,10 +1309,15 @@ Retorne APENAS o texto da narração, nada mais.`;
       : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
       : 'Edge TTS 🟢';
     logStep(video, `🎙️ Gerando narração (${ttsProviderAtivo})...`);
-    const audioPaths = await gerarNarracao(videoId, roteiro, video.voz);
+    let clonedVoiceId = null;
+    if (video.vozClonada) {
+      const vozInfo = await buscarVozClonada(video.vozClonada, video._userId);
+      if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+    }
+    const audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
     video.audioUrl = audioPaths.host;
     video.progresso = 40;
-    logStep(video, '🎙️ Narração criada!');
+    logStep(video, `🎙️ Narração criada${clonedVoiceId ? ' (voz clonada)' : ''}!`);
 
     // ETAPA 2.5: Legendas automáticas com Whisper (GRÁTIS - não bloqueia)
     let subtitlePaths = null;
@@ -2565,17 +2589,28 @@ registerRoot(RemotionRoot);
 // ============================================
 // FUNÇÃO: Gerar Narração com TTS (via Docker) - POR CENA
 // ============================================
-async function gerarNarracao(videoId, roteiro, voz = null) {
+async function gerarNarracao(videoId, roteiro, voz = null, vozClonada = null) {
   const dockerAudioPath = `/media/audios/${videoId}.mp3`;
   const hostAudioPath = resolve(MEDIA_DIR, 'audios', `${videoId}.mp3`);
 
   await fs.mkdir(resolve(MEDIA_DIR, 'audios'), { recursive: true });
   await fs.mkdir(resolve(MEDIA_DIR, 'temp', videoId), { recursive: true });
 
-  // Selecionar provedor TTS: ElevenLabs → OpenAI → Edge TTS (fallback gratuito)
-  const ttsProvider = process.env.ELEVENLABS_API_KEY ? 'elevenlabs'
-    : process.env.OPENAI_API_KEY ? 'openai'
-    : 'edge';
+  // Se tem voz clonada, forçar ElevenLabs com aquele voice_id
+  let ttsProvider;
+  let clonedVoiceId = null;
+  if (vozClonada) {
+    if (!process.env.ELEVENLABS_API_KEY) {
+      throw new Error('Voz clonada requer ELEVENLABS_API_KEY configurada');
+    }
+    ttsProvider = 'elevenlabs';
+    clonedVoiceId = vozClonada; // ElevenLabs voice_id
+    console.log(`🎤 Usando voz clonada: ${clonedVoiceId}`);
+  } else {
+    ttsProvider = process.env.ELEVENLABS_API_KEY ? 'elevenlabs'
+      : process.env.OPENAI_API_KEY ? 'openai'
+      : 'edge';
+  }
   console.log(`🎙️ TTS provider: ${ttsProvider}`);
 
   // Limpar texto para TTS - remove pontuações que são lidas em voz alta
@@ -2617,7 +2652,7 @@ output_path = sys.argv[2]
 cenas_path = sys.argv[3]
 
 API_KEY = '${process.env.ELEVENLABS_API_KEY || ''}'
-VOICE_ID = '${process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB'}'  # Adam (multilingual)
+VOICE_ID = '${clonedVoiceId || process.env.ELEVENLABS_VOICE_ID || 'pNInz6obpgDQGcFmaJgB'}'  # Adam (multilingual) ou voz clonada
 cenas = json.load(open(cenas_path))
 temp_dir = f'/media/temp/{video_id}'
 os.makedirs(temp_dir, exist_ok=True)
