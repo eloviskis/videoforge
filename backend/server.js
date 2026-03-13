@@ -513,6 +513,162 @@ app.post('/api/videos/manual', async (req, res) => {
   }
 });
 
+// ============================================
+// REVIEW DE PRODUTO — Pipeline especializado
+// ============================================
+app.post('/api/videos/review', async (req, res) => {
+  try {
+    const { nomeProduto, categoria, linkProduto, pontosPositivos, pontosNegativos, notaGeral,
+            publicoAlvo, faixaPreco, tipoVideo, legendas, estiloLegenda, publicarYoutube, duracao } = req.body;
+    
+    if (!nomeProduto?.trim()) return res.status(400).json({ error: 'Nome do produto é obrigatório' });
+
+    const videoId = uuidv4().split('-')[0];
+    const video = {
+      id: videoId,
+      titulo: `Review: ${nomeProduto.trim()}`,
+      nicho: categoria || 'tecnologia',
+      duracao: duracao || 8,
+      detalhes: '',
+      publicarYoutube: publicarYoutube || false,
+      tipoVideo: tipoVideo || 'stockImages',
+      legendas: legendas !== false,
+      estiloLegenda: estiloLegenda || 'classic',
+      status: 'iniciando',
+      progresso: 0,
+      etapa: 'Iniciando review...',
+      logEtapas: [{ ts: new Date().toISOString(), msg: '⭐ Pipeline de review iniciado...' }],
+      criado_em: new Date().toISOString(),
+      roteiro: null, audioUrl: null, videoUrl: null, youtubeId: null
+    };
+
+    videos.set(videoId, video);
+
+    const processarReview = async () => {
+      try {
+        // ETAPA 1: Gerar roteiro de review com prompt especializado
+        video.status = 'gerando_roteiro';
+        video.progresso = 10;
+        logStep(video, '⭐ Gerando roteiro de review com IA...');
+        
+        const roteiro = await gerarRoteiroReview({
+          nomeProduto: nomeProduto.trim(),
+          categoria,
+          linkProduto,
+          pontosPositivos,
+          pontosNegativos,
+          notaGeral,
+          publicoAlvo,
+          faixaPreco,
+          duracao: duracao || 8
+        });
+        
+        video.roteiro = roteiro;
+        video.progresso = 25;
+        logStep(video, `✅ Roteiro de review gerado! ${roteiro.cenas.length} cenas • ${roteiro.titulo}`);
+        
+        // ETAPA 2: Narração TTS
+        video.status = 'gerando_narracao';
+        const ttsProvider = process.env.ELEVENLABS_API_KEY ? 'ElevenLabs 🟡'
+          : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
+          : 'Edge TTS 🟢';
+        logStep(video, `🎙️ Gerando narração (${ttsProvider})...`);
+        const audioPaths = await gerarNarracao(videoId, roteiro);
+        video.audioUrl = audioPaths.host;
+        video.progresso = 40;
+        logStep(video, '🎙️ Narração criada!');
+
+        // ETAPA 2.5: Legendas
+        let subtitlePaths = null;
+        if (video.legendas !== false) {
+          video.status = 'gerando_legendas';
+          logStep(video, '💬 Gerando legendas (Whisper)...');
+          subtitlePaths = await gerarSubtitulos(videoId, audioPaths);
+          video.subtitlePath = subtitlePaths?.host || null;
+          if (subtitlePaths) logStep(video, '💬 Legendas geradas!');
+        }
+        video.progresso = 45;
+
+        // ETAPA 3: Visuais + Renderização
+        if (video.tipoVideo === 'stockVideos') {
+          video.status = 'buscando_visuais';
+          logStep(video, '🎬 Buscando vídeos stock para o review...');
+          const visuais = await buscarVisuaisVideo(roteiro.cenas);
+          video.visuais = visuais;
+          video.progresso = 65;
+          
+          let musicaPaths = null;
+          if (process.env.PIXABAY_API_KEY) {
+            logStep(video, '🎵 Buscando música de fundo...');
+            const duracaoTotal = audioPaths.duracoesCenas?.reduce((a, b) => a + b, 0) || 60;
+            musicaPaths = await gerarMusicaFundo(videoId, roteiro.nicho || categoria, duracaoTotal);
+          }
+          
+          video.status = 'renderizando';
+          logStep(video, '🎬 Renderizando review com vídeos...');
+          const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths, musicaPaths, video.estiloLegenda);
+          video.videoUrl = videoPaths.host;
+        } else if (video.tipoVideo === 'darkStickman') {
+          video.status = 'gerando_dark';
+          logStep(video, '🖤 Criando cenas dark...');
+          const videoPaths = await gerarVideoDarkStickman(videoId, roteiro, audioPaths);
+          video.videoUrl = videoPaths.host;
+        } else {
+          video.status = 'buscando_visuais';
+          logStep(video, '🖼️ Buscando imagens para o review...');
+          const visuais = await buscarVisuais(roteiro.cenas);
+          video.visuais = visuais;
+          video.progresso = 65;
+          
+          let musicaPaths = null;
+          if (process.env.PIXABAY_API_KEY) {
+            logStep(video, '🎵 Buscando música de fundo...');
+            const duracaoTotal = audioPaths.duracoesCenas?.reduce((a, b) => a + b, 0) || 60;
+            musicaPaths = await gerarMusicaFundo(videoId, roteiro.nicho || categoria, duracaoTotal);
+          }
+          
+          video.status = 'renderizando';
+          logStep(video, '🎬 Renderizando review...');
+          const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths, musicaPaths, video.estiloLegenda);
+          video.videoUrl = videoPaths.host;
+        }
+        
+        video.progresso = 90;
+
+        // Thumbnail
+        logStep(video, '🖼️ Gerando thumbnail...');
+        if (video.visuais) {
+          const thumbPaths = await gerarThumbnail(videoId, roteiro, video.visuais);
+          video.thumbnailPath = thumbPaths?.host || null;
+        }
+
+        // YouTube
+        if (video.publicarYoutube) {
+          video.status = 'publicando';
+          logStep(video, '📺 Publicando no YouTube...');
+          const videoPaths = { host: video.videoUrl, docker: `/media/videos/${videoId}.mp4` };
+          const youtubeId = await publicarNoYoutube(videoId, videoPaths, roteiro);
+          video.youtubeId = youtubeId;
+          logStep(video, `✅ Publicado! ID: ${youtubeId}`);
+        }
+
+        video.status = 'pronto';
+        video.progresso = 100;
+        logStep(video, '✅ Review pronto!');
+      } catch (err) {
+        video.status = 'erro';
+        logStep(video, `❌ Erro: ${err.message}`);
+        console.error('Erro no pipeline review:', err);
+      }
+    };
+
+    processarReview();
+    res.json({ success: true, videoId, message: `Review de "${nomeProduto}" iniciado!` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Rota demo — cria vídeo de exemplo sem chamar o Gemini (para testar qualidade)
 app.post('/api/videos/demo', async (req, res) => {
   try {
@@ -1266,6 +1422,209 @@ async function chamarGemini(prompt, timeout = 60000) {
   }
   
   throw new Error(`Todos os provedores de IA falharam: ${erros.join('; ')}`);
+}
+
+// ============================================
+// FUNÇÃO: Gerar Roteiro de Review com Gemini
+// ============================================
+async function gerarRoteiroReview({ nomeProduto, categoria, linkProduto, pontosPositivos, pontosNegativos, notaGeral, publicoAlvo, faixaPreco, duracao }) {
+  const cenasNecessarias = Math.max(8, Math.ceil((duracao * 60) / 20));
+
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'sua_chave_aqui') {
+    console.warn('⚠️ Gemini API Key não configurada, usando roteiro template de review');
+    return gerarRoteiroReviewTemplate(nomeProduto, categoria, notaGeral, duracao);
+  }
+
+  try {
+    const prompt = `Você é um roteirista profissional de vídeos de REVIEW de produtos para YouTube em português brasileiro.
+
+Crie um roteiro completo e DETALHADO para um vídeo de REVIEW sobre o produto: "${nomeProduto}"
+
+Informações do produto:
+- Nome: ${nomeProduto}
+- Categoria: ${categoria}
+- Link do produto: ${linkProduto || 'Não informado'}
+- Pontos positivos: ${pontosPositivos || 'Não informado'}
+- Pontos negativos: ${pontosNegativos || 'Não informado'}
+- Nota geral (0-10): ${notaGeral}
+- Público-alvo: ${publicoAlvo || 'Geral'}
+- Faixa de preço: ${faixaPreco || 'Não informado'}
+- Duração alvo: ${duracao} minutos (${duracao * 60} segundos)
+
+ESTRUTURA OBRIGATÓRIA DO REVIEW:
+1. ABERTURA (1-2 cenas): Gancho chamativo + apresentação do produto e do canal
+2. VISÃO GERAL (1-2 cenas): O que é o produto, para quem é, contexto de mercado
+3. PONTOS POSITIVOS (2-3 cenas): Detalhar cada ponto forte com exemplos e opinião
+4. PONTOS NEGATIVOS (1-2 cenas): Ser honesto sobre as falhas e limitações
+5. CUSTO-BENEFÍCIO (1 cena): Análise de preço vs valor entregue
+6. VEREDITO FINAL (1 cena): Nota final ${notaGeral}/10, recomendação clara, para quem vale a pena
+
+REGRAS IMPORTANTES:
+1. A narração deve ser envolvente, honesta e informativa (como um reviewer de confiança)
+2. CADA CENA DEVE TER 4-6 FRASES DE NARRAÇÃO (para durar ~20 segundos cada)
+3. O "prompt_visual" deve ser em INGLÊS e descrever uma FOTO REAL para banco de imagens, relacionada ao conteúdo da cena (ex: "person unboxing tech product on desk", "close up smartphone screen showing app interface", "person comparing two products side by side"). Use cenários REALISTAS e FOTOGRÁFICOS.
+4. CRIE EXATAMENTE ${cenasNecessarias} CENAS. Isso é OBRIGATÓRIO.
+5. Narração toda em português brasileiro
+6. Use tom conversacional mas profissional
+7. Inclua transições naturais entre as seções
+
+Retorne APENAS um JSON válido (sem markdown, sem explicações):
+
+{
+  "titulo": "Review: ${nomeProduto} - Vale a Pena? (máx 60 caracteres)",
+  "descricao": "Descrição SEO com keywords sobre o review do produto",
+  "tags": ["review", "${nomeProduto.toLowerCase()}", "${categoria}", "vale a pena", "análise"],
+  "cenas": [
+    {
+      "numero": 1,
+      "texto_narracao": "Texto da narração em português (4-6 frases)",
+      "prompt_visual": "realistic photo description in English related to scene content",
+      "duracao_estimada": 20
+    }
+  ],
+  "thumbnail_prompt": "Descrição para thumbnail: produto em destaque com nota ${notaGeral}/10"
+}`;
+
+    let content;
+    let roteiro;
+    let lastError;
+
+    for (let tentativa = 1; tentativa <= 2; tentativa++) {
+      try {
+        content = await chamarGemini(prompt, 60000);
+
+        console.log(`  📝 Review: Resposta bruta [${content.length} chars]: ${content.substring(0, 150)}...`);
+        let jsonStr = content;
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) jsonStr = jsonMatch[0];
+
+        jsonStr = jsonStr.replace(/,\s*([\]}])/g, '$1');
+        jsonStr = jsonStr.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+
+        roteiro = JSON.parse(jsonStr);
+        console.log(`  🔍 Review JSON keys: ${Object.keys(roteiro).join(', ')}`);
+
+        // Extrair de wrapper OpenAI se necessário
+        if (roteiro.role === 'assistant' || roteiro.choices) {
+          let innerContent = null;
+          if (roteiro.choices?.[0]?.message?.content) innerContent = roteiro.choices[0].message.content;
+          else if (roteiro.content && typeof roteiro.content === 'string' && roteiro.content.length > 50) innerContent = roteiro.content;
+          else if (roteiro.tool_calls && Array.isArray(roteiro.tool_calls)) {
+            for (const tc of roteiro.tool_calls) {
+              const args = tc.function?.arguments || tc.args || tc.input;
+              if (args && typeof args === 'string' && args.length > 50) { innerContent = args; break; }
+              else if (args && typeof args === 'object') { innerContent = JSON.stringify(args); break; }
+            }
+          }
+          if (innerContent) {
+            const innerMatch = innerContent.match(/\{[\s\S]*\}/);
+            if (innerMatch) innerContent = innerMatch[0];
+            innerContent = innerContent.replace(/,\s*([\]}])/g, '$1');
+            innerContent = innerContent.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
+            roteiro = JSON.parse(innerContent);
+          } else {
+            throw new Error('Wrapper OpenAI sem conteúdo extraível');
+          }
+        }
+
+        // Validar cenas
+        if (!roteiro.cenas || !Array.isArray(roteiro.cenas) || roteiro.cenas.length === 0) {
+          const possibleCenas = roteiro.scenes || roteiro.Cenas || roteiro.CENAS
+            || roteiro.script?.cenas || roteiro.script?.scenes
+            || roteiro.roteiro?.cenas || roteiro.video?.cenas;
+
+          let foundCenas = possibleCenas;
+          if (!foundCenas || !Array.isArray(foundCenas) || foundCenas.length === 0) {
+            for (const [key, val] of Object.entries(roteiro)) {
+              if (Array.isArray(val) && val.length >= 3 && typeof val[0] === 'object') {
+                const first = val[0];
+                if (first.texto_narracao || first.narration || first.text || first.prompt_visual || first.visual) {
+                  foundCenas = val;
+                  break;
+                }
+              }
+            }
+          }
+
+          if (foundCenas && Array.isArray(foundCenas) && foundCenas.length > 0) {
+            roteiro.cenas = foundCenas.map((c, i) => ({
+              numero: c.numero || c.number || i + 1,
+              texto_narracao: c.texto_narracao || c.narration || c.text || c.narracao || '',
+              prompt_visual: c.prompt_visual || c.visual || c.image || c.visual_prompt || '',
+              duracao_estimada: c.duracao_estimada || c.duration || 20
+            }));
+          } else {
+            throw new Error('Roteiro de review sem campo "cenas" válido');
+          }
+        }
+
+        // Normalizar cenas
+        roteiro.cenas = roteiro.cenas.map((c, i) => ({
+          numero: c.numero || i + 1,
+          texto_narracao: c.texto_narracao || c.narration || c.text || '',
+          prompt_visual: c.prompt_visual || c.visual || c.image_prompt || '',
+          duracao_estimada: c.duracao_estimada || c.duration || 20
+        }));
+
+        if (!roteiro.titulo) roteiro.titulo = `Review: ${nomeProduto}`;
+        if (!roteiro.tags) roteiro.tags = ['review', nomeProduto.toLowerCase(), categoria];
+        if (!roteiro.descricao) roteiro.descricao = `Review completo do ${nomeProduto}`;
+
+        console.log(`  📝 Review roteiro parseado: ${roteiro.cenas.length} cenas, título: ${roteiro.titulo}`);
+        lastError = null;
+        break;
+      } catch (parseErr) {
+        lastError = parseErr;
+        console.warn(`  ⚠️ Review tentativa ${tentativa}/2: ${parseErr.message.substring(0, 100)}`);
+      }
+    }
+
+    if (lastError || !roteiro) {
+      console.warn(`  ⚠️ LLM falhou para review. Usando template...`);
+      return gerarRoteiroReviewTemplate(nomeProduto, categoria, notaGeral, duracao);
+    }
+
+    return roteiro;
+
+  } catch (error) {
+    console.warn(`  ⚠️ Erro geral no gerarRoteiroReview: ${error.message}. Usando template...`);
+    return gerarRoteiroReviewTemplate(nomeProduto, categoria, notaGeral, duracao);
+  }
+}
+
+function gerarRoteiroReviewTemplate(nomeProduto, categoria, notaGeral, duracao) {
+  const cenasNecessarias = Math.max(8, Math.ceil(((duracao || 5) * 60) / 20));
+  const nota = notaGeral || '7';
+  const cenas = [];
+
+  const templateCenas = [
+    { texto: `Fala pessoal, tudo bem? Hoje vamos fazer o review completo do ${nomeProduto}. Esse é um dos produtos mais comentados na categoria ${categoria} e eu testei ele a fundo pra contar tudo pra vocês. Será que ele realmente vale o investimento? Fica comigo até o final pra descobrir.`, visual: `${categoria} product on modern desk, professional studio lighting` },
+    { texto: `Antes de mais nada, vamos entender o que é o ${nomeProduto}. Ele se posiciona como uma das principais opções do mercado de ${categoria}. Com um design moderno e funcionalidades que prometem facilitar o dia a dia, ele tem chamado bastante atenção. Mas será que entrega tudo que promete?`, visual: `person holding ${categoria} product, examining details closely` },
+    { texto: `Vamos começar pelos pontos positivos. A qualidade de construção do ${nomeProduto} impressiona logo de cara. Os materiais são de primeira linha e a atenção aos detalhes é evidente. Na prática, o desempenho é muito bom para a maioria dos cenários de uso.`, visual: `close up of high quality product details, premium materials` },
+    { texto: `Outro destaque é a facilidade de uso. Mesmo quem nunca usou um produto assim consegue se adaptar rapidamente. A interface é intuitiva e bem pensada, o que faz toda a diferença no dia a dia. Esse é um ponto que muitos concorrentes ainda precisam melhorar.`, visual: `person using technology product with ease, smiling, home office` },
+    { texto: `Agora vamos falar sobre o que poderia ser melhor. Todo produto tem seus pontos fracos e com o ${nomeProduto} não é diferente. Existem alguns aspectos que poderiam ser aprimorados em futuras versões. Nada que comprometa a experiência geral, mas vale mencionar.`, visual: `person with thoughtful expression analyzing product, comparison chart` },
+    { texto: `Em relação ao custo-benefício, o ${nomeProduto} está posicionado de forma competitiva no mercado de ${categoria}. Considerando tudo que ele entrega, o preço praticado é justo. Existem opções mais baratas, mas poucas entregam o mesmo nível de qualidade.`, visual: `price tag comparison, value for money concept, shopping decision` },
+    { texto: `Meu veredito final: o ${nomeProduto} recebe nota ${nota} de 10. É um produto sólido que cumpre bem sua proposta. Recomendo para quem busca qualidade e confiabilidade na categoria ${categoria}. Se você está em dúvida, pode ir sem medo.`, visual: `thumbs up review score rating, ${nota} out of 10 rating concept` },
+    { texto: `É isso pessoal! Se esse review te ajudou, deixa o like e se inscreve no canal. Comenta aí embaixo se você já usou o ${nomeProduto} e qual foi a sua experiência. Nos vemos no próximo vídeo com mais reviews e análises. Valeu!`, visual: `person waving goodbye to camera, subscribe button, social media engagement` },
+  ];
+
+  for (let i = 0; i < cenasNecessarias; i++) {
+    const t = templateCenas[i % templateCenas.length];
+    cenas.push({
+      numero: i + 1,
+      texto_narracao: t.texto,
+      prompt_visual: t.visual,
+      duracao_estimada: 20
+    });
+  }
+
+  return {
+    titulo: `Review: ${nomeProduto} - Nota ${nota}/10`,
+    descricao: `Review completo do ${nomeProduto}. Análise detalhada com prós, contras e nota final. Descubra se vale a pena investir nesse produto de ${categoria}.`,
+    tags: ['review', nomeProduto.toLowerCase(), categoria, 'vale a pena', 'análise'],
+    thumbnail_prompt: `${nomeProduto} product review thumbnail with score ${nota}/10, eye-catching design`,
+    cenas
+  };
 }
 
 // ============================================

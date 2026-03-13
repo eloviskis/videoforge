@@ -53,7 +53,25 @@ function App() {
   const [restartingBackend, setRestartingBackend] = useState(false)
   const [modoRoteiro, setModoRoteiro] = useState('ia') // 'ia' | 'manual'
   const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '' })
-  const [editorCenas, setEditorCenas] = useState({}) // { videoId: { cenas: [], loading: false, open: false } }
+  const [editorCenas, setEditorCenas] = useState({})
+
+  // === REVIEW STATE ===
+  const [reviewForm, setReviewForm] = useState({
+    nomeProduto: '',
+    categoria: 'tecnologia',
+    linkProduto: '',
+    pontosPositivos: '',
+    pontosNegativos: '',
+    notaGeral: '8',
+    publicoAlvo: '',
+    faixaPreco: '',
+    tipoVideo: 'stockImages',
+    legendas: true,
+    estiloLegenda: 'classic',
+    publicarYoutube: false,
+    duracao: 8
+  })
+  const [reviewLoading, setReviewLoading] = useState(false) // { videoId: { cenas: [], loading: false, open: false } }
   const [monitorVideoId, setMonitorVideoId] = useState(null)
   const [monitorVideo, setMonitorVideo] = useState(null)
   const [monitorMinimized, setMonitorMinimized] = useState(false)
@@ -618,6 +636,9 @@ function App() {
           </button>
           <button className={`tab-btn ${activeTab === 'cortes' ? 'active' : ''}`} onClick={() => setActiveTab('cortes')}>
             ✂️ Cortes
+          </button>
+          <button className={`tab-btn ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => setActiveTab('reviews')}>
+            ⭐ Reviews
           </button>
           <button className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>
             🎥 Timeline
@@ -2420,6 +2441,200 @@ function App() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Aba Reviews de Produtos */}
+      {activeTab === 'reviews' && (
+        <div className="main-card">
+          <h2>⭐ Review de Produto</h2>
+          <p style={{ color: '#888', marginBottom: '20px', fontSize: '0.9em' }}>
+            Crie vídeos de review profissionais automaticamente. A IA gera o roteiro completo avaliando o produto.
+          </p>
+
+          <form onSubmit={async (e) => {
+            e.preventDefault()
+            if (!reviewForm.nomeProduto.trim()) { alert('Informe o nome do produto'); return }
+            setReviewLoading(true)
+            try {
+              const r = await axios.post(`${API_URL}/videos/review`, reviewForm)
+              await carregarVideos()
+              setMonitorVideoId(r.data.videoId)
+              setMonitorMinimized(false)
+              setMonitorVideo(null)
+              setActiveTab('videos')
+              alert(`✅ Review iniciado! ${r.data.message}`)
+            } catch (err) {
+              alert('❌ Erro: ' + (err.response?.data?.error || err.message))
+            } finally {
+              setReviewLoading(false)
+            }
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label>📦 Nome do Produto *</label>
+                <input
+                  type="text"
+                  value={reviewForm.nomeProduto}
+                  onChange={e => setReviewForm(p => ({ ...p, nomeProduto: e.target.value }))}
+                  placeholder="Ex: iPhone 16 Pro Max, Air Fryer Mondial..."
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>🏷️ Categoria</label>
+                <select value={reviewForm.categoria} onChange={e => setReviewForm(p => ({ ...p, categoria: e.target.value }))}>
+                  <option value="tecnologia">📱 Tecnologia</option>
+                  <option value="eletrodomesticos">🏠 Eletrodomésticos</option>
+                  <option value="beleza">💄 Beleza & Cosméticos</option>
+                  <option value="fitness">💪 Fitness & Saúde</option>
+                  <option value="games">🎮 Games</option>
+                  <option value="automotivo">🚗 Automotivo</option>
+                  <option value="livros">📚 Livros & Cursos</option>
+                  <option value="alimentos">🍔 Alimentos & Bebidas</option>
+                  <option value="moda">👗 Moda & Acessórios</option>
+                  <option value="software">💻 Software & Apps</option>
+                  <option value="infantil">🧸 Infantil</option>
+                  <option value="pets">🐾 Pets</option>
+                  <option value="outro">📋 Outro</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>🔗 Link do Produto (opcional)</label>
+              <input
+                type="text"
+                value={reviewForm.linkProduto}
+                onChange={e => setReviewForm(p => ({ ...p, linkProduto: e.target.value }))}
+                placeholder="https://... (link de afiliado ou página do produto)"
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label>👍 Pontos Positivos</label>
+                <textarea
+                  value={reviewForm.pontosPositivos}
+                  onChange={e => setReviewForm(p => ({ ...p, pontosPositivos: e.target.value }))}
+                  placeholder="Ex: Bateria dura o dia todo, câmera excelente, design premium..."
+                  rows={3}
+                />
+              </div>
+              <div className="form-group">
+                <label>👎 Pontos Negativos</label>
+                <textarea
+                  value={reviewForm.pontosNegativos}
+                  onChange={e => setReviewForm(p => ({ ...p, pontosNegativos: e.target.value }))}
+                  placeholder="Ex: Preço alto, não tem entrada P2, carregador não incluso..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label>⭐ Nota Geral (0-10)</label>
+                <select value={reviewForm.notaGeral} onChange={e => setReviewForm(p => ({ ...p, notaGeral: e.target.value }))}>
+                  {[10,9,8,7,6,5,4,3,2,1,0].map(n => (
+                    <option key={n} value={String(n)}>{n}/10 {n >= 9 ? '🔥' : n >= 7 ? '👍' : n >= 5 ? '😐' : '👎'}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>💰 Faixa de Preço</label>
+                <input
+                  type="text"
+                  value={reviewForm.faixaPreco}
+                  onChange={e => setReviewForm(p => ({ ...p, faixaPreco: e.target.value }))}
+                  placeholder="Ex: R$ 1.299,00"
+                />
+              </div>
+              <div className="form-group">
+                <label>🎯 Público-alvo</label>
+                <input
+                  type="text"
+                  value={reviewForm.publicoAlvo}
+                  onChange={e => setReviewForm(p => ({ ...p, publicoAlvo: e.target.value }))}
+                  placeholder="Ex: Gamers, mães, profissionais..."
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label>🎬 Tipo de Vídeo</label>
+                <select value={reviewForm.tipoVideo} onChange={e => setReviewForm(p => ({ ...p, tipoVideo: e.target.value }))}>
+                  <optgroup label="✅ Gratuitos">
+                    <option value="stockImages">📸 Imagens Stock (Pexels)</option>
+                    <option value="stockVideos">🎬 Vídeos Stock (Pexels)</option>
+                    <option value="darkStickman">🖤 Dark Stickman</option>
+                    <option value="geminiVeoGeneration">🎬 Gemini Veo</option>
+                  </optgroup>
+                  <optgroup label="💳 Pagos">
+                    <option value="replicateGeneration">🤖 Replicate</option>
+                    <option value="klingGeneration">🎥 Kling AI</option>
+                  </optgroup>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>⏱️ Duração (minutos)</label>
+                <select value={reviewForm.duracao} onChange={e => setReviewForm(p => ({ ...p, duracao: parseInt(e.target.value) }))}>
+                  <option value="5">5 min — Review rápido</option>
+                  <option value="8">8 min — Review completo</option>
+                  <option value="10">10 min — Review detalhado</option>
+                  <option value="15">15 min — Review aprofundado</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9em' }}>
+                <input
+                  type="checkbox"
+                  checked={reviewForm.legendas}
+                  onChange={e => setReviewForm(p => ({ ...p, legendas: e.target.checked }))}
+                  style={{ width: 'auto' }}
+                />
+                💬 Legendas automáticas
+              </label>
+              {reviewForm.legendas && (
+                <select value={reviewForm.estiloLegenda} onChange={e => setReviewForm(p => ({ ...p, estiloLegenda: e.target.value }))} style={{ fontSize: '0.85em' }}>
+                  <option value="classic">📝 Clássico</option>
+                  <option value="bold">💪 Bold</option>
+                  <option value="neon">💜 Neon</option>
+                  <option value="cinematic">🎬 Cinematográfico</option>
+                </select>
+              )}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9em' }}>
+                <input
+                  type="checkbox"
+                  checked={reviewForm.publicarYoutube}
+                  onChange={e => setReviewForm(p => ({ ...p, publicarYoutube: e.target.checked }))}
+                  disabled={!config.youtube_connected}
+                  style={{ width: 'auto' }}
+                />
+                📺 Publicar no YouTube
+              </label>
+            </div>
+
+            <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
+              <button type="submit" className="btn btn-primary" disabled={reviewLoading} style={{ flex: 1 }}>
+                {reviewLoading ? '⏳ Gerando review...' : '⭐ Gerar Vídeo de Review'}
+              </button>
+            </div>
+
+            <div style={{ marginTop: '16px', padding: '12px 16px', background: '#f0f7ff', borderRadius: '8px', fontSize: '12px', color: '#555' }}>
+              <strong>💡 Como funciona:</strong>
+              <ol style={{ margin: '8px 0 0 0', paddingLeft: '20px', lineHeight: '1.8' }}>
+                <li>A IA analisa o produto e gera um roteiro de review profissional</li>
+                <li>Estrutura: abertura → apresentação → prós → contras → veredito final</li>
+                <li>Imagens/vídeos são buscados automaticamente no Pexels</li>
+                <li>Narração com TTS + legendas opcionais</li>
+                <li>Resultado: vídeo pronto para publicar!</li>
+              </ol>
+            </div>
+          </form>
         </div>
       )}
 
