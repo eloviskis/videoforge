@@ -25,6 +25,7 @@ export default function FeedbackWall({ onBack, user }) {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ tipo: 'sugestao', titulo: '', mensagem: '' })
+  const [mediaFile, setMediaFile] = useState(null)
   const [sending, setSending] = useState(false)
   const [msg, setMsg] = useState('')
   const [filter, setFilter] = useState('todos')
@@ -51,8 +52,14 @@ export default function FeedbackWall({ onBack, user }) {
     }
     try {
       setSending(true)
-      await axios.post(`${API_URL}/feedback`, form)
+      const fd = new FormData()
+      fd.append('tipo', form.tipo)
+      fd.append('titulo', form.titulo)
+      fd.append('mensagem', form.mensagem)
+      if (mediaFile) fd.append('media', mediaFile)
+      await axios.post(`${API_URL}/feedback`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       setForm({ tipo: 'sugestao', titulo: '', mensagem: '' })
+      setMediaFile(null)
       setShowForm(false)
       setMsg('✅ Feedback enviado com sucesso!')
       loadFeedbacks()
@@ -198,6 +205,51 @@ export default function FeedbackWall({ onBack, user }) {
               />
             </div>
 
+            {/* Anexo (print/vídeo) */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ fontSize: '12px', color: '#94a3b8', display: 'block', marginBottom: '6px', textTransform: 'uppercase', fontWeight: 600 }}>
+                📎 Anexo (opcional)
+              </label>
+              <div style={{
+                border: '1px dashed rgba(255,255,255,0.15)', borderRadius: '10px',
+                padding: '14px', background: 'rgba(0,0,0,0.2)', textAlign: 'center',
+              }}>
+                {mediaFile ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '13px', color: '#c4b5fd' }}>
+                      {mediaFile.type.startsWith('video') ? '🎥' : '🖼️'} {mediaFile.name}
+                      <span style={{ color: '#64748b', marginLeft: '8px' }}>({(mediaFile.size / 1024 / 1024).toFixed(1)}MB)</span>
+                    </span>
+                    <button type="button" onClick={() => setMediaFile(null)} style={{
+                      background: 'rgba(239,68,68,0.2)', border: 'none', color: '#fca5a5',
+                      borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '12px',
+                    }}>✕ Remover</button>
+                  </div>
+                ) : (
+                  <label style={{ cursor: 'pointer', color: '#94a3b8', fontSize: '13px' }}>
+                    <span style={{ fontSize: '24px', display: 'block', marginBottom: '4px' }}>📷</span>
+                    Clique para anexar print ou vídeo curto (máx 10MB)
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm"
+                      onChange={e => {
+                        const f = e.target.files[0]
+                        if (f && f.size > 10 * 1024 * 1024) {
+                          alert('Arquivo muito grande (máx 10MB)')
+                          return
+                        }
+                        setMediaFile(f || null)
+                      }}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                )}
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#4b5563' }}>
+                Formatos: PNG, JPG, GIF, WEBP, MP4, WEBM
+              </p>
+            </div>
+
             <button type="submit" disabled={sending} style={{
               padding: '10px 28px', borderRadius: '10px', border: 'none', cursor: sending ? 'not-allowed' : 'pointer',
               background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
@@ -289,6 +341,27 @@ export default function FeedbackWall({ onBack, user }) {
                   }}>
                     {fb.mensagem}
                   </p>
+
+                  {/* Anexo */}
+                  {fb.media_url && (
+                    <div style={{ marginBottom: '12px' }}>
+                      {fb.media_url.match(/\.(mp4|webm|mov)$/i) ? (
+                        <video
+                          src={fb.media_url}
+                          controls
+                          style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }}
+                        />
+                      ) : (
+                        <a href={fb.media_url} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={fb.media_url}
+                            alt="Anexo"
+                            style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }}
+                          />
+                        </a>
+                      )}
+                    </div>
+                  )}
 
                   {/* Resposta do admin */}
                   {fb.resposta_admin && (

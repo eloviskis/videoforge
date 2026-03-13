@@ -1,6 +1,9 @@
 import pool from './news/db.js';
 import { verificarToken, buscarUsuarioPorEmail } from './auth.js';
 import { enviarEmailFeedback } from './mailer.js';
+import multer from 'multer';
+import { resolve } from 'path';
+import { promises as fs } from 'fs';
 
 // ========================================
 // MIDDLEWARE: extrair usuário do token
@@ -52,6 +55,7 @@ async function ensureFeedbackTable() {
         tipo VARCHAR(20) NOT NULL DEFAULT 'sugestao',
         titulo VARCHAR(200) NOT NULL,
         mensagem TEXT NOT NULL,
+        media_url VARCHAR(500),
         resposta_admin TEXT,
         respondido_em TIMESTAMP,
         status VARCHAR(20) DEFAULT 'pendente',
@@ -59,6 +63,8 @@ async function ensureFeedbackTable() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    // Adicionar coluna media_url se não existir (migração)
+    await pool.query(`ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS media_url VARCHAR(500)`).catch(() => {});
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_feedbacks_user ON feedbacks(user_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_feedbacks_status ON feedbacks(status)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_feedbacks_created ON feedbacks(created_at DESC)`);
@@ -75,6 +81,27 @@ export function registrarRotasFeedback(app) {
   // Auto-create table on startup
   ensureFeedbackTable();
 
+  // Diretório de mídias de feedback
+  const MEDIA_DIR = process.env.MEDIA_DIR || resolve(process.cwd(), 'media');
+  const FEEDBACK_MEDIA_DIR = resolve(MEDIA_DIR, 'feedback');
+  fs.mkdir(FEEDBACK_MEDIA_DIR, { recursive: true }).catch(() => {});
+
+  // Multer: upload de imagem/vídeo (máx 10MB)
+  const feedbackUpload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => cb(null, FEEDBACK_MEDIA_DIR),
+      filename: (req, file, cb) => {
+        const ext = file.originalname.split('.').pop().toLowerCase();
+        cb(null, `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`);
+      }
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      const allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'];
+      cb(null, allowed.includes(file.mimetype));
+    }
+  });
+
   // ── USUÁRIO: listar SEUS feedbacks ──
   app.get('/api/feedback', feedbackAuth, async (req, res) => {
     try {
@@ -90,7 +117,7 @@ export function registrarRotasFeedback(app) {
   });
 
   // ── USUÁRIO: criar feedback ──
-  app.post('/api/feedback', feedbackAuth, async (req, res) => {
+  app.post('/api/feedback', feedbackAuth, feedbackUpload.single('media'), async (req, res) => {
     try {
       const { tipo, titulo, mensagem } = req.body;
       if (!titulo || !mensagem) return res.status(400).json({ error: 'Título e mensagem são obrigatórios' });
@@ -98,10 +125,15 @@ export function registrarRotasFeedback(app) {
       const tiposValidos = ['sugestao', 'bug', 'elogio', 'outro'];
       const tipoFinal = tiposValidos.includes(tipo) ? tipo : 'sugestao';
 
+      let mediaUrl = null;
+      if (req.file) {
+        mediaUrl = `/media/feedback/${req.file.filename}`;
+      }
+
       const { rows } = await pool.query(
-        `INSERT INTO feedbacks (user_id, user_email, user_nome, tipo, titulo, mensagem)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [req.feedbackUser.id, req.feedbackUser.email, req.feedbackUser.nome || '', tipoFinal, titulo, mensagem]
+        `INSERT INTO feedbacks (user_id, user_email, user_nome, tipo, titulo, mensagem, media_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [req.feedbackUser.id, req.feedbackUser.email, req.feedbackUser.nome || '', tipoFinal, titulo, mensagem, mediaUrl]
       );
 
       // Notificar admin por email (fire & forget)
