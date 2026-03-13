@@ -7,6 +7,7 @@ import AdminPanel from './AdminPanel.jsx'
 import MinhaConta from './MinhaConta.jsx'
 import FeedbackWall from './FeedbackWall.jsx'
 import ThankYouPage from './ThankYouPage.jsx'
+import AfiliadosPage from './AfiliadosPage.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -27,6 +28,11 @@ export default function AuthWrapper() {
     const params = new URLSearchParams(window.location.search)
     if (params.has('obrigado') || window.location.pathname.includes('/obrigado')) {
       setPage('obrigado')
+      return
+    }
+
+    if (window.location.pathname.includes('/afiliados')) {
+      setPage('afiliados')
       return
     }
 
@@ -113,6 +119,10 @@ export default function AuthWrapper() {
 
   if (page === 'obrigado') {
     return <ThankYouPage onGoLogin={() => { window.history.replaceState({}, '', '/'); setPage('login') }} />
+  }
+
+  if (page === 'afiliados') {
+    return <AfiliadosPage onGoBack={() => { window.history.replaceState({}, '', '/'); setPage('landing') }} />
   }
 
   if (page === 'landing') {
