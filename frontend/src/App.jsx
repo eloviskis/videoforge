@@ -2912,6 +2912,7 @@ function App() {
                   <optgroup label="💳 Pagos">
                     <option value="replicateGeneration">🤖 Replicate</option>
                     <option value="klingGeneration">🎥 Kling AI</option>
+                    <option value="didAvatar">🎭 D-ID Avatar Apresentador 🟡</option>
                   </optgroup>
                 </select>
               </div>

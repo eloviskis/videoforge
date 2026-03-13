@@ -983,6 +983,12 @@ app.post('/api/videos/review', async (req, res) => {
           logStep(video, '🖤 Criando cenas dark...');
           const videoPaths = await gerarVideoDarkStickman(videoId, roteiro, audioPaths);
           video.videoUrl = videoPaths.host;
+        } else if (video.tipoVideo === 'didAvatar') {
+          video.status = 'gerando_avatar';
+          video.progresso = 50;
+          logStep(video, '🎭 Gerando review com avatar D-ID (PAGO)...');
+          const videoPaths = await gerarVideoAvatar(videoId, roteiro, audioPaths);
+          video.videoUrl = videoPaths.host;
         } else {
           video.status = 'buscando_visuais';
           logStep(video, '🖼️ Buscando imagens para o review...');
