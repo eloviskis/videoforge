@@ -870,7 +870,7 @@ app.post('/api/videos/manual', async (req, res) => {
 app.post('/api/videos/review', async (req, res) => {
   try {
     const { nomeProduto, categoria, linkProduto, pontosPositivos, pontosNegativos, notaGeral,
-            publicoAlvo, faixaPreco, tipoVideo, legendas, estiloLegenda, publicarYoutube, duracao, voz } = req.body;
+            publicoAlvo, faixaPreco, tipoVideo, legendas, estiloLegenda, publicarYoutube, duracao, voz, tom } = req.body;
     
     if (!nomeProduto?.trim()) return res.status(400).json({ error: 'Nome do produto é obrigatório' });
 
@@ -912,7 +912,8 @@ app.post('/api/videos/review', async (req, res) => {
           notaGeral,
           publicoAlvo,
           faixaPreco,
-          duracao: duracao || 8
+          duracao: duracao || 8,
+          tom: tom || 'profissional'
         });
         
         video.roteiro = roteiro;
@@ -1783,8 +1784,17 @@ async function chamarGemini(prompt, timeout = 60000) {
 // ============================================
 // FUNÇÃO: Gerar Roteiro de Review com Gemini
 // ============================================
-async function gerarRoteiroReview({ nomeProduto, categoria, linkProduto, pontosPositivos, pontosNegativos, notaGeral, publicoAlvo, faixaPreco, duracao }) {
+async function gerarRoteiroReview({ nomeProduto, categoria, linkProduto, pontosPositivos, pontosNegativos, notaGeral, publicoAlvo, faixaPreco, duracao, tom }) {
   const cenasNecessarias = Math.max(4, Math.ceil((duracao * 60) / 20));
+  
+  const estilosTom = {
+    'comedy': 'Use tom de STANDUP COMEDY: faça piadas, trocadilhos, comparações absurdas e engraçadas, reações exageradas tipo "CARAMBA!", referências da cultura pop, ritmo rápido e ágil como se estivesse num show de comédia. Seja MUITO engraçado mas sem perder a informação sobre o produto.',
+    'standup': 'Use tom de STANDUP COMEDY: faça piadas, trocadilhos, comparações absurdas e engraçadas, reações exageradas tipo "CARAMBA!", referências da cultura pop, ritmo rápido e ágil como se estivesse num show de comédia. Seja MUITO engraçado mas sem perder a informação sobre o produto.',
+    'casual': 'Use tom super casual e descontraído, como se estivesse conversando com um amigo no bar. Gírias, expressões populares, sem formalidade.',
+    'profissional': 'Use tom conversacional mas profissional, como um reviewer de confiança.',
+    'entusiasmado': 'Use tom SUPER empolgado e entusiasmado, como se fosse a melhor coisa que já viu! Exclame muito, use superlativos, transmita energia!'
+  };
+  const instrucaoTom = estilosTom[tom] || estilosTom['profissional'];
 
   if (!GEMINI_API_KEY || GEMINI_API_KEY === 'sua_chave_aqui') {
     console.warn('⚠️ Gemini API Key não configurada, usando roteiro template de review');
@@ -1816,7 +1826,7 @@ ESTRUTURA OBRIGATÓRIA DO REVIEW:
 6. VEREDITO FINAL (1 cena): Nota final ${notaGeral}/10, recomendação clara, para quem vale a pena
 
 REGRAS IMPORTANTES:
-1. A narração deve ser envolvente, honesta e informativa (como um reviewer de confiança)
+1. TOM/ESTILO: ${instrucaoTom}
 2. CADA CENA DEVE TER 4-6 FRASES DE NARRAÇÃO (para durar ~20 segundos cada)
 3. O "prompt_visual" deve ser em INGLÊS e descrever uma FOTO REAL para banco de imagens, relacionada ao conteúdo da cena (ex: "person unboxing tech product on desk", "close up smartphone screen showing app interface", "person comparing two products side by side"). Use cenários REALISTAS e FOTOGRÁFICOS.
 4. CRIE EXATAMENTE ${cenasNecessarias} CENAS. Isso é OBRIGATÓRIO.
