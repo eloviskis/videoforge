@@ -1486,7 +1486,7 @@ async function chamarGemini(prompt, timeout = 60000) {
 // FUNÇÃO: Gerar Roteiro de Review com Gemini
 // ============================================
 async function gerarRoteiroReview({ nomeProduto, categoria, linkProduto, pontosPositivos, pontosNegativos, notaGeral, publicoAlvo, faixaPreco, duracao }) {
-  const cenasNecessarias = Math.max(8, Math.ceil((duracao * 60) / 20));
+  const cenasNecessarias = Math.max(4, Math.ceil((duracao * 60) / 20));
 
   if (!GEMINI_API_KEY || GEMINI_API_KEY === 'sua_chave_aqui') {
     console.warn('⚠️ Gemini API Key não configurada, usando roteiro template de review');
