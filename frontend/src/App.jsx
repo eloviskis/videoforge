@@ -1620,7 +1620,21 @@ function App() {
       {/* Lista de vídeos */}
       {activeTab === 'videos' && videos.length > 0 && (
         <div className="main-card">
-          <h2>📹 Seus Vídeos ({videos.length})</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h2 style={{ margin: 0 }}>📹 Seus Vídeos ({videos.length})</h2>
+            <button
+              onClick={async () => {
+                if (!window.confirm('Tem certeza que deseja limpar todo o histórico de vídeos?')) return;
+                try {
+                  await axios.delete(`${API_URL}/videos`);
+                  setVideos([]);
+                } catch (e) {
+                  alert('Erro ao limpar histórico');
+                }
+              }}
+              style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', cursor: 'pointer', fontSize: '14px' }}
+            >🗑️ Limpar Histórico</button>
+          </div>
           
           <div className="videos-grid">
             {videos.map((video) => (

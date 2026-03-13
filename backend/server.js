@@ -5944,6 +5944,28 @@ app.get('/api/videos', (req, res) => {
   res.json(todosVideos);
 });
 
+app.delete('/api/videos', async (req, res) => {
+  try {
+    const ids = Array.from(videos.keys());
+    for (const id of ids) {
+      try {
+        const videoFile = resolve(MEDIA_DIR, 'videos', `${id}.mp4`);
+        const audioFile = resolve(MEDIA_DIR, 'audios', `${id}.mp3`);
+        const tempDir = resolve(MEDIA_DIR, 'temp', id);
+        await fs.unlink(videoFile).catch(() => {});
+        await fs.unlink(audioFile).catch(() => {});
+        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+      } catch (e) { /* ignorar */ }
+    }
+    videos.clear();
+    await salvarHistoricoVideos();
+    console.log(`🗑️ Histórico limpo: ${ids.length} vídeos removidos`);
+    res.json({ ok: true, removidos: ids.length });
+  } catch (e) {
+    res.status(500).json({ error: 'Erro ao limpar histórico' });
+  }
+});
+
 app.get('/api/videos/:id', (req, res) => {
   const video = videos.get(req.params.id);
   if (!video) {
