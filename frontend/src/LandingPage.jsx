@@ -86,6 +86,7 @@ export default function LandingPage({ onGoLogin }) {
     { q: 'A narração parece robótica?', a: 'Não. O Edge TTS usa vozes neurais da Microsoft, com entonação natural em português. O resultado é profissional e indistinguível de uma voz real.' },
     { q: 'E se eu não gostar?', a: 'Você tem 7 dias de garantia pela Hotmart. Se não gostar, pede reembolso e recebe seu dinheiro de volta — sem perguntas, sem burocracia.' },
     { q: 'Posso criar quantos vídeos quiser?', a: 'Sim. Não tem limite. O acesso é vitalício e você pode gerar vídeos ilimitados para sempre.' },
+    { q: 'Como funciona o review de produto?', a: 'Você digita o nome do produto e a IA gera um vídeo completo de review com prós, contras, nota de 1 a 5, público-alvo e veredicto final. Ideal para canais de afiliados e nichos de tecnologia.' },
   ]
 
   return (
@@ -378,6 +379,7 @@ export default function LandingPage({ onGoLogin }) {
               { icon: '📸', title: '15+ APIs Integradas', desc: 'Pexels, Pixabay, Unsplash, Google Images, Stable Diffusion, DALL-E e mais.' },
               { icon: '📺', title: 'Upload Direto', desc: 'YouTube, TikTok, Twitter/X, Facebook, Instagram, LinkedIn — tudo de uma vez.' },
               { icon: '📰', title: 'Notícias via RSS', desc: 'Crie vídeos de notícias automaticamente a partir de feeds RSS do seu nicho.' },
+              { icon: '⭐', title: 'Review de Produto', desc: 'Gere vídeos de review automáticos com IA — prós, contras, nota e veredicto prontos.' },
             ].map(f => (
               <div key={f.title} className="feature-card" style={{
                 background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
@@ -388,6 +390,71 @@ export default function LandingPage({ onGoLogin }) {
                 <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ REVIEW DE PRODUTO COM IA ═══ */}
+      <section id="review-produto" data-animate style={{
+        padding: '100px 24px',
+        background: 'radial-gradient(ellipse at center, rgba(251,191,36,0.06), transparent 60%)',
+      }} className={`fade-section ${visibleSections['review-produto'] ? 'visible' : ''}`}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
+          <div style={{
+            display: 'inline-block', padding: '6px 16px', borderRadius: '99px', fontSize: '12px',
+            background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)',
+            color: '#fbbf24', fontWeight: 700, marginBottom: '20px', letterSpacing: '1px',
+          }}>NOVO</div>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '16px' }}>
+            Review de Produto — <span style={{ color: '#fbbf24' }}>100% Automático</span>
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '56px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.7 }}>
+            Digite o nome do produto e a IA cria um vídeo completo de review: prós, contras, nota, público-alvo e veredicto final. Perfeito para canais de afiliados e nichos de tecnologia.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '48px' }}>
+            {[
+              { icon: '📝', title: 'Roteiro Especializado', desc: 'A IA gera um roteiro de review profissional com estrutura de nota, prós/contras e comparativo.' },
+              { icon: '⭐', title: 'Nota e Veredicto', desc: 'Cada review inclui avaliação de 1 a 5 estrelas e veredicto final automático — como um review real.' },
+              { icon: '🎯', title: 'Público e Preço', desc: 'Define automaticamente para quem o produto é indicado e mostra faixa de preço no vídeo.' },
+              { icon: '🚀', title: 'Pronto para Monetizar', desc: 'Ideal para marketing de afiliados — gere reviews em escala e monetize com links de afiliado.' },
+            ].map(f => (
+              <div key={f.title} className="feature-card" style={{
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(251,191,36,0.12)',
+                borderRadius: '16px', padding: '28px', textAlign: 'left',
+              }}>
+                <span style={{ fontSize: '32px', display: 'block', marginBottom: '14px' }}>{f.icon}</span>
+                <h3 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>{f.title}</h3>
+                <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Como funciona o review */}
+          <div style={{
+            background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '16px', padding: '36px 28px', maxWidth: '640px', margin: '0 auto',
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '24px', color: '#fbbf24' }}>
+              Como funciona em 3 passos
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
+              {[
+                { n: '1', text: 'Digite o nome do produto (ex: "iPhone 16 Pro Max")' },
+                { n: '2', text: 'A IA pesquisa e gera o review completo com narração' },
+                { n: '3', text: 'Receba o vídeo pronto — publique e monetize' },
+              ].map(s => (
+                <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                    background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#0a0a14', fontWeight: 800, fontSize: '14px',
+                  }}>{s.n}</div>
+                  <p style={{ fontSize: '15px', color: '#cbd5e1', margin: 0, lineHeight: 1.6 }}>{s.text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
