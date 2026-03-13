@@ -377,10 +377,12 @@ export default function LandingPage({ onGoLogin }) {
           }}>
             {[
               { icon: '🤖', title: 'Roteiro com IA', desc: 'Gemini gera roteiros completos a partir de um tema. 100% grátis, sem custo de API.' },
-              { icon: '🎤', title: 'Narração Neural', desc: 'Edge TTS com vozes realistas em português. Gratuito e com entonação natural.' },
+              { icon: '🎤', title: '400+ Vozes Neurais', desc: 'Edge TTS com 400+ vozes em 100+ idiomas. Preview de voz, seleção por gênero e idioma. Tudo gratuito.' },
               { icon: '🎬', title: '8+ Tipos de Vídeo', desc: 'Notícias, listas, tutoriais, motivacional, dark, curiosidades e mais.' },
               { icon: '📸', title: '15+ APIs Integradas', desc: 'Pexels, Pixabay, Unsplash, Google Images, Stable Diffusion, DALL-E e mais.' },
               { icon: '📺', title: 'Upload Direto', desc: 'YouTube, TikTok, Twitter/X, Facebook, Instagram, LinkedIn — tudo de uma vez.' },
+              { icon: '🔍', title: 'SEO Automático', desc: 'IA gera títulos, descrições e tags otimizadas para YouTube. Cada vídeo sai com SEO pronto.' },
+              { icon: '🕵️', title: 'Análise de Canais', desc: 'Espione qualquer canal do YouTube: VPH, tags, engajamento, monetização e frequência de uploads.' },
               { icon: '📰', title: 'Notícias via RSS', desc: 'Crie vídeos de notícias automaticamente a partir de feeds RSS do seu nicho.' },
               { icon: '⭐', title: 'Review de Produto', desc: 'Gere vídeos de review automáticos com IA — prós, contras, nota e veredicto prontos.' },
             ].map(f => (
@@ -458,6 +460,55 @@ export default function LandingPage({ onGoLogin }) {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ NOVAS FUNCIONALIDADES PREMIUM ═══ */}
+      <section id="premium" data-animate style={{
+        padding: '100px 24px',
+        background: 'radial-gradient(ellipse at center, rgba(99,102,241,0.06), transparent 60%)',
+      }} className={`fade-section ${visibleSections['premium'] ? 'visible' : ''}`}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
+          <div style={{
+            display: 'inline-block', padding: '6px 16px', borderRadius: '99px', fontSize: '12px',
+            background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)',
+            color: '#818cf8', fontWeight: 700, marginBottom: '20px', letterSpacing: '1px',
+          }}>NOVO</div>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '16px' }}>
+            Ferramentas que seus <span style={{ color: '#818cf8' }}>concorrentes não têm</span>
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '56px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.7 }}>
+            SEO automático, 400+ vozes e espionagem de canais — tudo integrado, tudo gratuito.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '48px' }}>
+            {[
+              {
+                icon: '🎙️', title: '400+ Vozes Neurais',
+                desc: 'Escolha entre 400+ vozes em 100+ idiomas com preview ao vivo. Masculino, feminino, qualquer sotaque — tudo Edge TTS, 100% gratuito.',
+                color: '#10b981'
+              },
+              {
+                icon: '🔍', title: 'SEO Automático por IA',
+                desc: 'A cada publicação no YouTube, a IA gera títulos, descrições e tags otimizadas automaticamente. Mais alcance com zero esforço.',
+                color: '#f59e0b'
+              },
+              {
+                icon: '🕵️', title: 'Inteligência de Canais',
+                desc: 'Analise qualquer canal do YouTube: VPH (views/hora), tags mais usadas, taxa de engajamento, frequência de upload e status de monetização.',
+                color: '#8b5cf6'
+              },
+            ].map(f => (
+              <div key={f.title} className="feature-card" style={{
+                background: 'rgba(255,255,255,0.03)', border: `1px solid ${f.color}33`,
+                borderRadius: '16px', padding: '32px', textAlign: 'left',
+              }}>
+                <span style={{ fontSize: '40px', display: 'block', marginBottom: '16px' }}>{f.icon}</span>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, margin: '0 0 10px', color: '#fff' }}>{f.title}</h3>
+                <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>{f.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

@@ -408,12 +408,307 @@ const oauth2Client = new google.auth.OAuth2(
 const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
 
 // ============================================
+// TTS: Listar vozes Edge TTS disponíveis (cache 1h)
+// ============================================
+let cachedVoices = null;
+let voicesCacheTime = 0;
+
+app.get('/api/tts/voices', async (req, res) => {
+  try {
+    if (cachedVoices && Date.now() - voicesCacheTime < 3600000) {
+      return res.json(cachedVoices);
+    }
+    const cmd = makeExecCmd('edge-tts --list-voices');
+    const { stdout } = await execAsync(cmd, { timeout: 30000 });
+    const lines = stdout.split('\n');
+    const voices = [];
+    let current = {};
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('Name:')) {
+        if (current.id) voices.push(current);
+        current = { id: trimmed.replace('Name: ', '').trim() };
+        const parts = current.id.split('-');
+        current.locale = parts.slice(0, 2).join('-');
+        current.lang = parts[0];
+      } else if (trimmed.startsWith('Gender:')) {
+        current.gender = trimmed.replace('Gender: ', '').trim();
+      }
+    }
+    if (current.id) voices.push(current);
+
+    // Agrupar por idioma
+    const byLang = {};
+    for (const v of voices) {
+      if (!byLang[v.locale]) byLang[v.locale] = [];
+      const shortName = v.id.split('-').slice(2).join('-').replace('Neural', '').replace('Multilingual', '★');
+      byLang[v.locale].push({ id: v.id, name: shortName, gender: v.gender });
+    }
+    cachedVoices = { voices, byLang, total: voices.length };
+    voicesCacheTime = Date.now();
+    res.json(cachedVoices);
+  } catch (error) {
+    // Fallback com vozes padrão
+    res.json({
+      voices: [
+        { id: 'pt-BR-AntonioNeural', locale: 'pt-BR', gender: 'Male' },
+        { id: 'pt-BR-FranciscaNeural', locale: 'pt-BR', gender: 'Female' },
+        { id: 'pt-BR-ThalitaNeural', locale: 'pt-BR', gender: 'Female' },
+        { id: 'en-US-GuyNeural', locale: 'en-US', gender: 'Male' },
+        { id: 'en-US-JennyNeural', locale: 'en-US', gender: 'Female' },
+        { id: 'en-US-AriaNeural', locale: 'en-US', gender: 'Female' },
+        { id: 'es-ES-AlvaroNeural', locale: 'es-ES', gender: 'Male' },
+        { id: 'es-ES-ElviraNeural', locale: 'es-ES', gender: 'Female' },
+      ],
+      byLang: {},
+      total: 8
+    });
+  }
+});
+
+// Preview de voz (gera 5s de áudio de teste)
+app.post('/api/tts/preview', async (req, res) => {
+  try {
+    const { voice, text } = req.body;
+    const voiceId = (voice || 'pt-BR-AntonioNeural').replace(/[^a-zA-Z0-9\-]/g, '');
+    const sampleText = (text || 'Olá! Esta é uma demonstração da voz selecionada para seu vídeo.').substring(0, 200);
+    const previewPath = resolve(MEDIA_DIR, 'temp', `preview_${voiceId}.mp3`);
+    await fs.mkdir(resolve(MEDIA_DIR, 'temp'), { recursive: true });
+
+    const script = `
+import edge_tts, asyncio, sys
+async def main():
+    c = edge_tts.Communicate(text="""${sampleText.replace(/"/g, '\\"')}""", voice='${voiceId}', rate='+0%', pitch='+0Hz')
+    await c.save(sys.argv[1])
+asyncio.run(main())
+`;
+    const scriptPath = resolve(MEDIA_DIR, 'temp', `preview_${voiceId}.py`);
+    await fs.writeFile(scriptPath, script, 'utf-8');
+    const cmd = makeExecCmd(`python /media/temp/preview_${voiceId}.py "/media/temp/preview_${voiceId}.mp3"`);
+    await execAsync(cmd, { timeout: 30000 });
+    res.sendFile(previewPath);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao gerar preview: ' + error.message });
+  }
+});
+
+// ============================================
+// SEO: Gerar metadados otimizados com IA
+// ============================================
+async function gerarSEOporIA(roteiro, idioma = 'pt-BR') {
+  const prompt = `Você é um especialista em SEO para YouTube com anos de experiência.
+Dado este vídeo, gere metadados otimizados para maximizar alcance orgânico.
+
+Título do vídeo: "${roteiro.titulo}"
+Descrição original: "${(roteiro.descricao || '').substring(0, 500)}"
+Tags originais: ${JSON.stringify(roteiro.tags || [])}
+Idioma: ${idioma}
+
+Gere EXATAMENTE este JSON (sem markdown, sem explicações):
+{
+  "titulo": "título SEO otimizado (máx 70 chars, keyword principal no início)",
+  "descricao": "descrição SEO completa (máx 4000 chars): 2 linhas de hook atrativas, depois resumo do conteúdo, timestamps sugeridos, CTA para se inscrever, 3 hashtags no final",
+  "tags": ["15 a 30 tags relevantes incluindo long-tail keywords"],
+  "categoriaId": "número da categoria YouTube ideal (ex: 22=Entertainment, 27=Education, 28=Science)",
+  "hashtags": ["3 hashtags principais para o título"]
+}`;
+
+  try {
+    const resposta = await chamarGemini(prompt, 30000);
+    const match = resposta.match(/\{[\s\S]*\}/);
+    if (match) {
+      const seo = JSON.parse(match[0]);
+      return {
+        titulo: (seo.titulo || roteiro.titulo).substring(0, 100),
+        descricao: (seo.descricao || roteiro.descricao || '').substring(0, 5000),
+        tags: Array.isArray(seo.tags) ? seo.tags.slice(0, 30) : roteiro.tags || ['videoforge'],
+        categoriaId: String(seo.categoriaId || '22'),
+        hashtags: Array.isArray(seo.hashtags) ? seo.hashtags.slice(0, 3) : []
+      };
+    }
+  } catch (e) {
+    console.error('⚠️ Falha ao gerar SEO com IA:', e.message);
+  }
+  return {
+    titulo: roteiro.titulo,
+    descricao: roteiro.descricao || '',
+    tags: roteiro.tags || ['videoforge'],
+    categoriaId: '22',
+    hashtags: []
+  };
+}
+
+app.post('/api/youtube/generate-seo', async (req, res) => {
+  try {
+    const { videoId } = req.body;
+    const video = videos.get(videoId);
+    if (!video?.roteiro) return res.status(404).json({ error: 'Vídeo ou roteiro não encontrado' });
+    const seo = await gerarSEOporIA(video.roteiro);
+    res.json({ success: true, seo });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// YOUTUBE INTELLIGENCE: Análise de Canais
+// ============================================
+app.get('/api/youtube/analyze-channel', async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q?.trim()) return res.status(400).json({ error: 'Parâmetro q obrigatório (URL, @handle ou nome)' });
+    
+    const token = youtubeTokens.get('default');
+    if (!token) return res.status(401).json({ error: 'YouTube não autenticado' });
+    oauth2Client.setCredentials(token);
+
+    let channelId = null;
+
+    // Detectar tipo de input
+    const input = q.trim();
+    if (input.startsWith('UC') && input.length >= 20) {
+      channelId = input;
+    } else if (input.startsWith('@')) {
+      const searchResp = await youtube.search.list({
+        part: ['snippet'], q: input, type: ['channel'], maxResults: 1
+      });
+      channelId = searchResp.data.items?.[0]?.snippet?.channelId;
+    } else if (input.includes('youtube.com')) {
+      const handleMatch = input.match(/@([\w-]+)/);
+      const idMatch = input.match(/channel\/(UC[\w-]+)/);
+      if (idMatch) {
+        channelId = idMatch[1];
+      } else if (handleMatch) {
+        const searchResp = await youtube.search.list({
+          part: ['snippet'], q: `@${handleMatch[1]}`, type: ['channel'], maxResults: 1
+        });
+        channelId = searchResp.data.items?.[0]?.snippet?.channelId;
+      }
+    } else {
+      const searchResp = await youtube.search.list({
+        part: ['snippet'], q: input, type: ['channel'], maxResults: 1
+      });
+      channelId = searchResp.data.items?.[0]?.snippet?.channelId;
+    }
+
+    if (!channelId) return res.status(404).json({ error: 'Canal não encontrado' });
+
+    // Buscar dados do canal
+    const channelResp = await youtube.channels.list({
+      part: ['snippet', 'statistics', 'contentDetails', 'brandingSettings', 'topicDetails'],
+      id: [channelId]
+    });
+    const ch = channelResp.data.items?.[0];
+    if (!ch) return res.status(404).json({ error: 'Canal não encontrado' });
+
+    const subs = parseInt(ch.statistics.subscriberCount || '0');
+    const totalViews = parseInt(ch.statistics.viewCount || '0');
+    const totalVideos = parseInt(ch.statistics.videoCount || '0');
+
+    // Buscar últimos 50 vídeos
+    const uploadsPlaylistId = ch.contentDetails?.relatedPlaylists?.uploads;
+    let videosData = [];
+    if (uploadsPlaylistId) {
+      const playlistResp = await youtube.playlistItems.list({
+        part: ['snippet', 'contentDetails'],
+        playlistId: uploadsPlaylistId,
+        maxResults: 50
+      });
+      const videoIds = playlistResp.data.items?.map(v => v.contentDetails.videoId) || [];
+
+      if (videoIds.length > 0) {
+        const statsResp = await youtube.videos.list({
+          part: ['statistics', 'contentDetails', 'snippet'],
+          id: videoIds
+        });
+        videosData = (statsResp.data.items || []).map(v => {
+          const views = parseInt(v.statistics.viewCount || '0');
+          const likes = parseInt(v.statistics.likeCount || '0');
+          const comments = parseInt(v.statistics.commentCount || '0');
+          const publishedAt = new Date(v.snippet.publishedAt);
+          const horasDesde = (Date.now() - publishedAt.getTime()) / 3600000;
+          return {
+            id: v.id,
+            titulo: v.snippet.title,
+            publishedAt: v.snippet.publishedAt,
+            views, likes, comments,
+            vph: horasDesde > 0 ? Math.round(views / horasDesde * 10) / 10 : 0,
+            engajamento: views > 0 ? Math.round((likes + comments) / views * 10000) / 100 : 0,
+            duracao: v.contentDetails.duration,
+            tags: v.snippet.tags || []
+          };
+        });
+      }
+    }
+
+    // Calcular métricas
+    const mediaViews = videosData.length > 0 ? Math.round(videosData.reduce((s, v) => s + v.views, 0) / videosData.length) : 0;
+    const mediaLikes = videosData.length > 0 ? Math.round(videosData.reduce((s, v) => s + v.likes, 0) / videosData.length) : 0;
+    const taxaEngajamento = videosData.length > 0
+      ? Math.round(videosData.reduce((s, v) => s + v.engajamento, 0) / videosData.length * 100) / 100 : 0;
+
+    // Frequência de upload
+    let frequenciaUpload = 0;
+    if (videosData.length > 1) {
+      const datas = videosData.map(v => new Date(v.publishedAt).getTime()).sort((a, b) => b - a);
+      const diffs = [];
+      for (let i = 0; i < datas.length - 1; i++) diffs.push((datas[i] - datas[i + 1]) / 86400000);
+      frequenciaUpload = Math.round(diffs.reduce((s, d) => s + d, 0) / diffs.length * 10) / 10;
+    }
+
+    // Tags mais usadas
+    const tagCount = {};
+    for (const v of videosData) {
+      for (const t of v.tags) {
+        tagCount[t.toLowerCase()] = (tagCount[t.toLowerCase()] || 0) + 1;
+      }
+    }
+    const topTags = Object.entries(tagCount).sort((a, b) => b[1] - a[1]).slice(0, 20).map(([tag]) => tag);
+
+    // Estimativa de monetização
+    const estimativaMonetizado = subs >= 1000 && totalViews >= 4000;
+
+    // Nicho/tópicos
+    const topics = ch.topicDetails?.topicCategories?.map(t => t.split('/').pop().replace(/_/g, ' ')) || [];
+
+    res.json({
+      canal: {
+        id: channelId,
+        nome: ch.snippet.title,
+        descricao: ch.snippet.description?.substring(0, 300),
+        thumbnail: ch.snippet.thumbnails?.medium?.url,
+        subscribers: subs,
+        totalViews,
+        totalVideos,
+        criadoEm: ch.snippet.publishedAt,
+        pais: ch.snippet.country || '—',
+        nicho: topics,
+        estimativaMonetizado,
+        keywords: ch.brandingSettings?.channel?.keywords || ''
+      },
+      metricas: {
+        mediaViews,
+        mediaLikes,
+        taxaEngajamento,
+        frequenciaUpload,
+      },
+      topVideos: [...videosData].sort((a, b) => b.vph - a.vph).slice(0, 10),
+      ultimosVideos: videosData.slice(0, 10),
+      topTags,
+    });
+  } catch (error) {
+    console.error('❌ Erro análise canal:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // ROTA: Criar novo vídeo (pipeline completo)
 // ============================================
 // Rota manual — usa roteiro fornecido pelo usuário, pula o Gemini
 app.post('/api/videos/manual', async (req, res) => {
   try {
-    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda } = req.body;
+    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda, voz } = req.body;
     if (!titulo?.trim()) return res.status(400).json({ error: 'Título obrigatório' });
     if (!texto?.trim()) return res.status(400).json({ error: 'Roteiro (texto) obrigatório' });
 
@@ -445,6 +740,7 @@ app.post('/api/videos/manual', async (req, res) => {
       tipoVideo: tipoVideo || 'stickAnimation',
       legendas: legendas !== false,
       estiloLegenda: estiloLegenda || 'classic',
+      voz: voz || null,
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando com roteiro manual...',
@@ -462,7 +758,7 @@ app.post('/api/videos/manual', async (req, res) => {
         video.progresso = 25;
         logStep(video, `✅ Roteiro carregado (${roteiro.cenas.length} cenas). Gerando narração...`);
 
-        const audioPaths = await gerarNarracao(videoId, roteiro);
+        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz);
         video.audioUrl = audioPaths.host;
         video.progresso = 45;
         logStep(video, '🎙️ Narração gerada! Iniciando visuais...');
@@ -574,7 +870,7 @@ app.post('/api/videos/manual', async (req, res) => {
 app.post('/api/videos/review', async (req, res) => {
   try {
     const { nomeProduto, categoria, linkProduto, pontosPositivos, pontosNegativos, notaGeral,
-            publicoAlvo, faixaPreco, tipoVideo, legendas, estiloLegenda, publicarYoutube, duracao } = req.body;
+            publicoAlvo, faixaPreco, tipoVideo, legendas, estiloLegenda, publicarYoutube, duracao, voz } = req.body;
     
     if (!nomeProduto?.trim()) return res.status(400).json({ error: 'Nome do produto é obrigatório' });
 
@@ -589,6 +885,7 @@ app.post('/api/videos/review', async (req, res) => {
       tipoVideo: tipoVideo || 'stockImages',
       legendas: legendas !== false,
       estiloLegenda: estiloLegenda || 'classic',
+      voz: voz || null,
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando review...',
@@ -628,7 +925,7 @@ app.post('/api/videos/review', async (req, res) => {
           : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
           : 'Edge TTS 🟢';
         logStep(video, `🎙️ Gerando narração (${ttsProvider})...`);
-        const audioPaths = await gerarNarracao(videoId, roteiro);
+        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz);
         video.audioUrl = audioPaths.host;
         video.progresso = 40;
         logStep(video, '🎙️ Narração criada!');
@@ -803,7 +1100,7 @@ app.post('/api/videos/demo', async (req, res) => {
         video.progresso = 25;
         logStep(video, `✅ Roteiro demo pronto (${roteiro.cenas.length} cenas). Gerando narração...`);
 
-        const audioPaths = await gerarNarracao(videoId, roteiro);
+        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz);
         video.audioUrl = audioPaths.host;
         video.progresso = 45;
         logStep(video, '🎙️ Narração gerada! Gerando animações...');
@@ -844,7 +1141,7 @@ app.post('/api/videos/demo', async (req, res) => {
 
 app.post('/api/videos', async (req, res) => {
   try {
-    const { titulo, nicho, duracao, detalhes, publicarYoutube, tipoVideo, legendas, estiloLegenda } = req.body;
+    const { titulo, nicho, duracao, detalhes, publicarYoutube, tipoVideo, legendas, estiloLegenda, voz } = req.body;
     
     console.log(`📋 Novo vídeo recebido - tipoVideo: ${tipoVideo || 'NÃO DEFINIDO'}`);
     
@@ -860,6 +1157,7 @@ app.post('/api/videos', async (req, res) => {
       tipoVideo: tipoVideo || 'stockImages',
       legendas: legendas !== false,
       estiloLegenda: estiloLegenda || 'classic',
+      voz: voz || null,
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando pipeline...',
@@ -991,7 +1289,7 @@ Retorne APENAS o texto da narração, nada mais.`;
       : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
       : 'Edge TTS 🟢';
     logStep(video, `🎙️ Gerando narração (${ttsProviderAtivo})...`);
-    const audioPaths = await gerarNarracao(videoId, roteiro);
+    const audioPaths = await gerarNarracao(videoId, roteiro, video.voz);
     video.audioUrl = audioPaths.host;
     video.progresso = 40;
     logStep(video, '🎙️ Narração criada!');
@@ -2258,7 +2556,7 @@ registerRoot(RemotionRoot);
 // ============================================
 // FUNÇÃO: Gerar Narração com TTS (via Docker) - POR CENA
 // ============================================
-async function gerarNarracao(videoId, roteiro) {
+async function gerarNarracao(videoId, roteiro, voz = null) {
   const dockerAudioPath = `/media/audios/${videoId}.mp3`;
   const hostAudioPath = resolve(MEDIA_DIR, 'audios', `${videoId}.mp3`);
 
@@ -2432,6 +2730,7 @@ print(f'DURACOES:{json.dumps(duracoes)}')
 `;
 
   // ── Script Edge TTS (gratuito, fallback) ──────────────────────────────────
+  const edgeVoice = (voz || 'pt-BR-AntonioNeural').replace(/[^a-zA-Z0-9\-]/g, '');
   const scriptEdge = `
 import json, subprocess, os, sys, asyncio
 
@@ -2449,7 +2748,7 @@ async def gerar_audio_cena(i, texto):
     enhanced_path = f'{temp_dir}/cena_{i+1}_audio.mp3'
     for tentativa in range(3):
         try:
-            communicate = edge_tts.Communicate(text=texto, voice='pt-BR-AntonioNeural', rate='+8%', pitch='+0Hz')
+            communicate = edge_tts.Communicate(text=texto, voice='${edgeVoice}', rate='+8%', pitch='+0Hz')
             await communicate.save(raw_path)
             break
         except Exception as e:
@@ -4957,14 +5256,28 @@ async function publicarNoYoutube(videoId, videoPaths, roteiro) {
     
     // Usar canal selecionado se disponível
     const channelId = youtubeSelectedChannel?.id;
-    const tituloYT = (roteiro.titulo || videos.get(videoId)?.titulo || 'Vídeo VideoForge').substring(0, 100).trim() || 'Vídeo VideoForge';
-    const descricaoYT = (roteiro.descricao || '').substring(0, 5000).trim();
-    const tagsYT = Array.isArray(roteiro.tags) && roteiro.tags.length > 0 ? roteiro.tags : ['videoforge'];
+
+    // Gerar SEO otimizado com IA (se não tiver customizado)
+    let seo = roteiro.seoCustomizado || null;
+    if (!seo) {
+      try {
+        console.log('🔍 Gerando SEO otimizado com IA...');
+        seo = await gerarSEOporIA(roteiro);
+        console.log(`✅ SEO gerado: "${seo.titulo}"`);
+      } catch (e) {
+        console.log('⚠️ SEO com IA falhou, usando dados originais');
+      }
+    }
+
+    const tituloYT = (seo?.titulo || roteiro.titulo || videos.get(videoId)?.titulo || 'Vídeo VideoForge').substring(0, 100).trim() || 'Vídeo VideoForge';
+    const descricaoYT = (seo?.descricao || roteiro.descricao || '').substring(0, 5000).trim();
+    const tagsYT = (seo?.tags?.length > 0 ? seo.tags : (Array.isArray(roteiro.tags) && roteiro.tags.length > 0 ? roteiro.tags : ['videoforge']));
+    const categoriaId = seo?.categoriaId || '22';
     const snippet = {
       title: tituloYT,
       description: descricaoYT,
       tags: tagsYT,
-      categoryId: '22',
+      categoryId: categoriaId,
       defaultLanguage: 'pt-BR'
     };
     if (channelId) {

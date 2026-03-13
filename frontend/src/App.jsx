@@ -32,7 +32,8 @@ function App() {
     publicarYoutube: false,
     legendas: true,
     estiloLegenda: 'classic',
-    tipoVideo: 'stickAnimation' // 'stockImages' ou 'stickAnimation'
+    tipoVideo: 'stickAnimation',
+    voz: 'pt-BR-AntonioNeural'
   })
 
   // === NEWS STATE ===
@@ -69,7 +70,8 @@ function App() {
     legendas: true,
     estiloLegenda: 'classic',
     publicarYoutube: false,
-    duracao: 8
+    duracao: 8,
+    voz: 'pt-BR-AntonioNeural'
   })
   const [reviewLoading, setReviewLoading] = useState(false) // { videoId: { cenas: [], loading: false, open: false } }
   const [monitorVideoId, setMonitorVideoId] = useState(null)
@@ -89,6 +91,21 @@ function App() {
   const [corteTitulos, setCorteTitulos] = useState({}) // { clipFile: titulo }
   const [corteDescricoes, setCorteDescricoes] = useState({}) // { clipFile: descricao }
   const [tiktokConectado, setTiktokConectado] = useState(false)
+
+  // === VOICES STATE ===
+  const [availableVoices, setAvailableVoices] = useState(null)
+  const [voiceFilter, setVoiceFilter] = useState('')
+  const [playingPreview, setPlayingPreview] = useState(null)
+
+  // === INTELLIGENCE STATE ===
+  const [intelQuery, setIntelQuery] = useState('')
+  const [intelLoading, setIntelLoading] = useState(false)
+  const [intelResult, setIntelResult] = useState(null)
+
+  // === SEO STATE ===
+  const [seoData, setSeoData] = useState(null)
+  const [seoLoading, setSeoLoading] = useState(false)
+  const [seoVideoId, setSeoVideoId] = useState(null)
 
   // Tipos pagos com informação de custo
   // numCenas = Math.max(8, Math.ceil(duracao * 60 / 20)) — mesma fórmula do backend
@@ -451,6 +468,61 @@ function App() {
     }
   }
 
+  // === CARREGAR VOZES EDGE TTS ===
+  const carregarVozes = async () => {
+    if (availableVoices) return
+    try {
+      const resp = await axios.get(`${API_URL}/tts/voices`)
+      setAvailableVoices(resp.data)
+    } catch (e) {
+      console.error('Erro ao carregar vozes:', e)
+    }
+  }
+
+  const previewVoz = async (voiceId) => {
+    if (playingPreview) return
+    setPlayingPreview(voiceId)
+    try {
+      const resp = await axios.post(`${API_URL}/tts/preview`, { voice: voiceId }, { responseType: 'blob' })
+      const url = URL.createObjectURL(resp.data)
+      const audio = new Audio(url)
+      audio.onended = () => { setPlayingPreview(null); URL.revokeObjectURL(url) }
+      audio.play()
+    } catch (e) {
+      setPlayingPreview(null)
+      console.error('Erro preview voz:', e)
+    }
+  }
+
+  // === ANALISAR CANAL YOUTUBE ===
+  const analisarCanal = async () => {
+    if (!intelQuery.trim()) return
+    setIntelLoading(true)
+    setIntelResult(null)
+    try {
+      const resp = await axios.get(`${API_URL}/youtube/analyze-channel`, { params: { q: intelQuery.trim() } })
+      setIntelResult(resp.data)
+    } catch (e) {
+      alert('Erro: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setIntelLoading(false)
+    }
+  }
+
+  // === GERAR SEO ===
+  const gerarSEO = async (videoId) => {
+    setSeoLoading(true)
+    setSeoVideoId(videoId)
+    try {
+      const resp = await axios.post(`${API_URL}/youtube/generate-seo`, { videoId })
+      setSeoData(resp.data.seo)
+    } catch (e) {
+      alert('Erro SEO: ' + (e.response?.data?.error || e.message))
+    } finally {
+      setSeoLoading(false)
+    }
+  }
+
   const carregarShareLinks = async (videoId) => {
     try {
       const response = await axios.get(`${API_URL}/videos/${videoId}/share-links`)
@@ -642,6 +714,9 @@ function App() {
           </button>
           <button className={`tab-btn ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>
             🎥 Timeline
+          </button>
+          <button className={`tab-btn ${activeTab === 'intelligence' ? 'active' : ''}`} onClick={() => { setActiveTab('intelligence'); carregarVozes() }}>
+            🕵️ Inteligência
           </button>
           <button className={`tab-btn ${activeTab === 'docs' ? 'active' : ''}`} onClick={() => setActiveTab('docs')}>
             📚 Tutoriais
@@ -1242,6 +1317,38 @@ function App() {
           </div>
 
           <div className="form-group">
+            <label>🎙️ Voz da Narração</label>
+            <select name="voz" value={formData.voz} onChange={handleChange} onFocus={carregarVozes}>
+              <optgroup label="⭐ Populares">
+                <option value="pt-BR-AntonioNeural">🇧🇷 Antonio (Masculino)</option>
+                <option value="pt-BR-FranciscaNeural">🇧🇷 Francisca (Feminino)</option>
+                <option value="pt-BR-ThalitaNeural">🇧🇷 Thalita (Feminino)</option>
+                <option value="en-US-GuyNeural">🇺🇸 Guy (Male)</option>
+                <option value="en-US-JennyNeural">🇺🇸 Jenny (Female)</option>
+                <option value="en-US-AriaNeural">🇺🇸 Aria (Female)</option>
+                <option value="es-ES-AlvaroNeural">🇪🇸 Alvaro (Masculino)</option>
+                <option value="es-ES-ElviraNeural">🇪🇸 Elvira (Feminino)</option>
+              </optgroup>
+              {availableVoices?.byLang && Object.entries(availableVoices.byLang)
+                .filter(([locale]) => !['pt-BR','en-US','es-ES'].includes(locale))
+                .sort(([a],[b]) => a.localeCompare(b))
+                .map(([locale, voices]) => (
+                  <optgroup key={locale} label={`🌍 ${locale} (${voices.length})`}>
+                    {voices.map(v => (
+                      <option key={v.id} value={v.id}>{v.gender === 'Male' ? '♂' : '♀'} {v.name}</option>
+                    ))}
+                  </optgroup>
+                ))
+              }
+            </select>
+            {availableVoices && <small style={{ color: '#888', fontSize: '0.8em' }}>{availableVoices.total} vozes neurais disponíveis</small>}
+            <button type="button" onClick={() => previewVoz(formData.voz)} disabled={!!playingPreview}
+              style={{ marginTop: '4px', padding: '4px 12px', fontSize: '12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', background: playingPreview ? '#eee' : '#fff' }}>
+              {playingPreview === formData.voz ? '🔊 Reproduzindo...' : '▶️ Ouvir voz'}
+            </button>
+          </div>
+
+          <div className="form-group">
             <label>Detalhes adicionais (opcional)</label>
             <textarea
               name="detalhes"
@@ -1431,7 +1538,44 @@ function App() {
                       >
                         📤 Copiar p/ compartilhar
                       </button>
+                      {config.youtube_connected && (
+                        <button
+                          onClick={() => gerarSEO(video.id)}
+                          disabled={seoLoading && seoVideoId === video.id}
+                          style={{
+                            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '8px 16px',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                          }}
+                        >
+                          {seoLoading && seoVideoId === video.id ? '⏳ Gerando SEO...' : '🔍 Gerar SEO'}
+                        </button>
+                      )}
                     </div>
+                    {seoData && seoVideoId === video.id && (
+                      <div style={{ marginTop: '8px', padding: '12px', background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: '8px', fontSize: '12px' }}>
+                        <strong>🔍 SEO Otimizado:</strong>
+                        <p style={{ margin: '6px 0 2px', fontWeight: 600 }}>Título: {seoData.titulo}</p>
+                        <p style={{ margin: '2px 0', color: '#555', maxHeight: '60px', overflow: 'auto' }}>{seoData.descricao?.substring(0, 200)}...</p>
+                        <p style={{ margin: '2px 0', color: '#888' }}>Tags: {seoData.tags?.slice(0, 8).join(', ')}</p>
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
+                          <button onClick={() => {
+                            navigator.clipboard.writeText(`${seoData.titulo}\n\n${seoData.descricao}\n\n${seoData.tags?.join(', ')}`)
+                            alert('📋 SEO copiado!')
+                          }} style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '4px' }}>
+                            📋 Copiar tudo
+                          </button>
+                          <button onClick={() => setSeoData(null)} style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '4px' }}>
+                            ✕ Fechar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -2588,6 +2732,36 @@ function App() {
               </div>
             </div>
 
+            <div className="form-group" style={{ marginTop: '8px' }}>
+              <label>🎙️ Voz da Narração</label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <select value={reviewForm.voz} onChange={e => setReviewForm(p => ({ ...p, voz: e.target.value }))} onFocus={carregarVozes} style={{ flex: 1 }}>
+                  <optgroup label="⭐ Populares">
+                    <option value="pt-BR-AntonioNeural">🇧🇷 Antonio (Masc.)</option>
+                    <option value="pt-BR-FranciscaNeural">🇧🇷 Francisca (Fem.)</option>
+                    <option value="pt-BR-ThalitaNeural">🇧🇷 Thalita (Fem.)</option>
+                    <option value="en-US-GuyNeural">🇺🇸 Guy (Male)</option>
+                    <option value="en-US-JennyNeural">🇺🇸 Jenny (Female)</option>
+                    <option value="es-ES-AlvaroNeural">🇪🇸 Alvaro (Masc.)</option>
+                  </optgroup>
+                  {availableVoices?.byLang && Object.entries(availableVoices.byLang)
+                    .filter(([l]) => !['pt-BR','en-US','es-ES'].includes(l))
+                    .sort(([a],[b]) => a.localeCompare(b))
+                    .map(([locale, voices]) => (
+                      <optgroup key={locale} label={`🌍 ${locale}`}>
+                        {voices.map(v => <option key={v.id} value={v.id}>{v.gender === 'Male' ? '♂' : '♀'} {v.name}</option>)}
+                      </optgroup>
+                    ))
+                  }
+                </select>
+                <button type="button" onClick={() => previewVoz(reviewForm.voz)} disabled={!!playingPreview}
+                  style={{ padding: '6px 10px', fontSize: '12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', whiteSpace: 'nowrap' }}>
+                  {playingPreview === reviewForm.voz ? '🔊...' : '▶️ Ouvir'}
+                </button>
+              </div>
+              {availableVoices && <small style={{ color: '#888', fontSize: '0.8em' }}>{availableVoices.total}+ vozes</small>}
+            </div>
+
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9em' }}>
                 <input
@@ -2643,6 +2817,136 @@ function App() {
 
       {/* Aba Timeline Editor */}
       {activeTab === 'timeline' && <TimelineEditor token={localStorage.getItem('token')} />}
+
+      {/* Aba Inteligência — Análise de Canais YouTube */}
+      {activeTab === 'intelligence' && (
+        <div className="main-card">
+          <h2>🕵️ Inteligência de Canais YouTube</h2>
+          <p style={{ color: '#888', marginBottom: '20px', fontSize: '0.9em' }}>
+            Analise qualquer canal do YouTube: métricas, VPH, tags, frequência de upload e muito mais.
+          </p>
+
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            <input
+              type="text"
+              value={intelQuery}
+              onChange={e => setIntelQuery(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && analisarCanal()}
+              placeholder="@canal, URL do YouTube ou nome do canal..."
+              style={{ flex: 1 }}
+            />
+            <button
+              onClick={analisarCanal}
+              disabled={intelLoading}
+              className="btn btn-primary"
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              {intelLoading ? '⏳ Analisando...' : '🔍 Analisar Canal'}
+            </button>
+          </div>
+
+          {intelResult && (
+            <div>
+              {/* Header do Canal */}
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', padding: '20px', background: '#f8fafc', borderRadius: '12px', marginBottom: '20px' }}>
+                {intelResult.canal.thumbnail && (
+                  <img src={intelResult.canal.thumbnail} alt="" style={{ width: '80px', height: '80px', borderRadius: '50%' }} />
+                )}
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 4px', fontSize: '20px' }}>{intelResult.canal.nome}</h3>
+                  <p style={{ margin: '0 0 8px', color: '#64748b', fontSize: '13px' }}>
+                    {intelResult.canal.descricao}
+                  </p>
+                  <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', fontSize: '14px' }}>
+                    <span><strong>{(intelResult.canal.subscribers || 0).toLocaleString()}</strong> subs</span>
+                    <span><strong>{(intelResult.canal.totalViews || 0).toLocaleString()}</strong> views</span>
+                    <span><strong>{intelResult.canal.totalVideos}</strong> vídeos</span>
+                    <span>{intelResult.canal.estimativaMonetizado ? '✅ Provável monetizado' : '❌ Não monetizado'}</span>
+                    {intelResult.canal.pais !== '—' && <span>🌍 {intelResult.canal.pais}</span>}
+                  </div>
+                  {intelResult.canal.nicho?.length > 0 && (
+                    <div style={{ marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {intelResult.canal.nicho.map(n => (
+                        <span key={n} style={{ padding: '2px 8px', background: '#e0e7ff', color: '#4338ca', borderRadius: '12px', fontSize: '11px' }}>{n}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Métricas */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+                {[
+                  { label: 'Média Views/Vídeo', value: (intelResult.metricas.mediaViews || 0).toLocaleString(), icon: '👁️' },
+                  { label: 'Média Likes/Vídeo', value: (intelResult.metricas.mediaLikes || 0).toLocaleString(), icon: '👍' },
+                  { label: 'Taxa Engajamento', value: `${intelResult.metricas.taxaEngajamento}%`, icon: '📈' },
+                  { label: 'Upload a cada', value: `${intelResult.metricas.frequenciaUpload} dias`, icon: '📅' },
+                ].map(m => (
+                  <div key={m.label} style={{ padding: '16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', textAlign: 'center' }}>
+                    <span style={{ fontSize: '24px' }}>{m.icon}</span>
+                    <p style={{ fontSize: '22px', fontWeight: 700, margin: '4px 0' }}>{m.value}</p>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{m.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Top Vídeos por VPH */}
+              <div style={{ marginBottom: '20px' }}>
+                <h3>🏆 Top Vídeos por VPH (Views/Hora)</h3>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                        <th style={{ textAlign: 'left', padding: '8px' }}>#</th>
+                        <th style={{ textAlign: 'left', padding: '8px' }}>Título</th>
+                        <th style={{ textAlign: 'right', padding: '8px' }}>VPH</th>
+                        <th style={{ textAlign: 'right', padding: '8px' }}>Views</th>
+                        <th style={{ textAlign: 'right', padding: '8px' }}>Engaj.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {intelResult.topVideos?.map((v, i) => (
+                        <tr key={v.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '8px', fontWeight: 600 }}>{i + 1}</td>
+                          <td style={{ padding: '8px' }}>
+                            <a href={`https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer" style={{ color: '#4338ca', textDecoration: 'none' }}>
+                              {v.titulo?.substring(0, 60)}{v.titulo?.length > 60 ? '...' : ''}
+                            </a>
+                          </td>
+                          <td style={{ textAlign: 'right', padding: '8px', fontWeight: 700, color: '#059669' }}>{v.vph}</td>
+                          <td style={{ textAlign: 'right', padding: '8px' }}>{v.views?.toLocaleString()}</td>
+                          <td style={{ textAlign: 'right', padding: '8px' }}>{v.engajamento}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Tags mais usadas */}
+              {intelResult.topTags?.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <h3>🏷️ Tags Mais Usadas</h3>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    {intelResult.topTags.map(t => (
+                      <span key={t} style={{ padding: '4px 10px', background: '#fef3c7', color: '#92400e', borderRadius: '12px', fontSize: '12px' }}>{t}</span>
+                    ))}
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(intelResult.topTags.join(', '))
+                      alert('📋 Tags copiadas!')
+                    }}
+                    style={{ padding: '6px 14px', fontSize: '12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px' }}
+                  >
+                    📋 Copiar Tags
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
     </>
   )
