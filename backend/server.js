@@ -259,6 +259,38 @@ app.use('/media', express.static(MEDIA_DIR));
 // Armazenamento simples em memória
 const videos = new Map();
 
+// ── Persistir histórico dos últimos 2 vídeos por 24h ──
+const VIDEOS_HISTORY_FILE = resolve(MEDIA_DIR, '.videos_history.json');
+const MAX_HISTORY = 2;
+const HISTORY_TTL_MS = 24 * 60 * 60 * 1000; // 24 horas
+
+async function salvarHistoricoVideos() {
+  try {
+    const arr = Array.from(videos.values())
+      .filter(v => ['pronto', 'concluido', 'publicado'].includes(v.status) && v.videoUrl)
+      .sort((a, b) => new Date(b.criado_em) - new Date(a.criado_em))
+      .slice(0, MAX_HISTORY)
+      .map(v => ({ ...v, _savedAt: Date.now() }));
+    await fs.writeFile(VIDEOS_HISTORY_FILE, JSON.stringify(arr, null, 2), 'utf-8');
+  } catch (e) { console.error('Erro ao salvar histórico vídeos:', e.message); }
+}
+
+async function carregarHistoricoVideos() {
+  try {
+    const raw = await fs.readFile(VIDEOS_HISTORY_FILE, 'utf-8');
+    const arr = JSON.parse(raw);
+    const agora = Date.now();
+    let restaurados = 0;
+    for (const v of arr) {
+      if (agora - (v._savedAt || 0) > HISTORY_TTL_MS) continue; // expirado
+      delete v._savedAt;
+      if (!videos.has(v.id)) { videos.set(v.id, v); restaurados++; }
+    }
+    if (restaurados) console.log(`📼 ${restaurados} vídeos restaurados do histórico`);
+  } catch (e) { /* arquivo não existe ainda */ }
+}
+setTimeout(() => carregarHistoricoVideos(), 50);
+
 // Helper: registra etapa com timestamp no log do vídeo
 function logStep(video, msg) {
   const ts = new Date().toISOString();
@@ -267,6 +299,28 @@ function logStep(video, msg) {
   video.logEtapas.push({ ts, msg });
   console.log(`  [${video.id}] ${msg}`);
 }
+
+// ── Limpeza automática de vídeos com mais de 24h ──
+setInterval(async () => {
+  const agora = Date.now();
+  for (const [id, v] of videos) {
+    if (v.criado_em && agora - new Date(v.criado_em).getTime() > HISTORY_TTL_MS) {
+      videos.delete(id);
+      // Apagar arquivos de mídia associados
+      try {
+        const videoFile = resolve(MEDIA_DIR, 'videos', `${id}.mp4`);
+        const audioFile = resolve(MEDIA_DIR, 'audios', `${id}.mp3`);
+        const tempDir = resolve(MEDIA_DIR, 'temp', id);
+        await fs.unlink(videoFile).catch(() => {});
+        await fs.unlink(audioFile).catch(() => {});
+        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+      } catch (e) { /* ignorar */ }
+      console.log(`🗑️ Vídeo ${id} expirado (>24h), removido`);
+    }
+  }
+  salvarHistoricoVideos();
+}, 60 * 60 * 1000); // a cada 1 hora
+
 const youtubeTokens = new Map();
 const socialTokens = new Map(); // Redes sociais conectadas
 let youtubeChannels = []; // Canais da conta YouTube
@@ -499,6 +553,7 @@ app.post('/api/videos/manual', async (req, res) => {
         video.status = 'pronto';
         video.progresso = 100;
         logStep(video, '✅ Vídeo pronto!');
+        salvarHistoricoVideos();
       } catch (err) {
         video.status = 'erro';
         logStep(video, `❌ Erro: ${err.message}`);
@@ -655,6 +710,7 @@ app.post('/api/videos/review', async (req, res) => {
         video.status = 'pronto';
         video.progresso = 100;
         logStep(video, '✅ Review pronto!');
+        salvarHistoricoVideos();
       } catch (err) {
         video.status = 'erro';
         logStep(video, `❌ Erro: ${err.message}`);
@@ -770,6 +826,7 @@ app.post('/api/videos/demo', async (req, res) => {
         video.status = 'pronto';
         video.progresso = 100;
         logStep(video, '✅ Vídeo demo pronto!');
+        salvarHistoricoVideos();
       } catch (err) {
         video.status = 'erro';
         logStep(video, `❌ Erro: ${err.message}`);
@@ -1162,6 +1219,7 @@ Retorne APENAS o texto da narração, nada mais.`;
       video.progresso = 100;
       video.status = 'concluido';
       logStep(video, '✅ Vídeo pronto!');
+      salvarHistoricoVideos();
     }
     
   } catch (error) {
