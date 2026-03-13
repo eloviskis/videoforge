@@ -1828,11 +1828,10 @@ ESTRUTURA OBRIGATÓRIA DO REVIEW:
 REGRAS IMPORTANTES:
 1. TOM/ESTILO: ${instrucaoTom}
 2. CADA CENA DEVE TER 4-6 FRASES DE NARRAÇÃO (para durar ~20 segundos cada)
-3. O "prompt_visual" deve ser em INGLÊS e descrever uma FOTO REAL para banco de imagens, relacionada ao conteúdo da cena (ex: "person unboxing tech product on desk", "close up smartphone screen showing app interface", "person comparing two products side by side"). Use cenários REALISTAS e FOTOGRÁFICOS.
+3. O "prompt_visual" deve ser em INGLÊS e descrever um VÍDEO REAL para banco de vídeos stock (Pexels). FOQUE em cenas com PESSOAS: pessoa usando computador, pessoa editando vídeo, pessoa digitando no teclado, pessoa sorrindo olhando tela, mãos no mouse, tela de laptop com software, pessoa filmando com câmera, pessoa assistindo vídeo no celular, escritório moderno com telas. Use termos como: "person working on laptop", "man editing video on computer screen", "woman typing keyboard smiling", "hands using mouse computer desk", "person watching video smartphone", "content creator filming studio". NUNCA use termos abstratos como "quality" ou "cost-effective" sozinhos.
 4. CRIE EXATAMENTE ${cenasNecessarias} CENAS. Isso é OBRIGATÓRIO.
 5. Narração toda em português brasileiro
-6. Use tom conversacional mas profissional
-7. Inclua transições naturais entre as seções
+6. Inclua transições naturais entre as seções
 
 Retorne APENAS um JSON válido (sem markdown, sem explicações):
 
