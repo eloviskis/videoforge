@@ -44,6 +44,7 @@ services:
       - "80:80"
       - "443:443"
       - "3002:3002"
+      - "3003:3003"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
@@ -161,7 +162,6 @@ services:
     environment:
       - DATABASE_URL=postgresql://umami:umami123@postgres:5432/umami
       - APP_SECRET=${UMAMI_SECRET:-videoforge-umami-secret-2026}
-      - BASE_PATH=/umami
     depends_on:
       postgres:
         condition: service_healthy
