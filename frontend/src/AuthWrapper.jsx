@@ -278,6 +278,9 @@ export default function AuthWrapper() {
                   <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
                     Inclui backend + frontend integrados. Roda localmente sem precisar de servidor.
                   </p>
+                  <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#8b5cf6' }}>
+                    ✨ Novo: Avatar Studio AI, Upload de mídia no Feedback
+                  </p>
                 </div>
                 <a
                   href="https://github.com/eloviskis/videoforge/releases/download/v1.5.0/VideoForge.Setup.1.5.0.exe"
