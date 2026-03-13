@@ -256,33 +256,15 @@ export default function AuthWrapper() {
                 <div style={{ flex: 1 }}>
                   <h4 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>VideoForge para Windows</h4>
                   <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
-                    Versão {appInfo.versao_app || '1.1.0'} — Instalador .exe (Setup)
+                    Versão {appInfo.versao_app || '1.5.0'} — Instalador .exe (Setup)
                   </p>
                   <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
                     Inclui backend + frontend integrados. Roda localmente sem precisar de servidor.
                   </p>
                 </div>
                 <a
-                  href={`${API_URL}/download/installer`}
-                  onClick={e => {
-                    e.preventDefault()
-                    const a = document.createElement('a')
-                    a.href = `${API_URL}/download/installer`
-                    // adicionar token como header via fetch
-                    fetch(`${API_URL}/download/installer`, {
-                      headers: { Authorization: `Bearer ${token}` }
-                    }).then(r => {
-                      if (!r.ok) throw new Error('Erro ao baixar')
-                      return r.blob()
-                    }).then(blob => {
-                      const url = URL.createObjectURL(blob)
-                      const a = document.createElement('a')
-                      a.href = url
-                      a.download = `VideoForge-Setup-${appInfo.versao_app || '1.1.0'}.exe`
-                      a.click()
-                      URL.revokeObjectURL(url)
-                    }).catch(err => alert('Erro ao baixar: ' + err.message))
-                  }}
+                  href="https://github.com/eloviskis/videoforge/releases/download/v1.5.0/VideoForge.Setup.1.5.0.exe"
+                  target="_blank" rel="noopener noreferrer"
                   style={{
                     padding: '10px 24px', borderRadius: '10px', textDecoration: 'none',
                     background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',

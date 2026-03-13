@@ -529,6 +529,55 @@ function YoutubeCliAuth() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SUB-COMPONENTE: Card de Tutorial
+// ─────────────────────────────────────────────────────────────────────────────
+function TutorialCard({ tutorial }) {
+  const [aberto, setAberto] = useState(false)
+  return (
+    <div style={{
+      border: '1px solid #e5e7eb', borderRadius: '12px', overflow: 'hidden',
+      background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    }}>
+      <button
+        onClick={() => setAberto(a => !a)}
+        style={{
+          width: '100%', textAlign: 'left', padding: '16px 20px',
+          background: 'none', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '12px',
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: '15px', color: '#111827' }}>{tutorial.titulo}</strong>
+            <span style={{
+              padding: '2px 8px', borderRadius: '99px', fontSize: '11px', fontWeight: 700,
+              background: tutorial.badgeColor, color: '#fff',
+            }}>{tutorial.badge}</span>
+          </div>
+          <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>{tutorial.desc}</p>
+        </div>
+        <span style={{ fontSize: '18px', color: '#9ca3af', transition: 'transform 0.2s', transform: aberto ? 'rotate(180deg)' : 'rotate(0)' }}>▼</span>
+      </button>
+      {aberto && (
+        <div style={{ padding: '0 20px 20px', borderTop: '1px solid #f3f4f6' }}>
+          <ol style={{ margin: '16px 0 0', paddingLeft: '20px', fontSize: '13px', color: '#374151', lineHeight: 2 }}>
+            {tutorial.passos.map((p, i) => <li key={i}>{p}</li>)}
+          </ol>
+          {tutorial.requisito && (
+            <div style={{
+              marginTop: '12px', padding: '10px 14px', borderRadius: '8px',
+              background: '#fefce8', border: '1px solid #fde68a', fontSize: '12px', color: '#78350f',
+            }}>
+              ⚠️ <strong>Requisito:</strong> {tutorial.requisito}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 export default function DocsTab() {
@@ -580,6 +629,126 @@ export default function DocsTab() {
           <span style={{ padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: 700, background: '#991b1b', color: '#fff' }}>
             🔴 {nPago} Pagas
           </span>
+        </div>
+      </div>
+
+      {/* ═══════════════ TUTORIAIS DAS FUNCIONALIDADES ═══════════════ */}
+      <div className="main-card" style={{ marginBottom: '24px' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: '18px' }}>🎓 Tutoriais — Como Usar as Funcionalidades</h3>
+        <p style={{ color: '#6b7280', margin: '0 0 20px', fontSize: '13px' }}>
+          Passo a passo de cada recurso do VideoForge.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {[
+            {
+              titulo: '🎤 Clonagem de Voz',
+              desc: 'Clone qualquer voz a partir de um áudio MP3 e use-a na narração dos seus vídeos.',
+              passos: [
+                'Vá na aba "Criar Vídeo" e role até "Biblioteca de Vozes Clonadas"',
+                'Clique para expandir e preencha: nome da voz, descrição, idioma e gênero',
+                'Faça upload de um áudio MP3/WAV de 30s a 5min da voz que deseja clonar',
+                'Clique em "Clonar Voz" — o processo leva alguns segundos',
+                'Quando o status mudar para ✅, a voz está pronta para uso',
+                'No campo "Voz da Narração", selecione sua voz clonada no grupo "🎤 Minhas Vozes Clonadas"',
+                'Crie o vídeo normalmente — a narração será gerada com a voz clonada!',
+              ],
+              requisito: 'Requer chave ELEVENLABS_API_KEY configurada em ⚙️ Minha Conta',
+              badge: '🟡 Requer ElevenLabs',
+              badgeColor: '#92400e',
+            },
+            {
+              titulo: '🎭 D-ID Avatar Apresentador',
+              desc: 'Gere vídeos com um avatar realista que "fala" a narração — perfeito para reviews e apresentações.',
+              passos: [
+                'Na criação de vídeo (normal ou review), selecione o tipo "🎭 D-ID Avatar Apresentador"',
+                'Preencha os campos normalmente (tema, nicho, duração, etc.)',
+                'O sistema vai gerar o roteiro, narração e enviar para o D-ID criar o avatar falando',
+                'O vídeo final mostra o avatar apresentando o conteúdo',
+                'Tempo de geração: 2-10 minutos dependendo da duração',
+              ],
+              requisito: 'Requer DID_API_KEY e DID_PRESENTER_URL configuradas em ⚙️ Minha Conta',
+              badge: '🔴 Pago (D-ID)',
+              badgeColor: '#991b1b',
+            },
+            {
+              titulo: '⭐ Review de Produto',
+              desc: 'Crie vídeos de review profissionais com prós, contras, nota e veredicto — ideal para afiliados.',
+              passos: [
+                'Acesse a aba "Review de Produto" no menu superior',
+                'Preencha: nome do produto, categoria, pontos positivos e negativos',
+                'Defina a nota geral (1 a 10), público-alvo e faixa de preço',
+                'Escolha o tipo de vídeo (Stock Images, Stock Videos, D-ID Avatar, etc.)',
+                'Selecione duração, voz e tom (profissional, casual, entusiasmado, etc.)',
+                'Clique em "Gerar Review" — o sistema cria roteiro, narração e renderiza',
+                'O vídeo final inclui: introdução, análise, prós/contras, nota e veredicto',
+              ],
+              requisito: 'Funciona com APIs gratuitas (Gemini + Pexels). Para avatar, precisa D-ID.',
+              badge: '🟢 Grátis (modo básico)',
+              badgeColor: '#166534',
+            },
+            {
+              titulo: '🖤 Dark Stickman Animation',
+              desc: 'Crie vídeos no estilo "história sombria" com animação de palitinhos — 100% offline, sem APIs.',
+              passos: [
+                'Na criação de vídeo, selecione o tipo "🖤 Dark Stickman"',
+                'Digite o tema da história (ex: "O Mistério da Floresta", "A Casa Abandonada")',
+                'O roteiro é gerado offline (zero tokens!) com temas de mistério e terror',
+                'A animação usa palitinhos desenhados com cenas em preto e branco',
+                'A narração usa Edge TTS (grátis) com voz sombria',
+                'Ideal para canais de histórias de terror e mistério',
+              ],
+              requisito: 'Nenhuma API necessária! Funciona 100% offline.',
+              badge: '🟢 100% Grátis',
+              badgeColor: '#166534',
+            },
+            {
+              titulo: '📺 Publicação Multi-Plataforma',
+              desc: 'Publique seus vídeos automaticamente no YouTube, TikTok, Instagram e Twitter.',
+              passos: [
+                'Configure suas redes sociais em ⚙️ Minha Conta → API Keys',
+                'YouTube: clique "Autenticar YouTube" na aba Tutoriais (abaixo)',
+                'Ao criar um vídeo, marque "Publicar no YouTube" antes de gerar',
+                'Para TikTok/Instagram/Twitter: configure as chaves na aba Minha Conta',
+                'Após o vídeo ficar pronto, use os botões de compartilhamento no card do vídeo',
+              ],
+              requisito: 'YouTube (grátis com OAuth). TikTok/Instagram/Twitter requerem apps de desenvolvedor.',
+              badge: '🟢 YouTube Grátis',
+              badgeColor: '#166534',
+            },
+            {
+              titulo: '🎬 Modos de Geração de Vídeo',
+              desc: 'Entenda os diferentes modos de vídeo disponíveis e quando usar cada um.',
+              passos: [
+                '📸 Stock Images (Pexels) — Grátis. Usa fotos do Pexels de fundo. Bom para canais de curiosidades.',
+                '🎬 Stock Videos (Pexels) — Grátis. Usa vídeos do Pexels. Melhor qualidade que fotos.',
+                '🖤 Dark Stickman — Grátis. Animação de palitinhos offline. Para canais de terror.',
+                '🎭 D-ID Avatar — Pago. Avatar realista falando. Para canais profissionais.',
+                '🎬 Gemini Veo — Google Vertex AI. Alta qualidade de vídeo gerado por IA.',
+                '🤖 Replicate — Pago. Wan 2.1 model. Vídeos com IA generativa.',
+                '🎥 Kling AI — Pago. Geração realista chinesa. Estilo cinematográfico.',
+              ],
+              requisito: 'Modos gratuitos: Stock Images, Stock Videos, Dark Stickman. Outros requerem APIs pagas.',
+              badge: '🟢 3 Grátis + 4 Pagos',
+              badgeColor: '#166534',
+            },
+            {
+              titulo: '💬 Legendas Automáticas',
+              desc: 'Adicione legendas automáticas geradas pelo Whisper em qualquer vídeo.',
+              passos: [
+                'Ao criar um vídeo, a opção "Legendas" já vem ativada por padrão',
+                'Escolha o estilo: Classic (branco), Neon (colorido), Minimal (sutil)',
+                'O sistema usa Whisper (IA de transcrição) para gerar as legendas automaticamente',
+                'As legendas são sincronizadas com o áudio e queimadas no vídeo final',
+                'Para desativar, desmarque "Legendas" antes de gerar o vídeo',
+              ],
+              requisito: 'Grátis! Usa Whisper via Docker.',
+              badge: '🟢 Grátis',
+              badgeColor: '#166534',
+            },
+          ].map((tut, i) => (
+            <TutorialCard key={i} tutorial={tut} />
+          ))}
         </div>
       </div>
 
