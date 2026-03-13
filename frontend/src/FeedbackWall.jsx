@@ -57,7 +57,7 @@ export default function FeedbackWall({ onBack, user }) {
       fd.append('titulo', form.titulo)
       fd.append('mensagem', form.mensagem)
       if (mediaFile) fd.append('media', mediaFile)
-      await axios.post(`${API_URL}/feedback`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      await axios.post(`${API_URL}/feedback`, fd)
       setForm({ tipo: 'sugestao', titulo: '', mensagem: '' })
       setMediaFile(null)
       setShowForm(false)
