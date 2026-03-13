@@ -1361,7 +1361,7 @@ function App() {
                   </>
                 )}
 
-                {video.status === 'concluido' && video.videoUrl && (
+                {['pronto','concluido'].includes(video.status) && video.videoUrl && (
                   <div style={{ marginTop: '10px' }}>
                     <p style={{ fontSize: '12px', marginBottom: '8px' }}>
                       ✅ Vídeo pronto!
