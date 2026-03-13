@@ -63,8 +63,9 @@ async function ensureFeedbackTable() {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
-    // Adicionar coluna media_url se não existir (migração)
+    // Adicionar colunas de mídia se não existirem (migração)
     await pool.query(`ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS media_url VARCHAR(500)`).catch(() => {});
+    await pool.query(`ALTER TABLE feedbacks ADD COLUMN IF NOT EXISTS resposta_media_url VARCHAR(500)`).catch(() => {});
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_feedbacks_user ON feedbacks(user_id)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_feedbacks_status ON feedbacks(status)`);
     await pool.query(`CREATE INDEX IF NOT EXISTS idx_feedbacks_created ON feedbacks(created_at DESC)`);
@@ -189,8 +190,8 @@ export function registrarRotasFeedback(app) {
     }
   });
 
-  // ── ADMIN: responder feedback ──
-  app.patch('/api/admin/feedback/:id', adminOnly, async (req, res) => {
+  // ── ADMIN: responder feedback (com mídia opcional) ──
+  app.patch('/api/admin/feedback/:id', adminOnly, feedbackUpload.single('media'), async (req, res) => {
     try {
       const { resposta, status } = req.body;
       const updates = [];
@@ -204,6 +205,11 @@ export function registrarRotasFeedback(app) {
       if (status) {
         params.push(status);
         updates.push(`status = $${params.length}`);
+      }
+      if (req.file) {
+        const mediaUrl = `/media/feedback/${req.file.filename}`;
+        params.push(mediaUrl);
+        updates.push(`resposta_media_url = $${params.length}`);
       }
       if (updates.length === 0) return res.status(400).json({ error: 'Nada para atualizar' });
 

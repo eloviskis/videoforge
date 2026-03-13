@@ -288,18 +288,20 @@ export default function AdminPanel({ onBack }) {
     } catch (e) { setMsg('Erro: ' + e.message) }
   }
 
-  async function handleUpdateFeedback(id, resposta, status) {
+  async function handleUpdateFeedback(id, resposta, status, mediaFile) {
     setFbReplying(id)
     try {
-      const body = {}
-      if (resposta) body.resposta = resposta
-      if (status) body.status = status
+      const fd = new FormData()
+      if (resposta) fd.append('resposta', resposta)
+      if (status) fd.append('status', status)
+      if (mediaFile) fd.append('media', mediaFile)
+      const token = localStorage.getItem('token')
       const r = await fetch(`${API_URL}/admin/feedback/${id}`, {
-        method: 'PATCH', headers: hdr(), body: JSON.stringify(body)
+        method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` }, body: fd
       })
       if (r.ok) {
         setMsg('✅ Feedback atualizado')
-        setFbReply({ ...fbReply, [id]: '' })
+        setFbReply({ ...fbReply, [id]: '', [`${id}_media`]: null })
         loadAllFeedbacks()
       } else { const d = await r.json(); setMsg('Erro: ' + d.error) }
     } catch (e) { setMsg('Erro: ' + e.message) }
@@ -1171,11 +1173,36 @@ export default function AdminPanel({ onBack }) {
                     <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: 700, color: '#e2e8f0' }}>{fb.titulo}</h4>
                     <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#94a3b8', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{fb.mensagem}</p>
 
+                    {/* Anexo do usuário */}
+                    {fb.media_url && (
+                      <div style={{ marginBottom: '12px' }}>
+                        {fb.media_url.match(/\.(mp4|webm|mov)$/i) ? (
+                          <video src={fb.media_url} controls style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        ) : (
+                          <a href={fb.media_url} target="_blank" rel="noopener noreferrer">
+                            <img src={fb.media_url} alt="Anexo" style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer' }} />
+                          </a>
+                        )}
+                        <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>📎 Anexo do usuário</div>
+                      </div>
+                    )}
+
                     {/* Resposta existente */}
                     {fb.resposta_admin && (
                       <div style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '10px', padding: '12px', marginBottom: '10px' }}>
                         <div style={{ fontSize: '11px', fontWeight: 700, color: '#a78bfa', marginBottom: '4px' }}>🛡️ Sua resposta:</div>
                         <p style={{ margin: 0, fontSize: '13px', color: '#c4b5fd', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{fb.resposta_admin}</p>
+                        {fb.resposta_media_url && (
+                          <div style={{ marginTop: '8px' }}>
+                            {fb.resposta_media_url.match(/\.(mp4|webm|mov)$/i) ? (
+                              <video src={fb.resposta_media_url} controls style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '10px', border: '1px solid rgba(139,92,246,0.2)' }} />
+                            ) : (
+                              <a href={fb.resposta_media_url} target="_blank" rel="noopener noreferrer">
+                                <img src={fb.resposta_media_url} alt="Anexo da resposta" style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '10px', border: '1px solid rgba(139,92,246,0.2)', cursor: 'pointer' }} />
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -1194,6 +1221,28 @@ export default function AdminPanel({ onBack }) {
                             fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box',
                           }}
                         />
+                        {/* Anexo na resposta do admin */}
+                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <label style={{ cursor: 'pointer', fontSize: '12px', color: '#8b5cf6', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            📎 Anexar mídia
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm"
+                              onChange={e => {
+                                const f = e.target.files[0]
+                                if (f && f.size > 10 * 1024 * 1024) { alert('Máx 10MB'); e.target.value = ''; return }
+                                setFbReply({ ...fbReply, [`${fb.id}_media`]: f || null })
+                              }}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                          {fbReply[`${fb.id}_media`] && (
+                            <span style={{ fontSize: '11px', color: '#c4b5fd' }}>
+                              {fbReply[`${fb.id}_media`].name}
+                              <button type="button" onClick={() => setFbReply({ ...fbReply, [`${fb.id}_media`]: null })} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '11px', marginLeft: '4px' }}>✕</button>
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <select
                         value={fb.status}
@@ -1211,7 +1260,7 @@ export default function AdminPanel({ onBack }) {
                         <option value="rejeitado">❌ Rejeitado</option>
                       </select>
                       <button
-                        onClick={() => handleUpdateFeedback(fb.id, fbReply[fb.id], 'respondido')}
+                        onClick={() => handleUpdateFeedback(fb.id, fbReply[fb.id], 'respondido', fbReply[`${fb.id}_media`])}
                         disabled={!fbReply[fb.id]?.trim() || fbReplying === fb.id}
                         style={{
                           ...sty.btn,

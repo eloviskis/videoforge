@@ -380,6 +380,17 @@ export default function FeedbackWall({ onBack, user }) {
                       <p style={{ margin: 0, fontSize: '13px', color: '#c4b5fd', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
                         {fb.resposta_admin}
                       </p>
+                      {fb.resposta_media_url && (
+                        <div style={{ marginTop: '8px' }}>
+                          {fb.resposta_media_url.match(/\.(mp4|webm|mov)$/i) ? (
+                            <video src={fb.resposta_media_url} controls style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '10px', border: '1px solid rgba(139,92,246,0.2)' }} />
+                          ) : (
+                            <a href={fb.resposta_media_url} target="_blank" rel="noopener noreferrer">
+                              <img src={fb.resposta_media_url} alt="Anexo" style={{ maxWidth: '100%', maxHeight: '250px', borderRadius: '10px', border: '1px solid rgba(139,92,246,0.2)', cursor: 'pointer' }} />
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
