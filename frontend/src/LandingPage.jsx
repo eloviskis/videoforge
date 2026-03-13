@@ -120,11 +120,14 @@ export default function LandingPage({ onGoLogin }) {
           .footer-grid{flex-direction:column!important;align-items:center!important;text-align:center!important}
           .cta-green{font-size:16px!important;padding:16px 32px!important;width:100%!important;text-align:center}
           .urgency-bar-content{flex-direction:column!important;gap:4px!important;font-size:12px!important}
+          .urgency-bar{display:none!important}
+          .landing-nav{top:0!important}
+          .hero-section{padding-top:100px!important}
         }
       `}</style>
 
       {/* ═══ BARRA DE URGÊNCIA (topo fixo) ═══ */}
-      <div style={{
+      <div className="urgency-bar" style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 110,
         background: 'linear-gradient(90deg, #6c5ce7, #a29bfe)',
         padding: '10px 16px', textAlign: 'center',
@@ -138,7 +141,7 @@ export default function LandingPage({ onGoLogin }) {
       </div>
 
       {/* ═══ NAVBAR ═══ */}
-      <nav style={{
+      <nav className="landing-nav" style={{
         position: 'fixed', top: '40px', left: 0, right: 0, zIndex: 100,
         background: 'rgba(10,10,20,0.9)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',
@@ -189,7 +192,7 @@ export default function LandingPage({ onGoLogin }) {
       )}
 
       {/* ═══ HERO SECTION ═══ */}
-      <section style={{
+      <section className="hero-section" style={{
         minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
         textAlign: 'center', padding: '160px 24px 80px',
         background: 'radial-gradient(ellipse at center top, rgba(108,92,231,0.15), transparent 60%)',
