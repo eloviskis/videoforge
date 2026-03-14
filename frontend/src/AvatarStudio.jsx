@@ -65,21 +65,31 @@ export default function AvatarStudio({ onBack, user }) {
   async function startCamera() {
     try {
       setCameraError('')
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' },
-        audio: true
-      })
+      let stream
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+          audio: true
+        })
+      } catch (e) {
+        // Fallback: celulares podem rejeitar constraints específicas
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true })
+      }
       streamRef.current = stream
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
+        await videoRef.current.play().catch(() => {})
       }
       setCameraActive(true)
       startTracking()
     } catch (err) {
-      setCameraError(err.name === 'NotAllowedError'
-        ? 'Permissão da câmera negada. Verifique as configurações do navegador.'
-        : 'Erro ao acessar câmera: ' + err.message)
+      setCameraError(
+        err.name === 'NotAllowedError'
+          ? 'Permissão da câmera negada. Verifique as configurações do navegador.'
+          : err.name === 'NotFoundError'
+            ? 'Nenhuma câmera encontrada neste dispositivo.'
+            : 'Erro ao acessar câmera: ' + err.message
+      )
     }
   }
 
@@ -101,8 +111,10 @@ export default function AvatarStudio({ onBack, user }) {
     if (!video || !canvas) return
 
     const ctx = canvas.getContext('2d')
-    canvas.width = 640
-    canvas.height = 480
+    const vw = video.videoWidth || 640
+    const vh = video.videoHeight || 480
+    canvas.width = vw
+    canvas.height = vh
 
     let avatarImg = null
     if (activeAvatar?.image_url) {
@@ -113,14 +125,14 @@ export default function AvatarStudio({ onBack, user }) {
 
     function drawFrame() {
       if (!streamRef.current) return
-      ctx.drawImage(video, 0, 0, 640, 480)
+      ctx.drawImage(video, 0, 0, vw, vh)
 
       if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
         // Detectar região do rosto usando proporções padrão
-        const faceX = 640 * 0.25
-        const faceY = 480 * 0.08
-        const faceW = 640 * 0.5
-        const faceH = 480 * 0.7
+        const faceX = vw * 0.25
+        const faceY = vh * 0.08
+        const faceW = vw * 0.5
+        const faceH = vh * 0.7
 
         // Espelhar horizontalmente para ficar natural
         ctx.save()
@@ -134,20 +146,21 @@ export default function AvatarStudio({ onBack, user }) {
         // Mostrar grid de tracking quando não tem avatar
         ctx.strokeStyle = 'rgba(34,197,94,0.4)'
         ctx.lineWidth = 1
+        const cx = vw / 2, cy = vh * 0.46
         // Oval do rosto
         ctx.beginPath()
-        ctx.ellipse(320, 220, 120, 160, 0, 0, 2 * Math.PI)
+        ctx.ellipse(cx, cy, vw * 0.19, vh * 0.33, 0, 0, 2 * Math.PI)
         ctx.stroke()
         // Cruz central
         ctx.beginPath()
-        ctx.moveTo(320, 60); ctx.lineTo(320, 380)
-        ctx.moveTo(200, 220); ctx.lineTo(440, 220)
+        ctx.moveTo(cx, vh * 0.12); ctx.lineTo(cx, vh * 0.79)
+        ctx.moveTo(vw * 0.31, cy); ctx.lineTo(vw * 0.69, cy)
         ctx.stroke()
         // Texto
         ctx.fillStyle = 'rgba(34,197,94,0.7)'
-        ctx.font = '14px Inter, sans-serif'
+        ctx.font = `${Math.max(12, vw * 0.022)}px Inter, sans-serif`
         ctx.textAlign = 'center'
-        ctx.fillText('👤 Posicione seu rosto no centro', 320, 430)
+        ctx.fillText('👤 Posicione seu rosto no centro', cx, vh * 0.9)
       }
 
       animFrameRef.current = requestAnimationFrame(drawFrame)
