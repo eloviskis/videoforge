@@ -65,6 +65,13 @@ export default function AvatarStudio({ onBack, user }) {
   async function startCamera() {
     try {
       setCameraError('')
+
+      // Verificar se o navegador suporta getUserMedia
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('Seu navegador não suporta acesso à câmera. Use Chrome ou Safari atualizado.')
+        return
+      }
+
       let stream
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -72,12 +79,33 @@ export default function AvatarStudio({ onBack, user }) {
           audio: true
         })
       } catch (e) {
-        // Fallback: celulares podem rejeitar constraints específicas
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true })
+        // Fallback 1: sem restrição de resolução
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true })
+        } catch (e2) {
+          // Fallback 2: sem áudio (alguns celulares bloqueiam áudio separadamente)
+          stream = await navigator.mediaDevices.getUserMedia({ video: true })
+        }
       }
       streamRef.current = stream
       if (videoRef.current) {
+        videoRef.current.setAttribute('autoplay', '')
+        videoRef.current.setAttribute('playsinline', '')
+        videoRef.current.setAttribute('webkit-playsinline', '')
         videoRef.current.srcObject = stream
+
+        // Esperar o vídeo estar realmente pronto antes de iniciar tracking
+        await new Promise((resolve) => {
+          const onReady = () => {
+            videoRef.current?.removeEventListener('loadedmetadata', onReady)
+            resolve()
+          }
+          if (videoRef.current.readyState >= 1) {
+            resolve()
+          } else {
+            videoRef.current.addEventListener('loadedmetadata', onReady)
+          }
+        })
         await videoRef.current.play().catch(() => {})
       }
       setCameraActive(true)
@@ -88,7 +116,9 @@ export default function AvatarStudio({ onBack, user }) {
           ? 'Permissão da câmera negada. Verifique as configurações do navegador.'
           : err.name === 'NotFoundError'
             ? 'Nenhuma câmera encontrada neste dispositivo.'
-            : 'Erro ao acessar câmera: ' + err.message
+            : err.name === 'NotReadableError'
+              ? 'Câmera em uso por outro app. Feche outros apps e tente novamente.'
+              : 'Erro ao acessar câmera: ' + err.message
       )
     }
   }
@@ -361,7 +391,7 @@ export default function AvatarStudio({ onBack, user }) {
               </div>
             ) : (
               <div style={{ position: 'relative', width: '100%', aspectRatio: '4/3' }}>
-                <video ref={videoRef} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', opacity: activeAvatar ? 0.3 : 1 }} muted playsInline />
+                <video ref={videoRef} autoPlay playsInline webkit-playsinline="" style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', opacity: activeAvatar ? 0.3 : 1 }} muted />
                 <canvas ref={canvasRef} style={{ position: 'absolute', width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             )}
