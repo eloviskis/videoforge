@@ -764,6 +764,23 @@ export default function DocsTab() {
               badge: '🟡 Requer OpenAI',
               badgeColor: '#92400e',
             },
+            {
+              titulo: '🗣️ Talking Photo',
+              desc: 'Envie uma foto de qualquer pessoa e transforme em vídeo narrado com IA.',
+              passos: [
+                'Clique em "🗣️ Talking Photo" na barra superior',
+                'Envie uma foto com rosto frontal (JPG, PNG ou WebP)',
+                'Digite o texto que a pessoa irá narrar (máx 2000 caracteres)',
+                'Escolha uma das 6 vozes: Alloy, Echo, Fable, Onyx, Nova ou Shimmer',
+                'Clique "Gerar Vídeo Narrado"',
+                'A IA gera o áudio (OpenAI TTS) e depois o vídeo (D-ID) — leva ~1-3 minutos',
+                'O vídeo aparece na tela com opção de download em MP4',
+                'Seus vídeos ficam no histórico para rever ou baixar depois',
+              ],
+              requisito: 'Requer DID_API_KEY + OPENAI_API_KEY configuradas em ⚙️ Minha Conta',
+              badge: '🟡 D-ID + OpenAI',
+              badgeColor: '#1e40af',
+            },
           ].map((tut, i) => (
             <TutorialCard key={i} tutorial={tut} />
           ))}

@@ -7,6 +7,7 @@ import AdminPanel from './AdminPanel.jsx'
 import MinhaConta from './MinhaConta.jsx'
 import FeedbackWall from './FeedbackWall.jsx'
 import AvatarStudio from './AvatarStudio.jsx'
+import TalkingPhoto from './TalkingPhoto.jsx'
 import ThankYouPage from './ThankYouPage.jsx'
 import AfiliadosPage from './AfiliadosPage.jsx'
 
@@ -155,6 +156,10 @@ export default function AuthWrapper() {
     return <AvatarStudio onBack={() => setPage('app')} user={user} />
   }
 
+  if (page === 'talking') {
+    return <TalkingPhoto onBack={() => setPage('app')} user={user} />
+  }
+
   /* page === 'app' */
   return (
     <div>
@@ -199,6 +204,18 @@ export default function AuthWrapper() {
               }}
             >
               🎭 Avatar Studio
+            </button>
+
+            {/* Talking Photo button */}
+            <button
+              onClick={() => setPage('talking')}
+              style={{
+                padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(56,189,248,0.3)',
+                background: 'rgba(56,189,248,0.1)', color: '#7dd3fc', cursor: 'pointer', fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              🗣️ Talking Photo
             </button>
 
             {/* Feedback button */}

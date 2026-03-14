@@ -485,9 +485,14 @@ export default function LandingPage({ onGoLogin }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '48px' }}>
             {[
               {
-                icon: '�', title: 'Avatar Studio AI',
+                icon: '🎭', title: 'Avatar Studio AI',
                 desc: 'Crie avatares com IA, ative a webcam e grave vídeos com seu avatar personalizado apresentando conteúdo. Estilos: 2D Cartoon, 3D e Realista.',
                 color: '#ec4899'
+              },
+              {
+                icon: '🗣️', title: 'Talking Photo',
+                desc: 'Envie a foto de qualquer pessoa, escreva o texto e a IA transforma em vídeo com narração realista. Powered by D-ID + OpenAI.',
+                color: '#38bdf8'
               },
               {
                 icon: '�🎙️', title: '400+ Vozes Neurais',
