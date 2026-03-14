@@ -508,8 +508,8 @@ export default function LandingPage({ onGoLogin }) {
                 color: '#ec4899'
               },
               {
-                icon: '🗣️', title: 'Talking Photo',
-                desc: 'Envie a foto de qualquer pessoa, escreva o texto e a IA transforma em vídeo com narração realista. Powered by D-ID + OpenAI.',
+                icon: '🗣️', title: 'Talking Photo AI',
+                desc: 'Envie a foto de qualquer pessoa e a IA anima o rosto com narração realista. Escolha a voz, escreva o texto e receba um vídeo MP4 pronto. 🟡 Requer tokens D-ID + OpenAI.',
                 color: '#38bdf8'
               },
               {
