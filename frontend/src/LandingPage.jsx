@@ -97,6 +97,9 @@ export default function LandingPage({ onGoLogin }) {
         *{box-sizing:border-box}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+        @keyframes logoBounce{0%,100%{transform:translateY(0) scale(1)}25%{transform:translateY(-12px) scale(1.04)}50%{transform:translateY(0) scale(1)}75%{transform:translateY(-6px) scale(1.02)}}
+        @keyframes logoGlow{0%,100%{filter:drop-shadow(0 0 12px rgba(108,92,231,0.4)) drop-shadow(0 0 40px rgba(108,92,231,0.1))}50%{filter:drop-shadow(0 0 24px rgba(108,92,231,0.7)) drop-shadow(0 0 60px rgba(108,92,231,0.2))}}
+        @keyframes logoAppear{from{opacity:0;transform:translateY(40px) scale(0.5) rotate(-10deg)}to{opacity:1;transform:translateY(0) scale(1) rotate(0deg)}}
         .fade-section{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.4,0,.2,1)}
         .fade-section.visible{opacity:1;transform:translateY(0)}
         .cta-green{
@@ -198,6 +201,21 @@ export default function LandingPage({ onGoLogin }) {
         background: 'radial-gradient(ellipse at center top, rgba(108,92,231,0.15), transparent 60%)',
       }}>
         <div style={{ maxWidth: '820px' }}>
+          {/* Logo animado */}
+          <div style={{
+            animation: 'logoAppear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+            marginBottom: '28px',
+          }}>
+            <img
+              src="/logo.png"
+              alt="VideoForge"
+              style={{
+                width: '100px', height: '100px', borderRadius: '24px',
+                animation: 'logoBounce 3s ease-in-out infinite, logoGlow 4s ease-in-out infinite',
+                boxShadow: '0 8px 40px rgba(108,92,231,0.3)',
+              }}
+            />
+          </div>
           <h1 className="hero-h1" style={{
             fontSize: 'clamp(32px, 5.5vw, 56px)', fontWeight: 900, lineHeight: 1.1,
             margin: '0 0 24px', color: '#fff',
