@@ -273,7 +273,7 @@ export default function AuthWrapper() {
                 <div style={{ flex: 1 }}>
                   <h4 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 700 }}>VideoForge para Windows</h4>
                   <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>
-                    Versão {appInfo.versao_app || '1.5.0'} — Instalador .exe (Setup)
+                    Versão {appInfo.versao_app || '1.6.0'} — Instalador .exe (Setup)
                   </p>
                   <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>
                     Inclui backend + frontend integrados. Roda localmente sem precisar de servidor.
@@ -283,7 +283,7 @@ export default function AuthWrapper() {
                   </p>
                 </div>
                 <a
-                  href="https://github.com/eloviskis/videoforge/releases/download/v1.5.0/VideoForge.Setup.1.5.0.exe"
+                  href="https://github.com/eloviskis/videoforge/releases/download/v1.6.0/VideoForge.Setup.1.6.0.exe"
                   target="_blank" rel="noopener noreferrer"
                   style={{
                     padding: '10px 24px', borderRadius: '10px', textDecoration: 'none',
