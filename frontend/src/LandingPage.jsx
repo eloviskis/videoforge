@@ -82,11 +82,12 @@ export default function LandingPage({ onGoLogin }) {
     { q: 'Preciso saber programar?', a: 'Não. O VideoForge tem interface 100% visual. Você digita o tema do vídeo e o software faz todo o resto.' },
     { q: 'Funciona no Mac?', a: 'O VideoForge roda no navegador — funciona em qualquer sistema operacional (Windows, Mac, Linux). Também temos app desktop para Windows.' },
     { q: 'Os vídeos ficam com marca d\'água?', a: 'Não. Os vídeos são 100% seus, sem marca d\'água e sem limitações. Você pode monetizar livremente.' },
-    { q: 'Preciso pagar alguma API?', a: 'Não. O VideoForge usa Gemini (roteiro) e Edge TTS (narração), ambos gratuitos. As imagens vêm de bancos gratuitos como Pexels e Pixabay. Tudo funciona sem gastar nada extra.' },
+    { q: 'Preciso pagar alguma API?', a: 'O núcleo do VideoForge é 100% gratuito: Gemini (roteiro), Edge TTS (narração), Pexels/Pixabay (imagens). Porém, algumas ferramentas premium — como Talking Photo (D-ID) e vozes OpenAI — exigem tokens pagos dessas plataformas externas. Cada usuário configura suas próprias chaves de API nas configurações.' },
     { q: 'A narração parece robótica?', a: 'Não. O Edge TTS usa vozes neurais da Microsoft, com entonação natural em português. O resultado é profissional e indistinguível de uma voz real.' },
     { q: 'E se eu não gostar?', a: 'Você tem 7 dias de garantia pela Hotmart. Se não gostar, pede reembolso e recebe seu dinheiro de volta — sem perguntas, sem burocracia.' },
-    { q: 'Posso criar quantos vídeos quiser?', a: 'Sim. Não tem limite. O acesso é vitalício e você pode gerar vídeos ilimitados para sempre.' },
+    { q: 'Posso criar quantos vídeos quiser?', a: 'Sim. Os vídeos com Gemini + Edge TTS são ilimitados e gratuitos. Ferramentas premium (Talking Photo, Avatar Studio com IA externa) consomem tokens da API correspondente — o custo depende do seu uso e plano na plataforma de cada API.' },
     { q: 'Como funciona o review de produto?', a: 'Você digita o nome do produto e a IA gera um vídeo completo de review com prós, contras, nota de 1 a 5, público-alvo e veredicto final. Ideal para canais de afiliados e nichos de tecnologia.' },
+    { q: 'O que são "tokens" e chaves de API?', a: 'Tokens são créditos que plataformas de IA (OpenAI, D-ID, ElevenLabs) cobram por uso. O VideoForge não cobra taxas extras — você conecta sua própria chave de API diretamente nas configurações e paga apenas o que consumir na plataforma original. As funcionalidades básicas (roteiro, narração, imagens) não precisam de nenhum token.' },
   ]
 
   return (
@@ -361,10 +362,13 @@ export default function LandingPage({ onGoLogin }) {
               <div style={{ fontSize: '14px', color: '#00d2a0', fontWeight: 600, marginBottom: '16px' }}>uma vez, para sempre</div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: '#94a3b8', lineHeight: 2 }}>
                 <li>✅ Sem marca d'água</li>
-                <li>✅ Vídeos ilimitados</li>
+                <li>✅ Vídeos ilimitados*</li>
                 <li>✅ Pagamento único</li>
                 <li>✅ Acesso vitalício</li>
               </ul>
+              <p style={{ fontSize: '11px', color: '#64748b', marginTop: '10px', lineHeight: 1.5 }}>
+                *Ferramentas core gratuitas. Recursos premium usam tokens de APIs externas.
+              </p>
             </div>
           </div>
 
@@ -497,7 +501,7 @@ export default function LandingPage({ onGoLogin }) {
             Ferramentas que seus <span style={{ color: '#818cf8' }}>concorrentes não têm</span>
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '56px', maxWidth: '600px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.7 }}>
-            SEO automático, 400+ vozes e espionagem de canais — tudo integrado, tudo gratuito.
+            SEO automático, 400+ vozes e espionagem de canais — tudo integrado.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px', marginBottom: '48px' }}>
@@ -537,6 +541,19 @@ export default function LandingPage({ onGoLogin }) {
                 <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>{f.desc}</p>
               </div>
             ))}
+          </div>
+
+          {/* Transparency box */}
+          <div style={{
+            background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.25)',
+            borderRadius: '12px', padding: '20px 28px', textAlign: 'left', maxWidth: '700px',
+            margin: '0 auto',
+          }}>
+            <p style={{ fontSize: '14px', color: '#fbbf24', fontWeight: 700, margin: '0 0 8px' }}>⚠️ Transparência sobre custos</p>
+            <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0, lineHeight: 1.8 }}>
+              <strong style={{ color: '#e2e8f0' }}>Grátis e ilimitado:</strong> Roteiro (Gemini), narração (Edge TTS 400+ vozes), imagens (Pexels/Pixabay), SEO, espionagem de canais, review de produto e todos os tipos de vídeo.<br />
+              <strong style={{ color: '#e2e8f0' }}>Requer tokens externos (🟡):</strong> Talking Photo (D-ID + OpenAI), vozes premium (ElevenLabs/OpenAI). Você conecta sua própria chave de API e paga direto na plataforma — o VideoForge não cobra nada extra.
+            </p>
           </div>
         </div>
       </section>
