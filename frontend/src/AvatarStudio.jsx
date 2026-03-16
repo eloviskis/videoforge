@@ -88,28 +88,8 @@ export default function AvatarStudio({ onBack, user }) {
         }
       }
       streamRef.current = stream
-      if (videoRef.current) {
-        videoRef.current.setAttribute('autoplay', '')
-        videoRef.current.setAttribute('playsinline', '')
-        videoRef.current.setAttribute('webkit-playsinline', '')
-        videoRef.current.srcObject = stream
-
-        // Esperar o vídeo estar realmente pronto antes de iniciar tracking
-        await new Promise((resolve) => {
-          const onReady = () => {
-            videoRef.current?.removeEventListener('loadedmetadata', onReady)
-            resolve()
-          }
-          if (videoRef.current.readyState >= 1) {
-            resolve()
-          } else {
-            videoRef.current.addEventListener('loadedmetadata', onReady)
-          }
-        })
-        await videoRef.current.play().catch(() => {})
-      }
+      // Ativar a câmera primeiro para que o <video> seja renderizado no DOM
       setCameraActive(true)
-      startTracking()
     } catch (err) {
       setCameraError(
         err.name === 'NotAllowedError'
@@ -122,6 +102,28 @@ export default function AvatarStudio({ onBack, user }) {
       )
     }
   }
+
+  // Conectar stream ao <video> assim que ele existir no DOM
+  useEffect(() => {
+    if (!cameraActive || !streamRef.current) return
+    const video = videoRef.current
+    if (!video) return
+
+    video.setAttribute('autoplay', '')
+    video.setAttribute('playsinline', '')
+    video.setAttribute('webkit-playsinline', '')
+    video.srcObject = streamRef.current
+
+    const onReady = () => {
+      video.play().catch(() => {})
+      startTracking()
+    }
+    if (video.readyState >= 1) {
+      onReady()
+    } else {
+      video.addEventListener('loadedmetadata', onReady, { once: true })
+    }
+  }, [cameraActive])
 
   function stopCamera() {
     if (streamRef.current) {
