@@ -88,6 +88,7 @@ export default function LandingPage({ onGoLogin }) {
     { q: 'Posso criar quantos vídeos quiser?', a: 'Sim. Os vídeos com Gemini + Edge TTS são ilimitados e gratuitos. Ferramentas premium (Talking Photo, Avatar Studio com IA externa) consomem tokens da API correspondente — o custo depende do seu uso e plano na plataforma de cada API.' },
     { q: 'Como funciona o review de produto?', a: 'Você digita o nome do produto e a IA gera um vídeo completo de review com prós, contras, nota de 1 a 5, público-alvo e veredicto final. Ideal para canais de afiliados e nichos de tecnologia.' },
     { q: 'O que são "tokens" e chaves de API?', a: 'Tokens são créditos que plataformas de IA (OpenAI, D-ID, ElevenLabs) cobram por uso. O VideoForge não cobra taxas extras — você conecta sua própria chave de API diretamente nas configurações e paga apenas o que consumir na plataforma original. As funcionalidades básicas (roteiro, narração, imagens) não precisam de nenhum token.' },
+    { q: 'Como funciona o Social AI para Instagram?', a: 'Você conecta sua conta Instagram profissional pelo Meta (Facebook). A IA analisa seus posts, sugere melhorias, gera legendas, hashtags e até um calendário editorial completo. Você pode publicar direto pelo VideoForge ou agendar posts automáticos.' },
   ]
 
   return (
@@ -407,6 +408,7 @@ export default function LandingPage({ onGoLogin }) {
               { icon: '🕵️', title: 'Análise de Canais', desc: 'Espione qualquer canal do YouTube: VPH, tags, engajamento, monetização e frequência de uploads.' },
               { icon: '📰', title: 'Notícias via RSS', desc: 'Crie vídeos de notícias automaticamente a partir de feeds RSS do seu nicho.' },
               { icon: '⭐', title: 'Review de Produto', desc: 'Gere vídeos de review automáticos com IA — prós, contras, nota e veredicto prontos.' },
+              { icon: '📱', title: 'Social AI (Instagram)', desc: 'Automação completa do Instagram: análise de perfil, geração de conteúdo, calendário editorial e publicação automática com IA.' },
             ].map(f => (
               <div key={f.title} className="feature-card" style={{
                 background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
@@ -477,6 +479,72 @@ export default function LandingPage({ onGoLogin }) {
                     background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#0a0a14', fontWeight: 800, fontSize: '14px',
+                  }}>{s.n}</div>
+                  <p style={{ fontSize: '15px', color: '#cbd5e1', margin: 0, lineHeight: 1.6 }}>{s.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ SOCIAL AI — INSTAGRAM ═══ */}
+      <section id="social-ai" data-animate style={{
+        padding: '100px 24px',
+        background: 'radial-gradient(ellipse at center, rgba(236,72,153,0.06), transparent 60%)',
+      }} className={`fade-section ${visibleSections['social-ai'] ? 'visible' : ''}`}>
+        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
+          <div style={{
+            display: 'inline-block', padding: '6px 16px', borderRadius: '99px', fontSize: '12px',
+            background: 'rgba(236,72,153,0.1)', border: '1px solid rgba(236,72,153,0.3)',
+            color: '#ec4899', fontWeight: 700, marginBottom: '20px', letterSpacing: '1px',
+          }}>NOVO</div>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, marginBottom: '16px' }}>
+            Social AI — <span style={{ color: '#ec4899' }}>Instagram no Piloto Automático</span>
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '16px', marginBottom: '56px', maxWidth: '640px', marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.7 }}>
+            Conecte seu Instagram, deixe a IA analisar seu perfil e gere conteúdo, legendas, hashtags e calendário editorial automaticamente. Publique direto do VideoForge.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '48px' }}>
+            {[
+              { icon: '🔍', title: 'Análise de Perfil com IA', desc: 'A IA analisa seus últimos posts, identifica melhores hashtags, horários e formatos que mais engajam.' },
+              { icon: '✍️', title: 'Geração de Conteúdo', desc: 'Gere legendas, hashtags e roteiros de carrossel com um clique. Escolha o tom: profissional, descontraído ou inspirador.' },
+              { icon: '📅', title: 'Calendário Editorial', desc: 'A IA cria um plano de publicação de 7, 15 ou 30 dias personalizado para o seu nicho.' },
+              { icon: '📤', title: 'Publicação Automática', desc: 'Agende posts e a IA publica automaticamente no seu Instagram. Suporta imagens, carrossel e Reels.' },
+              { icon: '🎬', title: 'Vídeo → Reels', desc: 'Converta qualquer vídeo criado no VideoForge em Reels do Instagram com legenda e hashtags geradas pela IA.' },
+              { icon: '📊', title: 'Media Kit Automático', desc: 'Gere seu Media Kit profissional com estatísticas, engajamento e melhores posts — pronto para marcas.' },
+            ].map(f => (
+              <div key={f.title} className="feature-card" style={{
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(236,72,153,0.12)',
+                borderRadius: '16px', padding: '28px', textAlign: 'left',
+              }}>
+                <span style={{ fontSize: '32px', display: 'block', marginBottom: '14px' }}>{f.icon}</span>
+                <h3 style={{ fontSize: '17px', fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>{f.title}</h3>
+                <p style={{ fontSize: '14px', color: '#94a3b8', margin: 0, lineHeight: 1.7 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: '16px', padding: '36px 28px', maxWidth: '640px', margin: '0 auto',
+          }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '24px', color: '#ec4899' }}>
+              Como funciona em 3 passos
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
+              {[
+                { n: '1', text: 'Conecte seu Instagram profissional via Meta (Facebook)' },
+                { n: '2', text: 'A IA analisa seu perfil e gera conteúdo personalizado' },
+                { n: '3', text: 'Agende, publique e acompanhe tudo de um só lugar' },
+              ].map(s => (
+                <div key={s.n} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{
+                    width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
+                    background: 'linear-gradient(135deg, #ec4899, #db2777)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontWeight: 800, fontSize: '14px',
                   }}>{s.n}</div>
                   <p style={{ fontSize: '15px', color: '#cbd5e1', margin: 0, lineHeight: 1.6 }}>{s.text}</p>
                 </div>

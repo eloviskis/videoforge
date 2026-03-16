@@ -158,6 +158,59 @@ export default function AfiliadosPage({ onGoBack }) {
         </div>
       </section>
 
+      {/* Social AI */}
+      <section style={{
+        padding: '60px 24px', maxWidth: '900px', margin: '0 auto',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(236,72,153,0.1), rgba(219,39,119,0.05))',
+          border: '1px solid rgba(236,72,153,0.3)',
+          borderRadius: '20px', padding: '40px 32px', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>📱</div>
+          <div style={{
+            display: 'inline-block', padding: '4px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: 700,
+            background: 'rgba(236,72,153,0.15)', border: '1px solid rgba(236,72,153,0.3)', color: '#ec4899',
+            marginBottom: '16px', letterSpacing: '0.5px',
+          }}>
+            NOVIDADE
+          </div>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', marginBottom: '12px' }}>
+            Social AI — Instagram no Piloto Automático
+          </h2>
+          <p style={{ fontSize: '16px', color: '#94a3b8', maxWidth: '600px', margin: '0 auto 24px', lineHeight: 1.7 }}>
+            Mais um argumento de venda irresistível: o VideoForge agora automatiza o Instagram dos seus indicados.
+            <strong style={{ color: '#ec4899' }}> Análise de perfil, geração de conteúdo com IA, calendário editorial e publicação automática.</strong>
+          </p>
+          <div style={{
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px',
+            maxWidth: '650px', margin: '0 auto 28px',
+          }}>
+            {[
+              { icon: '🔍', text: 'Análise de perfil com IA' },
+              { icon: '✍️', text: 'Legendas e hashtags automáticas' },
+              { icon: '📅', text: 'Calendário editorial inteligente' },
+              { icon: '📤', text: 'Publicação e agendamento' },
+              { icon: '🎬', text: 'Vídeo → Reels em 1 clique' },
+              { icon: '📊', text: 'Media Kit profissional' },
+            ].map((item, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                background: 'rgba(255,255,255,0.03)', borderRadius: '10px', padding: '12px 16px',
+                fontSize: '14px', color: '#e2e8f0',
+              }}>
+                <span style={{ fontSize: '18px' }}>{item.icon}</span>
+                {item.text}
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: '14px', color: '#94a3b8', lineHeight: 1.7 }}>
+            Seus indicados ganham uma ferramenta completa de YouTube <strong style={{ color: '#fff' }}>+ Instagram</strong>. Mais valor = mais vendas = mais comissão pra você.
+          </p>
+        </div>
+      </section>
+
       {/* Vantagens */}
       <section style={{ padding: '40px 24px 60px', maxWidth: '900px', margin: '0 auto' }}>
         <h2 style={{ textAlign: 'center', fontSize: '28px', fontWeight: 700, color: '#fff', marginBottom: '40px' }}>
