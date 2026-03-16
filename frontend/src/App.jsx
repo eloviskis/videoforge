@@ -105,6 +105,14 @@ function App() {
   const [voiceCloneUploading, setVoiceCloneUploading] = useState(false)
   const [voiceCloneForm, setVoiceCloneForm] = useState({ nome: '', descricao: '', idioma: 'pt-BR', genero: '' })
 
+  // === GRAVAÇÃO DE ÁUDIO (microfone) ===
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordedAudio, setRecordedAudio] = useState(null) // { blob, url, duration }
+  const [recordingTime, setRecordingTime] = useState(0)
+  const mediaRecorderRef = useRef(null)
+  const recordingChunksRef = useRef([])
+  const recordingTimerRef = useRef(null)
+
   // === INTELLIGENCE STATE ===
   const [intelQuery, setIntelQuery] = useState('')
   const [intelLoading, setIntelLoading] = useState(false)
@@ -363,7 +371,19 @@ function App() {
     setLoading(true)
     
     try {
-      const response = await axios.post(`${API_URL}/videos`, formData)
+      let audioCustom = null
+
+      // Se o usuário gravou áudio, faz upload primeiro
+      if (recordedAudio?.blob) {
+        const audioForm = new FormData()
+        audioForm.append('audio', recordedAudio.blob, 'gravacao.webm')
+        const uploadResp = await axios.post(`${API_URL}/videos/upload-audio`, audioForm, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        audioCustom = uploadResp.data.audioFile
+      }
+
+      const response = await axios.post(`${API_URL}/videos`, { ...formData, audioCustom })
       
       setFormData({
         titulo: '',
@@ -377,6 +397,7 @@ function App() {
         voz: 'pt-BR-AntonioNeural',
         vozClonada: null
       })
+      removerGravacao()
       
       await carregarVideos()
       setMonitorVideoId(response.data.videoId)
@@ -572,6 +593,48 @@ function App() {
       alert('Erro no preview: ' + (e.response?.data?.error || e.message))
     }
   }
+
+  // === GRAVAÇÃO DE ÁUDIO DO MICROFONE ===
+  const iniciarGravacao = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      recordingChunksRef.current = []
+      const recorder = new MediaRecorder(stream, {
+        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm'
+      })
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) recordingChunksRef.current.push(e.data) }
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' })
+        const url = URL.createObjectURL(blob)
+        setRecordedAudio({ blob, url, duration: recordingTime })
+      }
+      mediaRecorderRef.current = recorder
+      recorder.start(250)
+      setIsRecording(true)
+      setRecordingTime(0)
+      setRecordedAudio(null)
+      recordingTimerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000)
+    } catch (e) {
+      alert('❌ Não foi possível acessar o microfone. Verifique as permissões do navegador.')
+    }
+  }
+
+  const pararGravacao = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
+    setIsRecording(false)
+    clearInterval(recordingTimerRef.current)
+  }
+
+  const removerGravacao = () => {
+    if (recordedAudio?.url) URL.revokeObjectURL(recordedAudio.url)
+    setRecordedAudio(null)
+    setRecordingTime(0)
+  }
+
+  const formatarTempo = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
   // === ANALISAR CANAL YOUTUBE ===
   const analisarCanal = async () => {
@@ -1396,15 +1459,15 @@ function App() {
           </div>
 
           <div className="form-group">
-            <label>🎙️ Voz da Narração</label>
-            <select name="voz" value={formData.vozClonada ? '__cloned__' : formData.voz} onChange={(e) => {
+            <label>🎙️ Voz da Narração {recordedAudio && <span style={{ fontSize: '11px', color: '#4caf50', fontWeight: 'normal' }}>(substituída por gravação)</span>}</label>
+            <select name="voz" value={formData.vozClonada ? '__cloned__' : formData.voz} disabled={!!recordedAudio} onChange={(e) => {
               if (e.target.value === '__cloned__') return
               if (e.target.value.startsWith('clone:')) {
                 setFormData(prev => ({ ...prev, vozClonada: e.target.value.replace('clone:', ''), voz: prev.voz }))
               } else {
                 setFormData(prev => ({ ...prev, voz: e.target.value, vozClonada: null }))
               }
-            }} onFocus={() => { carregarVozes(); if (voiceLibrary.length === 0) carregarVoiceLibrary() }}>
+            }} onFocus={() => { carregarVozes(); if (voiceLibrary.length === 0) carregarVoiceLibrary() }} style={recordedAudio ? { opacity: 0.5 } : {}}>
               {voiceLibrary.filter(v => v.status === 'ready').length > 0 && (
                 <optgroup label="🎤 Minhas Vozes Clonadas">
                   {voiceLibrary.filter(v => v.status === 'ready').map(v => (
@@ -1443,10 +1506,55 @@ function App() {
             )}
             {availableVoices && <small style={{ color: '#888', fontSize: '0.8em' }}>{availableVoices.total} vozes neurais + {voiceLibrary.filter(v => v.status === 'ready').length} clonadas</small>}
             <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-              <button type="button" onClick={() => formData.vozClonada ? previewVozClonada(formData.vozClonada) : previewVoz(formData.voz)} disabled={!!playingPreview}
-                style={{ padding: '4px 12px', fontSize: '12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', background: playingPreview ? '#eee' : '#fff' }}>
+              <button type="button" onClick={() => formData.vozClonada ? previewVozClonada(formData.vozClonada) : previewVoz(formData.voz)} disabled={!!playingPreview || !!recordedAudio}
+                style={{ padding: '4px 12px', fontSize: '12px', cursor: 'pointer', border: '1px solid #ccc', borderRadius: '6px', background: playingPreview ? '#eee' : '#fff', opacity: recordedAudio ? 0.5 : 1 }}>
                 {playingPreview ? '🔊 Reproduzindo...' : '▶️ Ouvir voz'}
               </button>
+            </div>
+
+            {/* === GRAVADOR DE ÁUDIO DO MICROFONE === */}
+            <div style={{ marginTop: '10px', padding: '12px', background: recordedAudio ? '#e8f5e9' : '#f5f5f5', borderRadius: '8px', border: `1px solid ${recordedAudio ? '#4caf50' : '#e0e0e0'}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#333' }}>🎙️ Gravar Minha Voz (Grátis)</span>
+                {recordedAudio && <span style={{ fontSize: '11px', background: '#4caf50', color: '#fff', padding: '2px 8px', borderRadius: '10px' }}>✓ Gravado</span>}
+              </div>
+              <p style={{ fontSize: '11px', color: '#888', margin: '0 0 8px 0' }}>
+                {recordedAudio ? 'Áudio gravado será usado no lugar da narração por IA.' : 'Grave sua narração pelo microfone. Substitui a voz da IA por completo.'}
+              </p>
+
+              {!recordedAudio ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {!isRecording ? (
+                    <button type="button" onClick={iniciarGravacao}
+                      style={{ padding: '6px 16px', fontSize: '13px', cursor: 'pointer', border: 'none', borderRadius: '6px', background: '#e53935', color: '#fff', fontWeight: 'bold' }}>
+                      ⏺ Gravar
+                    </button>
+                  ) : (
+                    <>
+                      <button type="button" onClick={pararGravacao}
+                        style={{ padding: '6px 16px', fontSize: '13px', cursor: 'pointer', border: 'none', borderRadius: '6px', background: '#333', color: '#fff', fontWeight: 'bold' }}>
+                        ⏹ Parar
+                      </button>
+                      <span style={{ fontSize: '14px', color: '#e53935', fontWeight: 'bold', fontFamily: 'monospace', animation: 'pulse 1s infinite' }}>
+                        🔴 {formatarTempo(recordingTime)}
+                      </span>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <audio src={recordedAudio.url} controls style={{ height: '32px', flex: 1, minWidth: '150px' }} />
+                  <span style={{ fontSize: '12px', color: '#666' }}>{formatarTempo(recordedAudio.duration)}</span>
+                  <button type="button" onClick={removerGravacao}
+                    style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer', border: '1px solid #e53935', borderRadius: '6px', background: '#fff', color: '#e53935' }}>
+                    ✕ Remover
+                  </button>
+                  <button type="button" onClick={() => { removerGravacao(); iniciarGravacao() }}
+                    style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer', border: '1px solid #1976d2', borderRadius: '6px', background: '#fff', color: '#1976d2' }}>
+                    🔄 Regravar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

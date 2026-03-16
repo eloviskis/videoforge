@@ -33,6 +33,7 @@ import { registrarRotasTalkingPhoto } from './talking-photo.js';
 import { enviarEmailLead } from './mailer.js';
 import { registrarRotasTimeline } from './timeline.js';
 import { registrarRotasVoiceLibrary, buscarVozClonada } from './voice-library.js';
+import multer from 'multer';
 
 const execAsync = promisify(exec);
 
@@ -769,16 +770,24 @@ app.post('/api/videos/manual', async (req, res) => {
         video.progresso = 25;
         logStep(video, `✅ Roteiro carregado (${roteiro.cenas.length} cenas). Gerando narração...`);
 
-        // Resolver voz clonada se selecionada
-        let clonedVoiceId = null;
-        if (video.vozClonada) {
-          const vozInfo = await buscarVozClonada(video.vozClonada, req.userId);
-          if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+        let audioPaths;
+        if (video.audioCustom) {
+          const customFile = resolve(MEDIA_DIR, 'audios', video.audioCustom);
+          if (!existsSync(customFile)) throw new Error('Áudio gravado não encontrado.');
+          audioPaths = { docker: `/media/audios/${video.audioCustom}`, host: customFile, duracoesCenas: null };
+          video.audioUrl = customFile;
+          logStep(video, '🎙️ Usando áudio gravado pelo usuário (GRÁTIS)!');
+        } else {
+          let clonedVoiceId = null;
+          if (video.vozClonada) {
+            const vozInfo = await buscarVozClonada(video.vozClonada, req.userId);
+            if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+          }
+          audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
+          video.audioUrl = audioPaths.host;
+          logStep(video, `🎙️ Narração gerada${clonedVoiceId ? ' (voz clonada)' : ''}! Iniciando visuais...`);
         }
-        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
-        video.audioUrl = audioPaths.host;
         video.progresso = 45;
-        logStep(video, `🎙️ Narração gerada${clonedVoiceId ? ' (voz clonada)' : ''}! Iniciando visuais...`);
 
         if (video.tipoVideo === 'stickAnimation') {
           video.status = 'gerando_animacao';
@@ -938,21 +947,31 @@ app.post('/api/videos/review', async (req, res) => {
         video.progresso = 25;
         logStep(video, `✅ Roteiro de review gerado! ${roteiro.cenas.length} cenas • ${roteiro.titulo}`);
         
-        // ETAPA 2: Narração TTS
+        // ETAPA 2: Narração TTS ou áudio gravado
         video.status = 'gerando_narracao';
-        const ttsProvider = process.env.ELEVENLABS_API_KEY ? 'ElevenLabs 🟡'
-          : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
-          : 'Edge TTS 🟢';
-        logStep(video, `🎙️ Gerando narração (${ttsProvider})...`);
-        let clonedVoiceId = null;
-        if (video.vozClonada) {
-          const vozInfo = await buscarVozClonada(video.vozClonada, req.userId);
-          if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+        let audioPaths;
+        
+        if (video.audioCustom) {
+          const customFile = resolve(MEDIA_DIR, 'audios', video.audioCustom);
+          if (!existsSync(customFile)) throw new Error('Áudio gravado não encontrado.');
+          audioPaths = { docker: `/media/audios/${video.audioCustom}`, host: customFile, duracoesCenas: null };
+          video.audioUrl = customFile;
+          logStep(video, '🎙️ Usando áudio gravado pelo usuário (GRÁTIS)!');
+        } else {
+          const ttsProvider = process.env.ELEVENLABS_API_KEY ? 'ElevenLabs 🟡'
+            : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
+            : 'Edge TTS 🟢';
+          logStep(video, `🎙️ Gerando narração (${ttsProvider})...`);
+          let clonedVoiceId = null;
+          if (video.vozClonada) {
+            const vozInfo = await buscarVozClonada(video.vozClonada, req.userId);
+            if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+          }
+          audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
+          video.audioUrl = audioPaths.host;
+          logStep(video, `🎙️ Narração criada${clonedVoiceId ? ' (voz clonada)' : ''}!`);
         }
-        const audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
-        video.audioUrl = audioPaths.host;
         video.progresso = 40;
-        logStep(video, `🎙️ Narração criada${clonedVoiceId ? ' (voz clonada)' : ''}!`);
 
         // ETAPA 2.5: Legendas
         let subtitlePaths = null;
@@ -1169,9 +1188,48 @@ app.post('/api/videos/demo', async (req, res) => {
   }
 });
 
+// ============================================
+// UPLOAD DE ÁUDIO GRAVADO PELO USUÁRIO
+// ============================================
+const audioUploadDir = resolve(MEDIA_DIR, 'audios');
+const audioUpload = multer({
+  dest: audioUploadDir,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (req, file, cb) => {
+    const allowed = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav', 'audio/ogg', 'audio/webm', 'audio/mp4', 'audio/m4a', 'audio/x-m4a'];
+    if (allowed.includes(file.mimetype) || file.originalname.match(/\.(mp3|wav|ogg|webm|m4a)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Formato de áudio não suportado.'));
+    }
+  }
+});
+
+app.post('/api/videos/upload-audio', audioUpload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Envie um arquivo de áudio.' });
+
+    await fs.mkdir(audioUploadDir, { recursive: true });
+
+    const audioId = uuidv4().split('-')[0];
+    const ext = req.file.originalname.match(/\.(mp3|wav|ogg|webm|m4a)$/i)?.[0] || '.webm';
+    const finalName = `custom_${audioId}${ext}`;
+    const finalPath = resolve(audioUploadDir, finalName);
+
+    await fs.rename(req.file.path, finalPath);
+
+    console.log(`🎙️ Áudio do usuário salvo: ${finalPath}`);
+    res.json({ success: true, audioId, audioFile: finalName });
+  } catch (error) {
+    if (req.file) await fs.unlink(req.file.path).catch(() => {});
+    console.error('Erro upload áudio:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/videos', async (req, res) => {
   try {
-    const { titulo, nicho, duracao, detalhes, publicarYoutube, tipoVideo, legendas, estiloLegenda, voz, vozClonada } = req.body;
+    const { titulo, nicho, duracao, detalhes, publicarYoutube, tipoVideo, legendas, estiloLegenda, voz, vozClonada, audioCustom } = req.body;
     
     console.log(`📋 Novo vídeo recebido - tipoVideo: ${tipoVideo || 'NÃO DEFINIDO'}`);
     
@@ -1189,6 +1247,7 @@ app.post('/api/videos', async (req, res) => {
       estiloLegenda: estiloLegenda || 'classic',
       voz: voz || null,
       vozClonada: vozClonada || null,
+      audioCustom: audioCustom || null,
       _userId: req.userId,
       status: 'iniciando',
       progresso: 0,
@@ -1315,21 +1374,35 @@ Retorne APENAS o texto da narração, nada mais.`;
     video.progresso = 25;
     logStep(video, `✅ Roteiro gerado! ${roteiro.cenas.length} cenas • ${roteiro.titulo}`);
     
-    // ETAPA 2: Gerar Narração (TTS)
+    // ETAPA 2: Gerar Narração (TTS) ou usar áudio gravado pelo usuário
     video.status = 'gerando_narracao';
-    const ttsProviderAtivo = process.env.ELEVENLABS_API_KEY ? 'ElevenLabs 🟡'
-      : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
-      : 'Edge TTS 🟢';
-    logStep(video, `🎙️ Gerando narração (${ttsProviderAtivo})...`);
-    let clonedVoiceId = null;
-    if (video.vozClonada) {
-      const vozInfo = await buscarVozClonada(video.vozClonada, video._userId);
-      if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+    let audioPaths;
+    
+    if (video.audioCustom) {
+      // Usuário gravou seu próprio áudio — pula TTS
+      const customFile = resolve(MEDIA_DIR, 'audios', video.audioCustom);
+      if (!existsSync(customFile)) {
+        throw new Error('Áudio gravado não encontrado. Tente gravar novamente.');
+      }
+      const dockerPath = `/media/audios/${video.audioCustom}`;
+      audioPaths = { docker: dockerPath, host: customFile, duracoesCenas: null };
+      video.audioUrl = customFile;
+      logStep(video, '🎙️ Usando áudio gravado pelo usuário (GRÁTIS)!');
+    } else {
+      const ttsProviderAtivo = process.env.ELEVENLABS_API_KEY ? 'ElevenLabs 🟡'
+        : process.env.OPENAI_API_KEY ? 'OpenAI TTS 🟡'
+        : 'Edge TTS 🟢';
+      logStep(video, `🎙️ Gerando narração (${ttsProviderAtivo})...`);
+      let clonedVoiceId = null;
+      if (video.vozClonada) {
+        const vozInfo = await buscarVozClonada(video.vozClonada, video._userId);
+        if (vozInfo) clonedVoiceId = vozInfo.provider_voice_id;
+      }
+      audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
+      video.audioUrl = audioPaths.host;
+      logStep(video, `🎙️ Narração criada${clonedVoiceId ? ' (voz clonada)' : ''}!`);
     }
-    const audioPaths = await gerarNarracao(videoId, roteiro, video.voz, clonedVoiceId);
-    video.audioUrl = audioPaths.host;
     video.progresso = 40;
-    logStep(video, `🎙️ Narração criada${clonedVoiceId ? ' (voz clonada)' : ''}!`);
 
     // ETAPA 2.5: Legendas automáticas com Whisper (GRÁTIS - não bloqueia)
     let subtitlePaths = null;
