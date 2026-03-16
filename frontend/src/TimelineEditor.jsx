@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const API_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : (window.location.port === '3000' ? 'http://localhost:3001/api' : `${window.location.origin}/api`)
 
 // ─── Cores / Tema ────────────────────────────
 const COLORS = {
