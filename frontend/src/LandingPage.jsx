@@ -159,6 +159,11 @@ export default function LandingPage({ onGoLogin }) {
         <div className="hide-mobile" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <a href="#como-funciona" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>Como funciona</a>
           <a href="#comparativo" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>Preços</a>
+          <a href="/social-ai" style={{
+            color: '#fff', textDecoration: 'none', fontSize: '13px', padding: '6px 14px',
+            background: 'linear-gradient(135deg, #ec4899, #db2777)', borderRadius: '99px',
+            fontWeight: 700, letterSpacing: '0.3px', display: 'flex', alignItems: 'center', gap: '5px',
+          }}>🤖 Social AI</a>
           <a href="#faq" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>FAQ</a>
           <a href="/blog/" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>Blog</a>
           <button onClick={onGoLogin} style={{
@@ -184,10 +189,14 @@ export default function LandingPage({ onGoLogin }) {
           {[
             { href: '#como-funciona', label: 'Como funciona' },
             { href: '#comparativo', label: 'Preços' },
+            { href: '/social-ai', label: '🤖 Social AI', highlight: true },
             { href: '#faq', label: 'FAQ' },
             { href: '/blog/', label: 'Blog' },
           ].map(l => (
-            <a key={l.href} href={l.href} onClick={() => setMobileMenu(false)} style={{ color: '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0' }}>{l.label}</a>
+            <a key={l.href} href={l.href} onClick={() => setMobileMenu(false)} style={{
+              color: l.highlight ? '#fff' : '#e2e8f0', textDecoration: 'none', fontSize: '16px', padding: '12px 0',
+              ...(l.highlight ? { background: 'linear-gradient(135deg, #ec4899, #db2777)', borderRadius: '12px', padding: '12px 16px', fontWeight: 700, textAlign: 'center' } : {}),
+            }}>{l.label}</a>
           ))}
           <button onClick={() => { setMobileMenu(false); onGoLogin() }} style={{
             padding: '12px', borderRadius: '10px', border: '1px solid rgba(108,92,231,0.5)',
