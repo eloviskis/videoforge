@@ -10,6 +10,9 @@ import AvatarStudio from './AvatarStudio.jsx'
 import TalkingPhoto from './TalkingPhoto.jsx'
 import ThankYouPage from './ThankYouPage.jsx'
 import AfiliadosPage from './AfiliadosPage.jsx'
+import PrivacyPage from './PrivacyPage.jsx'
+import TermsPage from './TermsPage.jsx'
+import DeleteAccountPage from './DeleteAccountPage.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -35,6 +38,21 @@ export default function AuthWrapper() {
 
     if (window.location.pathname.includes('/afiliados')) {
       setPage('afiliados')
+      return
+    }
+
+    if (window.location.pathname === '/privacy') {
+      setPage('privacy')
+      return
+    }
+
+    if (window.location.pathname === '/terms') {
+      setPage('terms')
+      return
+    }
+
+    if (window.location.pathname === '/excluir' || window.location.pathname === '/delete') {
+      setPage('excluir')
       return
     }
 
@@ -125,6 +143,18 @@ export default function AuthWrapper() {
 
   if (page === 'afiliados') {
     return <AfiliadosPage onGoBack={() => { window.history.replaceState({}, '', '/'); setPage('landing') }} />
+  }
+
+  if (page === 'privacy') {
+    return <PrivacyPage onGoBack={() => { window.history.replaceState({}, '', '/'); setPage('landing') }} />
+  }
+
+  if (page === 'terms') {
+    return <TermsPage onGoBack={() => { window.history.replaceState({}, '', '/'); setPage('landing') }} />
+  }
+
+  if (page === 'excluir') {
+    return <DeleteAccountPage onGoBack={() => { window.history.replaceState({}, '', '/'); setPage('landing') }} />
   }
 
   if (page === 'landing') {

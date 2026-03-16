@@ -799,6 +799,7 @@ export default function LandingPage({ onGoLogin }) {
           <div className="footer-grid" style={{ display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', marginBottom: '24px' }}>
             <a href="/privacy" style={{ color: '#64748b', textDecoration: 'none' }}>Política de Privacidade</a>
             <a href="/terms" style={{ color: '#64748b', textDecoration: 'none' }}>Termos de Uso</a>
+            <a href="/excluir" style={{ color: '#64748b', textDecoration: 'none' }}>Excluir Dados</a>
             <a href="/afiliados" style={{ color: '#fbbf24', textDecoration: 'none', fontWeight: 600 }}>Programa de Afiliados</a>
             <a href="mailto:eloi.santaroza@gmail.com" style={{ color: '#64748b', textDecoration: 'none' }}>eloi.santaroza@gmail.com</a>
           </div>

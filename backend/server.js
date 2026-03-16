@@ -6427,6 +6427,30 @@ app.post('/api/public/lead', async (req, res) => {
 });
 
 // ═══ GERADOR DE ROTEIRO GRÁTIS (funil de leads) ═══
+
+// Solicitação de exclusão de dados (LGPD / Meta)
+app.post('/api/public/delete-request', async (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'E-mail inválido' });
+  }
+  const sanitized = email.toLowerCase().trim();
+  try {
+    console.log(`🗑️ Solicitação de exclusão de dados recebida: ${sanitized}`);
+    // Verificar se o usuário existe
+    const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [sanitized]);
+    if (rows.length === 0) {
+      return res.json({ ok: true, message: 'Se este e-mail estiver cadastrado, enviaremos instruções.' });
+    }
+    // Notificar admin por log (pode integrar com email futuramente)
+    console.log(`⚠️ EXCLUSÃO SOLICITADA — user_id: ${rows[0].id}, email: ${sanitized}`);
+    res.json({ ok: true, message: 'Solicitação recebida. Você receberá confirmação por e-mail em até 48h.' });
+  } catch (err) {
+    console.error('❌ Erro em delete-request:', err.message);
+    res.json({ ok: true, message: 'Solicitação recebida.' });
+  }
+});
+
 const freeScriptLimiter = new Map(); // IP -> { count, resetAt }
 app.post('/api/public/gerar-roteiro-gratis', async (req, res) => {
   const { tema, email } = req.body;
