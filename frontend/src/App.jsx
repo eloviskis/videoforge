@@ -2850,7 +2850,7 @@ function App() {
 
                           {/* Botões */}
                           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            <a href={`http://localhost:3001${clip.url}`} target="_blank" rel="noreferrer"
+                            <a href={`${API_URL.replace('/api', '')}${clip.url}`} target="_blank" rel="noreferrer"
                               style={{ padding: '7px 14px', background: '#3b82f6', color: 'white', borderRadius: '6px', textDecoration: 'none', fontSize: '13px', fontWeight: 'bold' }}>
                               ⬇ Baixar
                             </a>
