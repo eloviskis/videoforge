@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import DocsTab from './DocsTab.jsx'
 import TimelineEditor from './TimelineEditor.jsx'
+import SocialAI from './SocialAI.jsx'
 
 // VITE_API_URL: configure no Vercel apontando para o backend no Railway
 // Em dev usa localhost:3001, em produção sem VITE_API_URL usa mesma origin
@@ -859,6 +860,9 @@ function App() {
           </button>
           <button className={`tab-btn ${activeTab === 'intelligence' ? 'active' : ''}`} onClick={() => { setActiveTab('intelligence'); carregarVozes() }}>
             🕵️ Inteligência
+          </button>
+          <button className={`tab-btn ${activeTab === 'social-ai' ? 'active' : ''}`} onClick={() => setActiveTab('social-ai')}>
+            📱 Social AI
           </button>
           <button className={`tab-btn ${activeTab === 'docs' ? 'active' : ''}`} onClick={() => setActiveTab('docs')}>
             📚 Tutoriais
@@ -3135,6 +3139,9 @@ function App() {
           </form>
         </div>
       )}
+
+      {/* Aba Social AI — Automação Instagram */}
+      {activeTab === 'social-ai' && <SocialAI />}
 
       {/* Aba Tutoriais / Documentação */}
       {activeTab === 'docs' && <DocsTab />}

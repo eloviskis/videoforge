@@ -33,6 +33,7 @@ import { registrarRotasTalkingPhoto } from './talking-photo.js';
 import { enviarEmailLead } from './mailer.js';
 import { registrarRotasTimeline } from './timeline.js';
 import { registrarRotasVoiceLibrary, buscarVozClonada } from './voice-library.js';
+import { registrarRotasSocialAI } from './social-ai.js';
 import multer from 'multer';
 
 const execAsync = promisify(exec);
@@ -254,6 +255,9 @@ registrarRotasTimeline(app);
 
 // Biblioteca de vozes clonadas (após auth — rotas protegidas)
 registrarRotasVoiceLibrary(app);
+
+// Social AI — Automação de Instagram (após auth — rotas protegidas)
+registrarRotasSocialAI(app);
 
 // Servir frontend estático (quando build existe)
 const FRONTEND_DIST = resolve(__dirname, '..', 'frontend', 'dist');
