@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ApiKeyGuideModal, { getGuideForKey } from './ApiKeyGuideModal'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -13,6 +14,7 @@ export default function MinhaConta({ onBack, user }) {
   const [apiEdits, setApiEdits] = useState({})
   const [apiSaving, setApiSaving] = useState(false)
   const [showValues, setShowValues] = useState({})
+  const [guideKey, setGuideKey] = useState(null)
   const [socials, setSocials] = useState([])
   const [socialLoading, setSocialLoading] = useState(null) // platform being connected
   const [msg, setMsg] = useState('')
@@ -255,12 +257,23 @@ export default function MinhaConta({ onBack, user }) {
                                 </button>
                               )}
                             </div>
-                            {/* Hint link */}
-                            {key.hint && !key.configurada && !key.globalDisponivel && (
-                              <a href={key.hint} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#8b5cf6', textDecoration: 'none', marginTop: '6px' }}>
-                                🔗 Criar conta / obter chave →
-                              </a>
-                            )}
+                            {/* Guide button + Hint link */}
+                            <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+                              {getGuideForKey(key.key) && (
+                                <button onClick={() => setGuideKey(key.key)} style={{
+                                  ...sty.btn, padding: '4px 12px', fontSize: '11px', fontWeight: 700,
+                                  background: 'rgba(139,92,246,0.12)', color: '#a78bfa', border: '1px solid rgba(139,92,246,0.25)',
+                                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                }}>
+                                  📖 Como configurar
+                                </button>
+                              )}
+                              {key.hint && !key.configurada && !key.globalDisponivel && (
+                                <a href={key.hint} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#8b5cf6', textDecoration: 'none' }}>
+                                  🔗 Criar conta / obter chave →
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -270,6 +283,9 @@ export default function MinhaConta({ onBack, user }) {
               </div>
             )
           })}
+
+          {/* Guide Modal */}
+          {guideKey && <ApiKeyGuideModal keyName={guideKey} onClose={() => setGuideKey(null)} />}
 
           {/* Botão salvar */}
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px' }}>
