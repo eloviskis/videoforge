@@ -36,6 +36,76 @@ export default function AvatarStudio({ onBack, user }) {
   const timerRef = useRef(null)
   const animFrameRef = useRef(null)
   const faceLandmarkerRef = useRef(null)
+  const faceDetectedRef = useRef(null) // { cx, cy, width, height, angle }
+
+  // ── Load FaceMesh via MediaPipe ──
+  useEffect(() => {
+    let cancelled = false
+    async function loadFaceDetection() {
+      try {
+        // Carregar MediaPipe FaceDetection via CDN
+        if (!window._mpFaceDetectionLoaded) {
+          await new Promise((resolve, reject) => {
+            const s1 = document.createElement('script')
+            s1.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js'
+            s1.crossOrigin = 'anonymous'
+            s1.onload = () => {
+              const s2 = document.createElement('script')
+              s2.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js'
+              s2.crossOrigin = 'anonymous'
+              s2.onload = () => { window._mpFaceDetectionLoaded = true; resolve() }
+              s2.onerror = reject
+              document.head.appendChild(s2)
+            }
+            s1.onerror = reject
+            document.head.appendChild(s1)
+          })
+        }
+        if (cancelled) return
+        // Inicializar FaceMesh
+        const faceMesh = new window.FaceMesh({
+          locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        })
+        faceMesh.setOptions({
+          maxNumFaces: 1,
+          refineLandmarks: false,
+          minDetectionConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        })
+        faceMesh.onResults((results) => {
+          if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+            const lm = results.multiFaceLandmarks[0]
+            // Landmarks chave: 10 (topo testa), 152 (queixo), 234 (orelha esq), 454 (orelha dir)
+            const topHead = lm[10]
+            const chin = lm[152]
+            const leftEar = lm[234]
+            const rightEar = lm[454]
+            const noseTip = lm[1]
+
+            // Centro do rosto
+            const cx = (leftEar.x + rightEar.x) / 2
+            const cy = (topHead.y + chin.y) / 2
+
+            // Largura e altura do rosto
+            const faceW = Math.abs(rightEar.x - leftEar.x)
+            const faceH = Math.abs(chin.y - topHead.y)
+
+            // Ângulo de rotação (inclinação lateral)
+            const angle = Math.atan2(rightEar.y - leftEar.y, rightEar.x - leftEar.x)
+
+            faceDetectedRef.current = { cx, cy, width: faceW, height: faceH, angle }
+          } else {
+            faceDetectedRef.current = null
+          }
+        })
+        faceLandmarkerRef.current = faceMesh
+      } catch (e) {
+        console.warn('FaceMesh não carregou, usando fallback:', e.message)
+      }
+    }
+    loadFaceDetection()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     loadLibrary()
@@ -133,9 +203,13 @@ export default function AvatarStudio({ onBack, user }) {
     setCameraActive(false)
     setTrackingActive(false)
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+    smoothedFaceRef.current = null
+    faceDetectedRef.current = null
   }
 
-  // ── Face Tracking (Canvas overlay) ──
+  // ── Face Tracking (Canvas overlay com MediaPipe) ──
+  const smoothedFaceRef = useRef(null)
+
   function startTracking() {
     setTrackingActive(true)
     const video = videoRef.current
@@ -155,40 +229,83 @@ export default function AvatarStudio({ onBack, user }) {
       avatarImg.src = activeAvatar.image_url
     }
 
+    // Enviar frames para FaceMesh a cada ~60ms (~16fps detecção)
+    let lastSendTime = 0
+    const SEND_INTERVAL = 60
+
+    function lerp(a, b, t) { return a + (b - a) * t }
+
     function drawFrame() {
       if (!streamRef.current) return
+      const now = performance.now()
+
+      // Enviar frame para MediaPipe FaceMesh
+      if (faceLandmarkerRef.current && now - lastSendTime > SEND_INTERVAL) {
+        lastSendTime = now
+        try { faceLandmarkerRef.current.send({ image: video }) } catch (_) {}
+      }
+
       ctx.drawImage(video, 0, 0, vw, vh)
 
       if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
-        // Detectar região do rosto usando proporções padrão
-        const faceX = vw * 0.25
-        const faceY = vh * 0.08
-        const faceW = vw * 0.5
-        const faceH = vh * 0.7
+        const face = faceDetectedRef.current
 
-        // Espelhar horizontalmente para ficar natural
-        ctx.save()
-        ctx.translate(faceX + faceW, faceY)
-        ctx.scale(-1, 1)
-        ctx.globalAlpha = 0.92
-        ctx.drawImage(avatarImg, 0, 0, faceW, faceH)
-        ctx.globalAlpha = 1
-        ctx.restore()
+        if (face) {
+          // Suavizar movimentos com interpolação (smoothing)
+          const t = 0.25  // fator de suavização (0=sem mover, 1=sem suavizar)
+          if (!smoothedFaceRef.current) {
+            smoothedFaceRef.current = { ...face }
+          } else {
+            const s = smoothedFaceRef.current
+            s.cx = lerp(s.cx, face.cx, t)
+            s.cy = lerp(s.cy, face.cy, t)
+            s.width = lerp(s.width, face.width, t)
+            s.height = lerp(s.height, face.height, t)
+            s.angle = lerp(s.angle, face.angle, t)
+          }
+          const sf = smoothedFaceRef.current
+
+          // Coordenadas normalizadas (0-1) para pixels
+          // Espelhar cx porque o canvas já é espelhado visualmente
+          const faceCx = (1 - sf.cx) * vw
+          const faceCy = sf.cy * vh
+          // Escalar avatar para cobrir rosto com margem (cabeça + cabelo)
+          const faceW = sf.width * vw * 1.8
+          const faceH = sf.height * vh * 1.5
+
+          ctx.save()
+          ctx.translate(faceCx, faceCy)
+          ctx.rotate(-sf.angle) // rotação invertida por espelhamento
+          ctx.globalAlpha = 0.93
+          ctx.drawImage(avatarImg, -faceW / 2, -faceH / 2, faceW, faceH)
+          ctx.globalAlpha = 1
+          ctx.restore()
+        } else {
+          // Fallback: sem detecção, posição central padrão
+          const faceX = vw * 0.25
+          const faceY = vh * 0.08
+          const faceW = vw * 0.5
+          const faceH = vh * 0.7
+          ctx.save()
+          ctx.translate(faceX + faceW, faceY)
+          ctx.scale(-1, 1)
+          ctx.globalAlpha = 0.92
+          ctx.drawImage(avatarImg, 0, 0, faceW, faceH)
+          ctx.globalAlpha = 1
+          ctx.restore()
+        }
       } else if (!avatarImg) {
         // Mostrar grid de tracking quando não tem avatar
         ctx.strokeStyle = 'rgba(34,197,94,0.4)'
         ctx.lineWidth = 1
         const cx = vw / 2, cy = vh * 0.46
-        // Oval do rosto
         ctx.beginPath()
         ctx.ellipse(cx, cy, vw * 0.19, vh * 0.33, 0, 0, 2 * Math.PI)
         ctx.stroke()
-        // Cruz central
         ctx.beginPath()
         ctx.moveTo(cx, vh * 0.12); ctx.lineTo(cx, vh * 0.79)
         ctx.moveTo(vw * 0.31, cy); ctx.lineTo(vw * 0.69, cy)
         ctx.stroke()
-        // Texto
         ctx.fillStyle = 'rgba(34,197,94,0.7)'
         ctx.font = `${Math.max(12, vw * 0.022)}px Inter, sans-serif`
         ctx.textAlign = 'center'
@@ -197,6 +314,8 @@ export default function AvatarStudio({ onBack, user }) {
 
       animFrameRef.current = requestAnimationFrame(drawFrame)
     }
+    // Reset smoothing ao iniciar
+    smoothedFaceRef.current = null
     drawFrame()
   }
 
