@@ -3140,7 +3140,7 @@ function App() {
       {activeTab === 'docs' && <DocsTab />}
 
       {/* Aba Timeline Editor */}
-      {activeTab === 'timeline' && <TimelineEditor token={localStorage.getItem('token')} />}
+      {activeTab === 'timeline' && <TimelineEditor token={localStorage.getItem('vf_token')} />}
 
       {/* Aba Inteligência — Análise de Canais YouTube */}
       {activeTab === 'intelligence' && (
