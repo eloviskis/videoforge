@@ -551,6 +551,17 @@ export default function LandingPage({ onGoLogin }) {
               ))}
             </div>
           </div>
+
+          <div style={{ marginTop: '40px' }}>
+            <a href="/social-ai" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 32px',
+              background: 'linear-gradient(135deg, #ec4899, #db2777)', color: '#fff',
+              borderRadius: '14px', fontSize: '16px', fontWeight: 700, textDecoration: 'none',
+              transition: 'all .3s',
+            }}>
+              📱 Saiba tudo sobre o Social AI →
+            </a>
+          </div>
         </div>
       </section>
 

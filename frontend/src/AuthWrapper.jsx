@@ -13,6 +13,7 @@ import AfiliadosPage from './AfiliadosPage.jsx'
 import PrivacyPage from './PrivacyPage.jsx'
 import TermsPage from './TermsPage.jsx'
 import DeleteAccountPage from './DeleteAccountPage.jsx'
+import SocialAIPage from './SocialAIPage.jsx'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -53,6 +54,11 @@ export default function AuthWrapper() {
 
     if (window.location.pathname === '/excluir' || window.location.pathname === '/delete') {
       setPage('excluir')
+      return
+    }
+
+    if (window.location.pathname === '/social-ai') {
+      setPage('social-ai')
       return
     }
 
@@ -155,6 +161,10 @@ export default function AuthWrapper() {
 
   if (page === 'excluir') {
     return <DeleteAccountPage onGoBack={() => { window.history.replaceState({}, '', '/'); setPage('landing') }} />
+  }
+
+  if (page === 'social-ai') {
+    return <SocialAIPage onGoBack={() => { window.history.replaceState({}, '', '/'); setPage('landing') }} onGoLogin={() => { window.history.replaceState({}, '', '/'); setPage('login') }} />
   }
 
   if (page === 'landing') {
