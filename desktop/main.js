@@ -85,6 +85,7 @@ function startBackendServer() {
         PORT: String(PORT), 
         ELECTRON_RUN: '1',
         ELECTRON_RUN_AS_NODE: '1',
+        AUTH_ENABLED: 'false', // Desktop: sem login
         MEDIA_DIR: mediaDir
       },
       stdio: ['pipe', 'pipe', 'pipe']
@@ -329,6 +330,101 @@ function updateSplash(splash, msg) {
   `).catch(() => {});
 }
 
+function isDockerInstalled() {
+  const dockerPaths = [
+    'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe',
+    process.env.LOCALAPPDATA + '\\Docker\\Docker Desktop.exe',
+  ];
+  for (const p of dockerPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  // Tentar via PATH
+  try { execSync('docker --version', { stdio: 'pipe', timeout: 5000 }); return 'docker'; } catch { return null; }
+}
+
+async function downloadAndInstallDocker(splash) {
+  const { net } = require('electron');
+  const installerPath = path.join(app.getPath('temp'), 'DockerDesktopInstaller.exe');
+
+  // Se já baixou antes, não baixar de novo
+  if (fs.existsSync(installerPath) && fs.statSync(installerPath).size > 100_000_000) {
+    console.log('[Docker] Instalador já existe, pulando download.');
+  } else {
+    updateSplash(splash, 'Baixando Docker Desktop... (0%)');
+    console.log('[Docker] Baixando Docker Desktop...');
+
+    const dockerUrl = 'https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe';
+    await new Promise((resolve, reject) => {
+      const file = fs.createWriteStream(installerPath);
+      const request = net.request(dockerUrl);
+      let received = 0;
+      let total = 0;
+
+      request.on('response', (response) => {
+        // Seguir redirects
+        if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
+          const location = response.headers.location;
+          if (location) {
+            file.close();
+            const redirectReq = net.request(Array.isArray(location) ? location[0] : location);
+            redirectReq.on('response', (rRes) => {
+              const cl = rRes.headers['content-length'];
+              total = cl ? parseInt(Array.isArray(cl) ? cl[0] : cl, 10) : 0;
+              rRes.on('data', (chunk) => {
+                received += chunk.length;
+                const outFile = fs.createWriteStream(installerPath, { flags: received === chunk.length ? 'w' : 'a' });
+                outFile.write(chunk);
+                outFile.end();
+                if (total > 0) {
+                  const pct = Math.round((received / total) * 100);
+                  updateSplash(splash, `Baixando Docker Desktop... (${pct}%)`);
+                }
+              });
+              rRes.on('end', resolve);
+              rRes.on('error', reject);
+            });
+            redirectReq.on('error', reject);
+            redirectReq.end();
+            return;
+          }
+        }
+
+        const cl = response.headers['content-length'];
+        total = cl ? parseInt(Array.isArray(cl) ? cl[0] : cl, 10) : 0;
+        response.on('data', (chunk) => {
+          file.write(chunk);
+          received += chunk.length;
+          if (total > 0) {
+            const pct = Math.round((received / total) * 100);
+            updateSplash(splash, `Baixando Docker Desktop... (${pct}%)`);
+          }
+        });
+        response.on('end', () => { file.end(); resolve(); });
+        response.on('error', (err) => { file.end(); reject(err); });
+      });
+      request.on('error', reject);
+      request.end();
+    });
+    console.log(`[Docker] Download concluído: ${installerPath}`);
+  }
+
+  // Instalar silenciosamente
+  updateSplash(splash, 'Instalando Docker Desktop...');
+  console.log('[Docker] Instalando Docker Desktop (silencioso)...');
+  try {
+    execSync(`"${installerPath}" install --quiet --accept-license`, {
+      stdio: 'pipe',
+      timeout: 600000, // 10 min
+    });
+    console.log('[Docker] Instalação concluída!');
+  } catch (e) {
+    console.warn('[Docker] Instalador retornou erro (pode precisar de reboot):', e.message.substring(0, 200));
+  }
+
+  // Limpar instalador
+  try { fs.unlinkSync(installerPath); } catch {}
+}
+
 async function ensureDockerRunning(splash) {
   // 1. Verificar se Docker já está acessível
   const isDockerRunning = () => {
@@ -338,33 +434,55 @@ async function ensureDockerRunning(splash) {
   if (isDockerRunning()) {
     console.log('[Docker] Já está rodando.');
   } else {
-    // 2. Tentar iniciar Docker Desktop
-    updateSplash(splash, 'Iniciando Docker Desktop...');
-    console.log('[Docker] Iniciando Docker Desktop...');
+    // 2. Verificar se Docker está instalado
+    let dockerExe = isDockerInstalled();
 
-    const dockerPaths = [
-      'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe',
-      process.env.LOCALAPPDATA + '\\Docker\\Docker Desktop.exe',
-    ];
+    if (!dockerExe) {
+      // 3. Docker NÃO instalado — perguntar se quer instalar
+      const { response } = await dialog.showMessageBox(null, {
+        type: 'question',
+        title: 'Docker não encontrado',
+        message: 'O Docker Desktop é necessário para renderizar vídeos (FFmpeg, TTS, Python).',
+        detail: 'Deseja instalar o Docker Desktop automaticamente?\n\nIsso vai baixar ~600MB e pode levar alguns minutos.',
+        buttons: ['Instalar agora', 'Pular (funcionalidade limitada)'],
+        defaultId: 0,
+        cancelId: 1,
+      });
 
-    let launched = false;
-    for (const p of dockerPaths) {
-      if (fs.existsSync(p)) {
-        spawn(p, [], { detached: true, stdio: 'ignore' }).unref();
-        launched = true;
-        console.log(`[Docker] Iniciado: ${p}`);
-        break;
+      if (response === 0) {
+        try {
+          await downloadAndInstallDocker(splash);
+          // Depois de instalar, encontrar o executável
+          dockerExe = isDockerInstalled();
+          if (!dockerExe) {
+            updateSplash(splash, 'Docker instalado! Pode precisar reiniciar o PC.');
+            await new Promise(r => setTimeout(r, 3000));
+            return;
+          }
+        } catch (err) {
+          console.error('[Docker] Erro na instalação:', err);
+          updateSplash(splash, 'Erro ao instalar Docker. Continue sem ele.');
+          await new Promise(r => setTimeout(r, 3000));
+          return;
+        }
+      } else {
+        console.log('[Docker] Usuário optou por pular instalação do Docker.');
+        return;
       }
     }
 
-    if (!launched) {
-      console.warn('[Docker] Docker Desktop não encontrado. Pulando...');
-      return;
+    // 4. Docker instalado mas não rodando — iniciar
+    updateSplash(splash, 'Iniciando Docker Desktop...');
+    console.log('[Docker] Iniciando Docker Desktop...');
+
+    if (dockerExe !== 'docker') {
+      spawn(dockerExe, [], { detached: true, stdio: 'ignore' }).unref();
+      console.log(`[Docker] Iniciado: ${dockerExe}`);
     }
 
-    // 3. Aguardar até 2 minutos pelo Docker
+    // 5. Aguardar até 3 minutos pelo Docker
     updateSplash(splash, 'Aguardando Docker inicializar...');
-    const maxWait = 24; // 24 x 5s = 120s
+    const maxWait = 36; // 36 x 5s = 180s
     let ready = false;
     for (let i = 0; i < maxWait; i++) {
       await new Promise(r => setTimeout(r, 5000));
@@ -375,7 +493,9 @@ async function ensureDockerRunning(splash) {
     }
 
     if (!ready) {
-      console.warn('[Docker] Docker não respondeu em 2 minutos.');
+      console.warn('[Docker] Docker não respondeu em 3 minutos.');
+      updateSplash(splash, 'Docker não respondeu. Continuando sem ele...');
+      await new Promise(r => setTimeout(r, 2000));
       return;
     }
     console.log('[Docker] Docker está pronto!');
@@ -388,11 +508,53 @@ async function ensureDockerRunning(splash) {
     return;
   }
 
-  updateSplash(splash, 'Iniciando containers VideoForge...');
+  // Verificar se containers já existem (primeira vez = precisa build/pull)
+  let isFirstTime = false;
+  try {
+    const ps = execSync('docker ps -a --filter name=videoforge --format "{{.Names}}"', { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], timeout: 5000 });
+    isFirstTime = !ps.trim();
+  } catch { isFirstTime = true; }
+
+  if (isFirstTime) {
+    updateSplash(splash, 'Primeira execução — baixando imagens Docker...');
+    console.log('[Docker] Primeira execução: pull + build (pode demorar)...');
+  } else {
+    updateSplash(splash, 'Iniciando containers VideoForge...');
+  }
+
   console.log('[Docker] Subindo containers...');
   try {
-    execSync(`docker compose -f "${composePath}" up -d`, { stdio: 'pipe', timeout: 60000 });
-    console.log('[Docker] Containers iniciados!');
+    // Primeira vez pode levar vários minutos (pull ~2GB de imagens + build python-worker)
+    const composeTimeout = isFirstTime ? 600000 : 120000; // 10min ou 2min
+    const composeProc = spawn('docker', ['compose', '-f', composePath, 'up', '-d', '--build'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: composeTimeout,
+    });
+
+    // Mostrar progresso no splash
+    let lastUpdate = Date.now();
+    const logHandler = (data) => {
+      const line = data.toString().trim();
+      if (line) console.log(`[Docker] ${line}`);
+      if (Date.now() - lastUpdate > 3000) {
+        lastUpdate = Date.now();
+        if (line.includes('Pull')) updateSplash(splash, 'Baixando imagens Docker...');
+        else if (line.includes('Build')) updateSplash(splash, 'Compilando containers...');
+        else if (line.includes('Start') || line.includes('Running')) updateSplash(splash, 'Iniciando containers...');
+      }
+    };
+    composeProc.stdout.on('data', logHandler);
+    composeProc.stderr.on('data', logHandler);
+
+    await new Promise((resolve, reject) => {
+      composeProc.on('close', (code) => {
+        if (code === 0) { console.log('[Docker] Containers iniciados!'); resolve(); }
+        else { console.warn(`[Docker] docker compose saiu com código ${code}`); resolve(); } // não rejeitar — pode funcionar parcialmente
+      });
+      composeProc.on('error', (err) => { console.warn('[Docker] Erro:', err.message); resolve(); });
+      // Timeout de segurança
+      setTimeout(resolve, composeTimeout);
+    });
   } catch (e) {
     console.warn('[Docker] Erro ao subir containers:', e.message.substring(0, 200));
   }
