@@ -62,7 +62,7 @@
     body { font-family: 'Inter', 'Segoe UI', sans-serif; background: #0a0a1a; color: #cbd5e1; line-height: 1.8; }
     a { color: #a855f7; text-decoration: none; }
     a:hover { text-decoration: underline; }
-    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(10,10,26,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(10,10,26,0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.06); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
     .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .nav-brand img { width: 32px; height: 32px; border-radius: 8px; }
     .nav-brand strong { font-size: 20px; background: linear-gradient(135deg,#8b5cf6,#c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -95,6 +95,10 @@
     .related h4 { color: #e2e8f0; font-size: 15px; margin-bottom: 6px; }
     .related p { color: #64748b; font-size: 13px; margin: 0; }
     footer { padding: 32px 24px; text-align: center; border-top: 1px solid rgba(255,255,255,0.06); color: #4b5563; font-size: 13px; }
+    footer a { color: #8b5cf6; margin-right: 16px; }
+    footer a:last-child { margin-right: 0; }
+    .footer-links { margin-top: 8px; }
+    .cta-guarantee { margin-top: 12px; font-size: 13px; color: #64748b; }
     @media(max-width:640px) { .nav-links { display: none; } .step { flex-direction: column; } }
   </style>
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-6TEHSNBW3J"></script>
@@ -197,7 +201,7 @@
         <h3>📺 Automatize seu canal agora</h3>
         <p>Comece a publicar vídeos diariamente no YouTube com IA. Setup em 15 minutos.</p>
         <a href="https://pay.hotmart.com/S104720959A?bid=1772552529640" class="cta-btn" rel="noopener noreferrer">Começar agora — R$ 59 →</a>
-        <p style="margin-top:12px;font-size:13px;color:#64748b;">🛡️ 7 dias de garantia incondicional</p>
+        <p class="cta-guarantee">🛡️ 7 dias de garantia incondicional</p>
       </div>
 
       <h2>Tipos de vídeo que funcionam no piloto automático</h2>
@@ -279,11 +283,11 @@
 
   <footer>
     <p>© 2026 VideoForge. Todos os direitos reservados.</p>
-    <p style="margin-top:8px;">
-      <a href="/" style="color:#8b5cf6;margin-right:16px;">Início</a>
-      <a href="/blog/" style="color:#8b5cf6;margin-right:16px;">Blog</a>
-      <a href="/privacy" style="color:#8b5cf6;margin-right:16px;">Privacidade</a>
-      <a href="/terms" style="color:#8b5cf6;">Termos</a>
+    <p class="footer-links">
+      <a href="/">Início</a>
+      <a href="/blog/">Blog</a>
+      <a href="/privacy">Privacidade</a>
+      <a href="/terms">Termos</a>
     </p>
   </footer>
 </body>

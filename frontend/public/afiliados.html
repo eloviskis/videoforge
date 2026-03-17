@@ -51,7 +51,7 @@
     a:hover { color: #c084fc; }
 
     /* ── NAV ── */
-    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(5,5,16,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.05); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(5,5,16,0.92); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255,255,255,0.05); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
     .nav-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
     .nav-brand img { width: 32px; height: 32px; border-radius: 8px; }
     .nav-brand strong { font-size: 20px; background: linear-gradient(135deg,#8b5cf6,#c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -165,6 +165,21 @@
     @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { opacity: 0; transform: translateY(30px); transition: all 0.7s cubic-bezier(0.4,0,0.2,1); }
     .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── EXTRACTED INLINE STYLES ── */
+    .btn-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+    .calc-note { margin: 8px 0 0; font-size: 13px; color: #64748b; }
+    .step-link { color: #a78bfa; text-decoration: underline; }
+    .highlight-green { color: #22c55e; }
+    .highlight-gold { color: #fbbf24; }
+    .highlight-purple { color: #a78bfa; }
+    .tip-box { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 24px 28px; margin-top: 40px; text-align: center; }
+    .tip-title { margin: 0 0 6px; font-size: 15px; color: #cbd5e1; }
+    .tip-text { margin: 0; font-size: 14px; color: #94a3b8; }
+    .cta-center { text-align: center; margin-top: 40px; }
+    .cta-hint { margin-top: 12px; font-size: 13px; color: #64748b; }
+    .cta-primary-lg { font-size: 20px; padding: 18px 48px; }
+    .footer-links { margin-top: 8px; }
   </style>
 
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-6TEHSNBW3J"></script>
@@ -205,7 +220,7 @@
         <strong>R$ 29,50 por venda</strong> — recorrente e sem teto.
       </p>
 
-      <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;" class="btn-row">
+      <div class="btn-row">
         <a href="https://affiliate.hotmart.com/affiliate-recruiting/view/8389V104720980" target="_blank" rel="noopener noreferrer" class="cta-primary">
           Quero ser afiliado →
         </a>
@@ -331,7 +346,7 @@
         <div class="calc-result">
           <div class="label">🏆 Top afiliados (100+ vendas/mês)</div>
           <div class="big-value">R$ 2.950+</div>
-          <p style="margin: 8px 0 0; font-size: 13px; color: #64748b;">Sem teto de comissão. Quanto mais vende, mais ganha.</p>
+          <p class="calc-note">Sem teto de comissão. Quanto mais vende, mais ganha.</p>
         </div>
       </div>
     </div>
@@ -348,7 +363,7 @@
           <div class="step-num">1</div>
           <div class="step-content">
             <h3>Crie sua conta gratuita na Hotmart</h3>
-            <p>Acesse <a href="https://www.hotmart.com" target="_blank" rel="noopener noreferrer" style="color: #a78bfa; text-decoration: underline;">hotmart.com</a> e clique em <strong>"Cadastre-se"</strong>. Se já tem conta, faça login normalmente.</p>
+            <p>Acesse <a href="https://www.hotmart.com" target="_blank" rel="noopener noreferrer" class="step-link">hotmart.com</a> e clique em <strong>"Cadastre-se"</strong>. Se já tem conta, faça login normalmente.</p>
           </div>
         </div>
         <div class="step-line"></div>
@@ -364,7 +379,7 @@
           <div class="step-num">3</div>
           <div class="step-content">
             <h3>Pesquise por "VideoForge"</h3>
-            <p>Na barra de busca do Mercado, digite <strong>"VideoForge"</strong> e pressione Enter. O produto aparecerá com o logo e a comissão de <strong style="color: #22c55e;">50%</strong> visível.</p>
+            <p>Na barra de busca do Mercado, digite <strong>"VideoForge"</strong> e pressione Enter. O produto aparecerá com o logo e a comissão de <strong class="highlight-green">50%</strong> visível.</p>
           </div>
         </div>
         <div class="step-line"></div>
@@ -372,7 +387,7 @@
           <div class="step-num">4</div>
           <div class="step-content">
             <h3>Solicite afiliação</h3>
-            <p>Clique no produto <strong>"VideoForge"</strong> e depois no botão <strong>"Solicitar afiliação"</strong>. A aprovação é <strong style="color: #22c55e;">automática e instantânea</strong> — sem espera!</p>
+            <p>Clique no produto <strong>"VideoForge"</strong> e depois no botão <strong>"Solicitar afiliação"</strong>. A aprovação é <strong class="highlight-green">automática e instantânea</strong> — sem espera!</p>
           </div>
         </div>
         <div class="step-line"></div>
@@ -380,23 +395,23 @@
           <div class="step-num">5</div>
           <div class="step-content">
             <h3>Copie seu HotLink e comece a vender</h3>
-            <p>Após a aprovação, vá em <strong>"Meus produtos" → "Afiliado"</strong> no menu. Clique em <strong>"Gerar HotLink"</strong> no VideoForge. Esse é o seu link exclusivo — cada venda feita por ele gera <strong style="color: #fbbf24;">R$ 29,50</strong> de comissão na sua conta.</p>
+            <p>Após a aprovação, vá em <strong>"Meus produtos" → "Afiliado"</strong> no menu. Clique em <strong>"Gerar HotLink"</strong> no VideoForge. Esse é o seu link exclusivo — cada venda feita por ele gera <strong class="highlight-gold">R$ 29,50</strong> de comissão na sua conta.</p>
           </div>
         </div>
       </div>
 
-      <div style="background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); border-radius: 12px; padding: 24px 28px; margin-top: 40px; text-align: center;">
-        <p style="margin: 0 0 6px; font-size: 15px; color: #cbd5e1;">📌 <strong>Resumo rápido:</strong></p>
-        <p style="margin: 0; font-size: 14px; color: #94a3b8;">
-          Hotmart → Mercado → Pesquisar <strong style="color: #a78bfa;">"VideoForge"</strong> → Solicitar afiliação → Gerar HotLink → Divulgar 🚀
+      <div class="tip-box">
+        <p class="tip-title">📌 <strong>Resumo rápido:</strong></p>
+        <p class="tip-text">
+          Hotmart → Mercado → Pesquisar <strong class="highlight-purple">"VideoForge"</strong> → Solicitar afiliação → Gerar HotLink → Divulgar 🚀
         </p>
       </div>
 
-      <div style="text-align: center; margin-top: 40px;">
+      <div class="cta-center">
         <a href="https://affiliate.hotmart.com/affiliate-recruiting/view/8389V104720980" target="_blank" rel="noopener noreferrer" class="cta-primary">
           Afiliar-se ao VideoForge →
         </a>
-        <p style="margin-top: 12px; font-size: 13px; color: #64748b;">Link direto — basta fazer login na Hotmart e confirmar</p>
+        <p class="cta-hint">Link direto — basta fazer login na Hotmart e confirmar</p>
       </div>
     </div>
   </section>
@@ -544,7 +559,7 @@
     <p>
       Clique abaixo, faça login na Hotmart e confirme sua afiliação. Aprovação automática!
     </p>
-    <a href="https://affiliate.hotmart.com/affiliate-recruiting/view/8389V104720980" target="_blank" rel="noopener noreferrer" class="cta-primary" style="font-size: 20px; padding: 18px 48px;">
+    <a href="https://affiliate.hotmart.com/affiliate-recruiting/view/8389V104720980" target="_blank" rel="noopener noreferrer" class="cta-primary cta-primary-lg">
       🚀 Quero ser afiliado VideoForge →
     </a>
     <div class="guarantee-line">
@@ -558,7 +573,7 @@
   <!-- ═══ FOOTER ═══ -->
   <footer>
     <p>© 2026 VideoForge. Todos os direitos reservados.</p>
-    <p style="margin-top: 8px;">
+    <p class="footer-links">
       <a href="/">Início</a>
       <a href="/blog/">Blog</a>
       <a href="/privacy">Privacidade</a>
