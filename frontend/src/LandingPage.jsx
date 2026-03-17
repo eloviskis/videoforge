@@ -13,6 +13,7 @@ export default function LandingPage({ onGoLogin }) {
   const [showEmailPopup, setShowEmailPopup] = useState(false)
   const [email, setEmail] = useState('')
   const [emailSent, setEmailSent] = useState(false)
+  const [showTokenModal, setShowTokenModal] = useState(false)
   const [showStickyBar, setShowStickyBar] = useState(false)
 
   const checkoutUrl = precos.hotmart_checkout_vitalicio
@@ -62,9 +63,16 @@ export default function LandingPage({ onGoLogin }) {
     } catch { setEmailSent(true) }
   }
 
-  const handleCTAClick = (label) => {
+  const handleCTAClick = (label, e) => {
+    e && e.preventDefault()
     if (window.trackCTA) window.trackCTA(label)
     if (window.fbq) window.fbq('track', 'InitiateCheckout', { content_name: 'VideoForge Vitalicio', value: 59, currency: 'BRL' })
+    setShowTokenModal(true)
+  }
+
+  const confirmarCompra = () => {
+    setShowTokenModal(false)
+    window.open(checkoutUrl, '_blank')
   }
 
   useEffect(() => {
@@ -237,7 +245,7 @@ export default function LandingPage({ onGoLogin }) {
             A IA escreve o roteiro, gera a narração, monta o vídeo em 1080p e publica direto no seu canal. <strong style={{ color: '#e2e8f0' }}>Tudo automático.</strong>
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-            <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="cta-green" onClick={() => handleCTAClick('hero_comprar')}>
+            <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="cta-green" onClick={(e) => handleCTAClick('hero_comprar', e)}>
               Quero Começar Agora — R$ 59 →
             </a>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -383,7 +391,7 @@ export default function LandingPage({ onGoLogin }) {
           </div>
 
           <div style={{ marginTop: '48px' }}>
-            <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="cta-green" onClick={() => handleCTAClick('comparativo_comprar')}>
+            <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="cta-green" onClick={(e) => handleCTAClick('comparativo_comprar', e)}>
               Quero Começar Agora — R$ 59 →
             </a>
             <p style={{ color: '#64748b', fontSize: '13px', marginTop: '14px' }}>
@@ -766,7 +774,7 @@ export default function LandingPage({ onGoLogin }) {
           <p style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '40px' }}>
             🛡️ 7 dias para testar. Não gostou? Seu dinheiro de volta.
           </p>
-          <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="cta-green" onClick={() => handleCTAClick('cta_final_comprar')}>
+          <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="cta-green" onClick={(e) => handleCTAClick('cta_final_comprar', e)}>
             Quero Começar Agora →
           </a>
           <p style={{ marginTop: '24px' }}>
@@ -792,7 +800,7 @@ export default function LandingPage({ onGoLogin }) {
             <strong style={{ color: '#fff', fontSize: '18px' }}>R$ {precos.preco_vitalicio || '59'}</strong>{' '}
             <span style={{ color: '#64748b' }}>— acesso vitalício</span>
           </span>
-          <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" onClick={() => handleCTAClick('sticky_bar_comprar')} style={{
+          <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => handleCTAClick('sticky_bar_comprar', e)} style={{
             padding: '10px 24px', borderRadius: '10px', textDecoration: 'none',
             background: 'linear-gradient(135deg, #00d2a0, #00b894)', color: '#0a0a14',
             fontWeight: 700, fontSize: '14px',
@@ -806,6 +814,52 @@ export default function LandingPage({ onGoLogin }) {
           }}>
             🛡️ 7 dias de garantia
           </span>
+        </div>
+      )}
+
+      {/* ═══ MODAL TOKENS ═══ */}
+      {showTokenModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowTokenModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#1a1a2e', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '32px', border: '1px solid rgba(108,92,231,0.3)', animation: 'fadeInUp 0.3s ease' }}>
+            <h3 style={{ color: '#fff', margin: '0 0 20px', fontSize: '22px', textAlign: 'center' }}>💡 Como funciona o VideoForge</h3>
+
+            <div style={{ background: '#0d3320', border: '1px solid #22c55e', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+              <strong style={{ color: '#22c55e' }}>✅ Funções 100% GRATUITAS (incluídas no plano):</strong>
+              <ul style={{ color: '#bbf7d0', margin: '8px 0 0', paddingLeft: '20px', lineHeight: '1.8', fontSize: '14px' }}>
+                <li>Roteiro automático com IA (Gemini)</li>
+                <li>Narração profissional (Edge TTS — 400+ vozes)</li>
+                <li>Imagens e vídeos stock (Pexels — ilimitado)</li>
+                <li>Animações de Palitinho, Dark Stickman</li>
+                <li>Legendas automáticas</li>
+                <li>Social AI — calendário e posts</li>
+                <li>Publicação no YouTube</li>
+              </ul>
+            </div>
+
+            <div style={{ background: '#332800', border: '1px solid #eab308', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+              <strong style={{ color: '#fbbf24' }}>⚡ Funções PREMIUM (tokens de API externa):</strong>
+              <p style={{ color: '#fef3c7', margin: '8px 0 0', fontSize: '13px', lineHeight: '1.7' }}>
+                Algumas ferramentas avançadas usam APIs externas que cobram por uso (ex: DALL-E, D-ID, Kling, Sora). <strong>O VideoForge não cobra nada extra</strong> — você conecta sua própria chave de API e paga diretamente à plataforma. A maioria dos usuários <strong>não precisa dessas ferramentas</strong> para criar vídeos profissionais.
+              </p>
+            </div>
+
+            <div style={{ background: 'rgba(108,92,231,0.1)', border: '1px solid rgba(108,92,231,0.3)', borderRadius: '10px', padding: '14px', marginBottom: '20px' }}>
+              <strong style={{ color: '#a78bfa' }}>📌 Resumo:</strong>
+              <p style={{ color: '#c4b5fd', margin: '8px 0 0', fontSize: '13px', lineHeight: '1.7' }}>
+                Com o pagamento único de <strong>R$ {precos.preco_vitalicio || '59'}</strong> você tem <strong>acesso vitalício</strong> a todas as funcionalidades gratuitas. As ferramentas premium são opcionais e independentes — pague só se usar, direto na plataforma da API.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={() => setShowTokenModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '10px', border: '1px solid #4b5563', background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}>
+                Voltar
+              </button>
+              <button onClick={confirmarCompra} style={{ flex: 2, padding: '14px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #00d2a0, #00b894)', color: '#0a0a14', cursor: 'pointer', fontWeight: 700, fontSize: '15px', boxShadow: '0 4px 16px rgba(0,210,160,0.3)' }}>
+                ✅ Entendi — Quero Comprar →
+              </button>
+            </div>
+            <p style={{ textAlign: 'center', color: '#64748b', fontSize: '12px', marginTop: '12px' }}>🛡️ 7 dias de garantia incondicional</p>
+          </div>
         </div>
       )}
 

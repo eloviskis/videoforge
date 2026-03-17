@@ -54,9 +54,22 @@ function App() {
   const [showPaidModal, setShowPaidModal] = useState(false)
   const [paidModalInfo, setPaidModalInfo] = useState(null)
   const [restartingBackend, setRestartingBackend] = useState(false)
-  const [modoRoteiro, setModoRoteiro] = useState('ia') // 'ia' | 'manual'
+  const [modoRoteiro, setModoRoteiro] = useState('ia') // 'ia' | 'manual' | 'livro'
   const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '' })
   const [editorCenas, setEditorCenas] = useState({})
+
+  // === LIVRO / SÉRIES STATE ===
+  const [livroForm, setLivroForm] = useState({
+    nomeLivro: '', autor: '', capitulo: '', numCapitulo: 1,
+    textoCapitulo: '', estilo: 'educativo',
+    tipoVideo: 'stickAnimation', duracao: 10,
+    voz: 'pt-BR-AntonioNeural', vozClonada: null,
+    legendas: true, estiloLegenda: 'classic', publicarYoutube: false
+  })
+  const [seriesSalvas, setSeriesSalvas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('vf_series') || '[]') } catch { return [] }
+  })
+  const [serieAtiva, setSerieAtiva] = useState(null)
 
   // === REVIEW STATE ===
   const [reviewForm, setReviewForm] = useState({
@@ -1154,17 +1167,202 @@ function App() {
 
         {/* Toggle modo */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', background: '#f0f0f0', borderRadius: '10px', padding: '4px', flexWrap: 'wrap' }}>
-          <button type="button" onClick={() => setModoRoteiro('ia')} style={{
-            flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88em',
-            background: modoRoteiro === 'ia' ? '#8b5cf6' : 'transparent',
-            color: modoRoteiro === 'ia' ? '#fff' : '#555', transition: 'all 0.2s'
-          }}>🤖 IA cria o roteiro</button>
-          <button type="button" onClick={() => setModoRoteiro('manual')} style={{
-            flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88em',
-            background: modoRoteiro === 'manual' ? '#8b5cf6' : 'transparent',
-            color: modoRoteiro === 'manual' ? '#fff' : '#555', transition: 'all 0.2s'
-          }}>✏️ Tenho meu roteiro</button>
+          {['ia', 'manual', 'livro'].map(m => (
+            <button key={m} type="button" onClick={() => setModoRoteiro(m)} style={{
+              flex: 1, padding: '8px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.88em',
+              background: modoRoteiro === m ? '#8b5cf6' : 'transparent',
+              color: modoRoteiro === m ? '#fff' : '#555', transition: 'all 0.2s', minWidth: '120px'
+            }}>{m === 'ia' ? '🤖 IA cria o roteiro' : m === 'manual' ? '✏️ Meu roteiro' : '📖 Capítulo de Livro'}</button>
+          ))}
         </div>
+
+        {/* Modo Capítulo de Livro */}
+        {modoRoteiro === 'livro' && (
+          <div>
+            {/* Séries salvas */}
+            {seriesSalvas.length > 0 && (
+              <div style={{ marginBottom: '20px', padding: '14px', background: '#f5f3ff', borderRadius: '10px', border: '1px solid #e0d7ff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <strong style={{ color: '#6b21a8' }}>📚 Séries em andamento</strong>
+                  {serieAtiva && <button type="button" onClick={() => { setSerieAtiva(null); setLivroForm(p => ({ ...p, nomeLivro: '', autor: '', numCapitulo: 1 })) }} style={{ fontSize: '12px', padding: '4px 10px', cursor: 'pointer', border: '1px solid #d8b4fe', borderRadius: '6px', background: '#fff', color: '#7c3aed' }}>+ Nova série</button>}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {seriesSalvas.map((s, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <button type="button" onClick={() => {
+                        setSerieAtiva(i)
+                        setLivroForm(p => ({ ...p, nomeLivro: s.nomeLivro, autor: s.autor, numCapitulo: s.proximoCapitulo, tipoVideo: s.tipoVideo, duracao: s.duracao, voz: s.voz, vozClonada: s.vozClonada, estiloLegenda: s.estiloLegenda, estilo: s.estilo }))
+                      }} style={{
+                        padding: '8px 14px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px',
+                        border: serieAtiva === i ? '2px solid #7c3aed' : '1px solid #d8b4fe',
+                        background: serieAtiva === i ? '#7c3aed' : '#fff',
+                        color: serieAtiva === i ? '#fff' : '#6b21a8', fontWeight: serieAtiva === i ? 700 : 500,
+                      }}>📗 {s.nomeLivro} — Cap. {s.proximoCapitulo}</button>
+                      <button type="button" onClick={() => {
+                        if (!confirm(`Remover série "${s.nomeLivro}"?`)) return
+                        const novo = seriesSalvas.filter((_, j) => j !== i)
+                        setSeriesSalvas(novo)
+                        localStorage.setItem('vf_series', JSON.stringify(novo))
+                        if (serieAtiva === i) setSerieAtiva(null)
+                      }} style={{ padding: '4px 6px', cursor: 'pointer', border: 'none', background: 'transparent', color: '#ef4444', fontSize: '14px' }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              if (!livroForm.nomeLivro.trim()) { alert('Informe o nome do livro'); return }
+              if (!livroForm.textoCapitulo.trim()) { alert('Cole o texto do capítulo'); return }
+              setLoading(true)
+              try {
+                // Montar prompt especial para a IA adaptar o capítulo em roteiro de vídeo
+                const promptLivro = `Adapte o seguinte capítulo do livro "${livroForm.nomeLivro}"${livroForm.autor ? ` de ${livroForm.autor}` : ''} (Capítulo ${livroForm.numCapitulo}${livroForm.capitulo ? ': ' + livroForm.capitulo : ''}) em um roteiro narrado para vídeo no estilo ${livroForm.estilo}. Mantenha a essência do conteúdo, adapte a linguagem para narração audiovisual envolvente. Separe em cenas (parágrafos). Cada parágrafo será uma cena do vídeo.\n\nTexto do capítulo:\n${livroForm.textoCapitulo}`
+
+                const response = await axios.post(`${API_URL}/videos`, {
+                  titulo: `📖 ${livroForm.nomeLivro} - Cap. ${livroForm.numCapitulo}${livroForm.capitulo ? ': ' + livroForm.capitulo : ''}`,
+                  nicho: 'educação',
+                  duracao: livroForm.duracao,
+                  detalhes: promptLivro,
+                  tipoVideo: livroForm.tipoVideo,
+                  legendas: livroForm.legendas,
+                  estiloLegenda: livroForm.estiloLegenda,
+                  publicarYoutube: livroForm.publicarYoutube,
+                  voz: livroForm.voz,
+                  vozClonada: livroForm.vozClonada,
+                })
+
+                // Salvar/atualizar série
+                const serieData = {
+                  nomeLivro: livroForm.nomeLivro, autor: livroForm.autor,
+                  proximoCapitulo: livroForm.numCapitulo + 1,
+                  tipoVideo: livroForm.tipoVideo, duracao: livroForm.duracao,
+                  voz: livroForm.voz, vozClonada: livroForm.vozClonada,
+                  estiloLegenda: livroForm.estiloLegenda, estilo: livroForm.estilo,
+                  ultimoUso: new Date().toISOString()
+                }
+                let novasSeries = [...seriesSalvas]
+                if (serieAtiva !== null) {
+                  novasSeries[serieAtiva] = serieData
+                } else {
+                  const idx = novasSeries.findIndex(s => s.nomeLivro === livroForm.nomeLivro)
+                  if (idx >= 0) novasSeries[idx] = serieData
+                  else novasSeries.push(serieData)
+                  setSerieAtiva(novasSeries.length - 1)
+                }
+                setSeriesSalvas(novasSeries)
+                localStorage.setItem('vf_series', JSON.stringify(novasSeries))
+
+                // Preparar para próximo capítulo
+                setLivroForm(p => ({ ...p, numCapitulo: p.numCapitulo + 1, capitulo: '', textoCapitulo: '' }))
+
+                await carregarVideos()
+                setMonitorVideoId(response.data.videoId)
+                setMonitorMinimized(false)
+                setMonitorVideo(null)
+                alert(`✅ Capítulo ${livroForm.numCapitulo} iniciado! Presets salvos na série "${livroForm.nomeLivro}" para continuar depois.`)
+              } catch (err) {
+                alert('❌ Erro: ' + (err.response?.data?.error || err.message))
+              } finally { setLoading(false) }
+            }}>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>📕 Nome do Livro</label>
+                  <input type="text" value={livroForm.nomeLivro} onChange={e => setLivroForm(p => ({ ...p, nomeLivro: e.target.value }))} placeholder="Ex: O Poder do Hábito" required />
+                </div>
+                <div className="form-group">
+                  <label>✍️ Autor (opcional)</label>
+                  <input type="text" value={livroForm.autor} onChange={e => setLivroForm(p => ({ ...p, autor: e.target.value }))} placeholder="Ex: Charles Duhigg" />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>Cap. nº</label>
+                  <input type="number" min="1" value={livroForm.numCapitulo} onChange={e => setLivroForm(p => ({ ...p, numCapitulo: parseInt(e.target.value) || 1 }))} />
+                </div>
+                <div className="form-group">
+                  <label>Título do Capítulo (opcional)</label>
+                  <input type="text" value={livroForm.capitulo} onChange={e => setLivroForm(p => ({ ...p, capitulo: e.target.value }))} placeholder="Ex: A Regra de Ouro da Mudança de Hábitos" />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>📝 Texto do Capítulo</label>
+                <textarea value={livroForm.textoCapitulo} onChange={e => setLivroForm(p => ({ ...p, textoCapitulo: e.target.value }))} placeholder="Cole aqui o texto do capítulo do livro. A IA vai adaptá-lo para um roteiro de vídeo narrado, mantendo a essência do conteúdo..." style={{ minHeight: '250px', fontFamily: 'inherit', lineHeight: '1.6' }} required />
+                <small style={{ color: '#888', fontSize: '0.82em' }}>💡 A IA adapta o texto literário para narração audiovisual, dividindo em cenas automaticamente.</small>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="form-group">
+                  <label>🎨 Estilo da Adaptação</label>
+                  <select value={livroForm.estilo} onChange={e => setLivroForm(p => ({ ...p, estilo: e.target.value }))}>
+                    <option value="educativo">📚 Educativo (fiel ao livro)</option>
+                    <option value="narrativo">🎭 Narrativo (storytelling)</option>
+                    <option value="resumo">⚡ Resumo (pontos-chave)</option>
+                    <option value="dramatico">🎬 Dramático (cinematográfico)</option>
+                    <option value="infantil">🧒 Infantil (linguagem simples)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>⏱️ Duração</label>
+                  <select value={livroForm.duracao} onChange={e => setLivroForm(p => ({ ...p, duracao: Number(e.target.value) }))}>
+                    <option value="5">5 min</option><option value="8">8 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>🎨 Tipo de Vídeo</label>
+                <select value={livroForm.tipoVideo} onChange={e => setLivroForm(p => ({ ...p, tipoVideo: e.target.value }))}>
+                  <optgroup label="✅ Gratuitos">
+                    <option value="stockImages">📸 Imagens Stock 🟢</option>
+                    <option value="stockVideos">🎬 Vídeos Stock 🟢</option>
+                    <option value="stickAnimation">🎨 Palitinho IA 🟢</option>
+                    <option value="darkStickman">🖤 Dark Stickman 🟢</option>
+                    <option value="geminiVeoGeneration">🎬 Gemini Veo 🟢</option>
+                  </optgroup>
+                  <optgroup label="💳 Pagos">
+                    <option value="replicateGeneration">🤖 Replicate 🟡</option>
+                    <option value="klingGeneration">🎥 Kling AI 🟡</option>
+                    <option value="veoGeneration">🎬 Veo 3 🟡</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>🎙️ Voz da Narração</label>
+                <select value={livroForm.voz} onChange={e => setLivroForm(p => ({ ...p, voz: e.target.value, vozClonada: null }))}>
+                  <option value="pt-BR-AntonioNeural">🇧🇷 Antonio (Masculino)</option>
+                  <option value="pt-BR-FranciscaNeural">🇧🇷 Francisca (Feminino)</option>
+                  <option value="pt-BR-ThalitaNeural">🇧🇷 Thalita (Feminino)</option>
+                  <option value="en-US-GuyNeural">🇺🇸 Guy (Male)</option>
+                  <option value="en-US-JennyNeural">🇺🇸 Jenny (Female)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={livroForm.publicarYoutube} onChange={e => setLivroForm(p => ({ ...p, publicarYoutube: e.target.checked }))} disabled={!config.youtube_connected} style={{ width: 'auto' }} />
+                  <span>📺 Publicar no YouTube</span>
+                  {!config.youtube_connected && <span style={{ fontSize: '12px', color: '#999' }}>(conecte nas config.)</span>}
+                </label>
+              </div>
+
+              {serieAtiva !== null && (
+                <div style={{ padding: '10px 14px', background: '#ecfdf5', border: '1px solid #86efac', borderRadius: '8px', marginBottom: '12px', fontSize: '13px', color: '#166534' }}>
+                  ✅ <strong>Continuando série:</strong> {seriesSalvas[serieAtiva]?.nomeLivro} — Todos os presets serão mantidos para o próximo capítulo.
+                </div>
+              )}
+
+              <button type="submit" className="btn btn-primary" disabled={loading}>
+                {loading ? '⏳ Criando...' : `📖 Criar Vídeo — Cap. ${livroForm.numCapitulo}`}
+              </button>
+            </form>
+          </div>
+        )}
 
         {/* Modo Manual */}
         {modoRoteiro === 'manual' && (

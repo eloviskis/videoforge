@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 export default function SocialAIPage({ onGoBack, onGoLogin }) {
   const [visibleSections, setVisibleSections] = useState({})
+  const [showTokenModal, setShowTokenModal] = useState(false)
 
   const HOTMART_URL = 'https://pay.hotmart.com/S104720959A?bid=1772552529640&utm_source=site&utm_medium=social-ai-page&utm_campaign=social-ai'
 
@@ -69,7 +70,7 @@ export default function SocialAIPage({ onGoBack, onGoLogin }) {
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <button onClick={onGoLogin} className="cta-btn-outline" style={{ padding: '8px 20px', fontSize: '14px' }}>Login</button>
-            <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" className="cta-btn"
+            <a href="#" onClick={(e) => { e.preventDefault(); setShowTokenModal(true) }} className="cta-btn"
               style={{ padding: '8px 24px', fontSize: '14px', background: 'linear-gradient(135deg, #ec4899, #db2777)' }}>
               Começar Agora
             </a>
@@ -106,7 +107,7 @@ export default function SocialAIPage({ onGoBack, onGoLogin }) {
             monta seu calendário editorial e <strong style={{ color: '#ec4899' }}>publica automaticamente</strong>. Tudo sem sair do VideoForge.
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" className="cta-btn"
+            <a href="#" onClick={(e) => { e.preventDefault(); setShowTokenModal(true) }} className="cta-btn"
               style={{ background: 'linear-gradient(135deg, #ec4899, #db2777)', fontSize: '18px', padding: '18px 40px' }}>
               🚀 Quero Automatizar Meu Instagram
             </a>
@@ -444,7 +445,7 @@ export default function SocialAIPage({ onGoBack, onGoLogin }) {
             Milhares de criadores já automatizaram seu Instagram com VideoForge.
             Comece agora e ganhe <strong style={{ color: '#22c55e' }}>horas do seu dia de volta</strong>.
           </p>
-          <a href={HOTMART_URL} target="_blank" rel="noopener noreferrer" className="cta-btn"
+          <a href="#" onClick={(e) => { e.preventDefault(); setShowTokenModal(true) }} className="cta-btn"
             style={{ background: 'linear-gradient(135deg, #ec4899, #db2777)', fontSize: '20px', padding: '20px 48px' }}>
             🎯 Quero o Social AI Agora
           </a>
@@ -457,6 +458,42 @@ export default function SocialAIPage({ onGoBack, onGoLogin }) {
           </div>
         </div>
       </section>
+
+      {/* ═══ MODAL TOKENS ═══ */}
+      {showTokenModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setShowTokenModal(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#1a1a2e', borderRadius: '16px', maxWidth: '520px', width: '100%', padding: '32px', border: '1px solid rgba(108,92,231,0.3)', animation: 'fadeInUp 0.3s ease' }}>
+            <h3 style={{ color: '#fff', margin: '0 0 20px', fontSize: '22px', textAlign: 'center' }}>💡 Como funciona o VideoForge</h3>
+            <div style={{ background: '#0d3320', border: '1px solid #22c55e', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+              <strong style={{ color: '#22c55e' }}>✅ Funções 100% GRATUITAS (incluídas no plano):</strong>
+              <ul style={{ color: '#bbf7d0', margin: '8px 0 0', paddingLeft: '20px', lineHeight: '1.8', fontSize: '14px' }}>
+                <li>Roteiro automático com IA (Gemini)</li>
+                <li>Narração profissional (Edge TTS — 400+ vozes)</li>
+                <li>Imagens e vídeos stock ilimitados</li>
+                <li>Social AI — calendário e posts automáticos</li>
+                <li>Publicação automática no YouTube</li>
+              </ul>
+            </div>
+            <div style={{ background: '#332800', border: '1px solid #eab308', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+              <strong style={{ color: '#fbbf24' }}>⚡ Funções PREMIUM (tokens de API externa):</strong>
+              <p style={{ color: '#fef3c7', margin: '8px 0 0', fontSize: '13px', lineHeight: '1.7' }}>
+                Algumas ferramentas avançadas usam APIs externas pagas (DALL-E, D-ID, Kling, Sora). <strong>O VideoForge não cobra nada extra</strong> — você conecta sua chave de API e paga diretamente à plataforma. A maioria dos usuários <strong>não precisa</strong> dessas ferramentas.
+              </p>
+            </div>
+            <div style={{ background: 'rgba(108,92,231,0.1)', border: '1px solid rgba(108,92,231,0.3)', borderRadius: '10px', padding: '14px', marginBottom: '20px' }}>
+              <strong style={{ color: '#a78bfa' }}>📌 Resumo:</strong>
+              <p style={{ color: '#c4b5fd', margin: '8px 0 0', fontSize: '13px', lineHeight: '1.7' }}>
+                Com pagamento único de <strong>R$ 59</strong> você tem <strong>acesso vitalício</strong> a tudo. Ferramentas premium são opcionais.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={() => setShowTokenModal(false)} style={{ flex: 1, padding: '14px', borderRadius: '10px', border: '1px solid #4b5563', background: 'transparent', color: '#9ca3af', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}>Voltar</button>
+              <button onClick={() => { setShowTokenModal(false); window.open(HOTMART_URL, '_blank') }} style={{ flex: 2, padding: '14px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #ec4899, #db2777)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '15px', boxShadow: '0 4px 16px rgba(236,72,153,0.3)' }}>✅ Entendi — Quero Comprar →</button>
+            </div>
+            <p style={{ textAlign: 'center', color: '#64748b', fontSize: '12px', marginTop: '12px' }}>🛡️ 7 dias de garantia incondicional</p>
+          </div>
+        </div>
+      )}
 
       {/* ═══ FOOTER ═══ */}
       <footer style={{
