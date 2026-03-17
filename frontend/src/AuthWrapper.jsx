@@ -340,7 +340,7 @@ export default function AuthWrapper() {
                   </p>
                 </div>
                 <a
-                  href="https://github.com/eloviskis/videoforge/releases/download/v1.8.0/VideoForge.Setup.1.8.0.exe"
+                  href="https://videoforge.tech/downloads/VideoForge%20Setup%201.9.0.exe"
                   target="_blank" rel="noopener noreferrer"
                   style={{
                     padding: '10px 24px', borderRadius: '10px', textDecoration: 'none',
