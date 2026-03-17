@@ -1713,11 +1713,12 @@ async function chamarGemini(prompt, timeout = 60000) {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (openRouterKey && openRouterKey.length > 10) {
     const openRouterModels = [
+      'google/gemini-2.0-flash-exp:free',
+      'google/gemma-3-27b-it:free',
       'deepseek/deepseek-chat-v3-0324:free',
-      'qwen/qwen3-235b-a22b:free',
-      'meta-llama/llama-4-maverick:free',
-      'google/gemini-2.5-flash-preview:free',
-      'deepseek/deepseek-r1:free',
+      'meta-llama/llama-3.3-70b-instruct:free',
+      'qwen/qwen-2.5-72b-instruct:free',
+      'mistralai/mistral-small-3.1-24b-instruct:free',
     ];
     
     for (const orModel of openRouterModels) {
@@ -1799,7 +1800,7 @@ async function chamarGemini(prompt, timeout = 60000) {
   // PRIORIDADE 4: Pollinations.ai Text — 100% gratuito, sem API key
   // NOTA: 'openai' é o único modelo consistentemente respondendo (via o3-mini)
   // O modelo retorna formato reasoning - extraímos via extrairConteudoOpenAI()
-  const pollinationsModels = ['openai', 'mistral', 'llama'];
+  const pollinationsModels = ['openai', 'mistral-large', 'llama', 'deepseek'];
   
   for (const pModel of pollinationsModels) {
     // Tentar POST primeiro
