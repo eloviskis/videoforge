@@ -220,6 +220,30 @@ function App() {
     },
   }
 
+  // Mapeamento: tipo pago → chaves de API necessárias
+  const PAID_TYPE_REQUIRED_KEYS = {
+    replicateGeneration: ['REPLICATE_API_TOKEN'],
+    klingGeneration: ['KLING_ACCESS_KEY_ID', 'KLING_ACCESS_KEY_SECRET'],
+    huggingfaceGeneration: ['HUGGINGFACE_API_TOKEN'],
+    veoGeneration: [],      // Google Vertex usa billing GCP, não chave simples
+    soraGeneration: ['OPENAI_API_KEY'],
+    didAvatar: ['DID_API_KEY'],
+  }
+
+  const [configBanner, setConfigBanner] = useState(null) // { message: string }
+
+  const verificarChavesPagas = (tipoVideo) => {
+    const requiredKeys = PAID_TYPE_REQUIRED_KEYS[tipoVideo]
+    if (!requiredKeys || requiredKeys.length === 0) return null
+    const missing = requiredKeys.filter(k => {
+      const found = apiKeys.find(ak => ak.key === k)
+      return !found || !found.configured
+    })
+    if (missing.length === 0) return null
+    const paidInfo = PAID_TYPES[tipoVideo]
+    return `⚠️ Para usar ${paidInfo?.label || tipoVideo}, configure: ${missing.join(', ')}. Abrindo Configurações...`
+  }
+
   useEffect(() => {
     carregarVideos()
     carregarConfig()
@@ -363,13 +387,20 @@ function App() {
     }
 
     if (!config.gemini_configured) {
-      alert('⚠️ Configure a API do Gemini antes de criar vídeos!\nVá em Configurações.')
+      setConfigBanner({ message: '⚠️ Configure a API do Gemini antes de criar vídeos!' })
+      setShowConfig(true)
       return
     }
 
-    // Verificar se é um tipo pago — mostrar modal de confirmação
+    // Verificar se é um tipo pago — checar chaves de API necessárias
     const paidInfo = PAID_TYPES[formData.tipoVideo]
     if (paidInfo) {
+      const missingMsg = verificarChavesPagas(formData.tipoVideo)
+      if (missingMsg) {
+        setConfigBanner({ message: missingMsg })
+        setShowConfig(true)
+        return
+      }
       const costInfo = paidInfo.calcCost(formData.duracao)
       setPaidModalInfo({ ...paidInfo, costInfo, duracao: formData.duracao })
       setShowPaidModal(true)
@@ -574,7 +605,8 @@ function App() {
     } catch (e) {
       const msg = e.response?.data?.error || e.message
       if (e.response?.data?.needsApiKey) {
-        alert('Para usar clonagem de voz, configure sua ElevenLabs API Key em Configurações > API Keys.')
+        setConfigBanner({ message: '⚠️ Para usar clonagem de voz, configure sua ElevenLabs API Key.' })
+        setShowConfig(true)
       } else {
         alert('Erro ao clonar voz: ' + msg)
       }
@@ -771,7 +803,8 @@ function App() {
 
   const gerarVideoNoticias = async () => {
     if (!config.gemini_configured) {
-      alert('⚠️ Configure a API do Gemini antes de gerar vídeos!')
+      setConfigBanner({ message: '⚠️ Configure a API do Gemini antes de gerar vídeos de notícias!' })
+      setShowConfig(true)
       return
     }
     setNewsLoading(true)
@@ -842,7 +875,7 @@ function App() {
         <h1>🎬 VideoForge</h1>
         <p>Crie vídeos automaticamente com IA e publique no YouTube</p>
         <button 
-          onClick={() => setShowConfig(!showConfig)}
+          onClick={() => { setShowConfig(!showConfig); if (showConfig) setConfigBanner(null) }}
           style={{
             marginTop: '10px',
             padding: '8px 16px',
@@ -887,6 +920,27 @@ function App() {
       {showConfig && (
         <div className="main-card" style={{ marginBottom: '20px' }}>
           <h2>⚙️ Configurações</h2>
+          
+          {/* Banner de alerta quando redirecionado automaticamente */}
+          {configBanner && (
+            <div style={{
+              padding: '12px 16px',
+              marginBottom: '16px',
+              background: '#fef3c7',
+              border: '1px solid #f59e0b',
+              borderRadius: '8px',
+              color: '#92400e',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px'
+            }}>
+              <span style={{ fontWeight: 500 }}>{configBanner.message}</span>
+              <button onClick={() => setConfigBanner(null)} style={{
+                background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#92400e'
+              }}>✕</button>
+            </div>
+          )}
           
           {/* Chaves de API - Gerenciamento Completo */}
           {['apis', 'youtube', 'social'].map(group => {
@@ -1215,6 +1269,12 @@ function App() {
               e.preventDefault()
               if (!livroForm.nomeLivro.trim()) { alert('Informe o nome do livro'); return }
               if (!livroForm.textoCapitulo.trim()) { alert('Cole o texto do capítulo'); return }
+              if (!config.gemini_configured) {
+                setConfigBanner({ message: '⚠️ Configure a API do Gemini antes de criar vídeos!' })
+                setShowConfig(true); return
+              }
+              const missingLivro = verificarChavesPagas(livroForm.tipoVideo)
+              if (missingLivro) { setConfigBanner({ message: missingLivro }); setShowConfig(true); return }
               setLoading(true)
               try {
                 // Montar prompt especial para a IA adaptar o capítulo em roteiro de vídeo
@@ -1370,6 +1430,12 @@ function App() {
             e.preventDefault()
             if (!roteiroManual.titulo.trim()) { alert('Informe o título do vídeo'); return }
             if (!roteiroManual.texto.trim()) { alert('Cole o roteiro abaixo'); return }
+            if (!config.gemini_configured) {
+              setConfigBanner({ message: '⚠️ Configure a API do Gemini antes de criar vídeos!' })
+              setShowConfig(true); return
+            }
+            const missingManual = verificarChavesPagas(roteiroManual.tipoVideo)
+            if (missingManual) { setConfigBanner({ message: missingManual }); setShowConfig(true); return }
             setLoading(true)
             try {
               const r = await axios.post(`${API_URL}/videos/manual`, roteiroManual)
@@ -3103,6 +3169,12 @@ function App() {
           <form onSubmit={async (e) => {
             e.preventDefault()
             if (!reviewForm.nomeProduto.trim()) { alert('Informe o nome do produto'); return }
+            if (!config.gemini_configured) {
+              setConfigBanner({ message: '⚠️ Configure a API do Gemini antes de criar reviews!' })
+              setShowConfig(true); return
+            }
+            const missingReview = verificarChavesPagas(reviewForm.tipoVideo)
+            if (missingReview) { setConfigBanner({ message: missingReview }); setShowConfig(true); return }
             setReviewLoading(true)
             try {
               const r = await axios.post(`${API_URL}/videos/review`, reviewForm)

@@ -37,13 +37,16 @@ export default function AvatarStudio({ onBack, user }) {
   const animFrameRef = useRef(null)
   const faceLandmarkerRef = useRef(null)
   const faceDetectedRef = useRef(null) // { cx, cy, width, height, angle }
+  const faceMeshBusyRef = useRef(false)
+  const [faceMeshStatus, setFaceMeshStatus] = useState('loading') // 'loading' | 'ready' | 'error'
+  const [faceOk, setFaceOk] = useState(false)
 
   // ── Load FaceMesh via MediaPipe ──
   useEffect(() => {
     let cancelled = false
     async function loadFaceDetection() {
       try {
-        // Carregar MediaPipe FaceDetection via CDN
+        // Carregar MediaPipe scripts via CDN
         if (!window._mpFaceDetectionLoaded) {
           await new Promise((resolve, reject) => {
             const s1 = document.createElement('script')
@@ -69,38 +72,39 @@ export default function AvatarStudio({ onBack, user }) {
         faceMesh.setOptions({
           maxNumFaces: 1,
           refineLandmarks: false,
-          minDetectionConfidence: 0.5,
-          minTrackingConfidence: 0.5,
+          minDetectionConfidence: 0.3,
+          minTrackingConfidence: 0.3,
         })
         faceMesh.onResults((results) => {
+          faceMeshBusyRef.current = false
           if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
             const lm = results.multiFaceLandmarks[0]
-            // Landmarks chave: 10 (topo testa), 152 (queixo), 234 (orelha esq), 454 (orelha dir)
             const topHead = lm[10]
             const chin = lm[152]
             const leftEar = lm[234]
             const rightEar = lm[454]
-            const noseTip = lm[1]
 
-            // Centro do rosto
             const cx = (leftEar.x + rightEar.x) / 2
             const cy = (topHead.y + chin.y) / 2
-
-            // Largura e altura do rosto
             const faceW = Math.abs(rightEar.x - leftEar.x)
             const faceH = Math.abs(chin.y - topHead.y)
-
-            // Ângulo de rotação (inclinação lateral)
             const angle = Math.atan2(rightEar.y - leftEar.y, rightEar.x - leftEar.x)
 
             faceDetectedRef.current = { cx, cy, width: faceW, height: faceH, angle }
+            setFaceOk(true)
           } else {
             faceDetectedRef.current = null
+            setFaceOk(false)
           }
         })
+        // Inicializar WASM (crítico — sem isso o send() falha silenciosamente)
+        await faceMesh.initialize()
         faceLandmarkerRef.current = faceMesh
+        if (!cancelled) setFaceMeshStatus('ready')
+        console.log('FaceMesh inicializado com sucesso')
       } catch (e) {
-        console.warn('FaceMesh não carregou, usando fallback:', e.message)
+        console.warn('FaceMesh não carregou:', e.message)
+        if (!cancelled) setFaceMeshStatus('error')
       }
     }
     loadFaceDetection()
@@ -229,9 +233,9 @@ export default function AvatarStudio({ onBack, user }) {
       avatarImg.src = activeAvatar.image_url
     }
 
-    // Enviar frames para FaceMesh a cada ~60ms (~16fps detecção)
+    // Enviar frames para FaceMesh a cada ~33ms (~30fps detecção)
     let lastSendTime = 0
-    const SEND_INTERVAL = 60
+    const SEND_INTERVAL = 33
 
     function lerp(a, b, t) { return a + (b - a) * t }
 
@@ -239,20 +243,37 @@ export default function AvatarStudio({ onBack, user }) {
       if (!streamRef.current) return
       const now = performance.now()
 
-      // Enviar frame para MediaPipe FaceMesh
-      if (faceLandmarkerRef.current && now - lastSendTime > SEND_INTERVAL) {
+      // Enviar frame para MediaPipe FaceMesh (com back-pressure)
+      if (faceLandmarkerRef.current && !faceMeshBusyRef.current &&
+          now - lastSendTime > SEND_INTERVAL &&
+          video.readyState >= 2 && video.videoWidth > 0) {
         lastSendTime = now
-        try { faceLandmarkerRef.current.send({ image: video }) } catch (_) {}
+        faceMeshBusyRef.current = true
+        try {
+          faceLandmarkerRef.current.send({ image: video })
+            .catch(() => { faceMeshBusyRef.current = false })
+        } catch (_) {
+          faceMeshBusyRef.current = false
+        }
+      }
+      // Safety: reset busy flag se travou por mais de 2s
+      if (faceMeshBusyRef.current && now - lastSendTime > 2000) {
+        faceMeshBusyRef.current = false
       }
 
+      // Desenhar vídeo espelhado (como espelho, natural para webcam)
+      ctx.save()
+      ctx.translate(vw, 0)
+      ctx.scale(-1, 1)
       ctx.drawImage(video, 0, 0, vw, vh)
+      ctx.restore()
 
       if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
         const face = faceDetectedRef.current
 
         if (face) {
           // Suavizar movimentos com interpolação (smoothing)
-          const t = 0.25  // fator de suavização (0=sem mover, 1=sem suavizar)
+          const t = 0.3  // fator de suavização (maior = mais responsivo)
           if (!smoothedFaceRef.current) {
             smoothedFaceRef.current = { ...face }
           } else {
@@ -266,7 +287,7 @@ export default function AvatarStudio({ onBack, user }) {
           const sf = smoothedFaceRef.current
 
           // Coordenadas normalizadas (0-1) para pixels
-          // Espelhar cx porque o canvas já é espelhado visualmente
+          // FaceMesh retorna coords do vídeo bruto; canvas é espelhado
           const faceCx = (1 - sf.cx) * vw
           const faceCy = sf.cy * vh
           // Escalar avatar para cobrir rosto com margem (cabeça + cabelo)
@@ -281,16 +302,12 @@ export default function AvatarStudio({ onBack, user }) {
           ctx.globalAlpha = 1
           ctx.restore()
         } else {
-          // Fallback: sem detecção, posição central padrão
-          const faceX = vw * 0.25
-          const faceY = vh * 0.08
+          // Fallback: sem detecção, avatar centralizado
           const faceW = vw * 0.5
           const faceH = vh * 0.7
           ctx.save()
-          ctx.translate(faceX + faceW, faceY)
-          ctx.scale(-1, 1)
           ctx.globalAlpha = 0.92
-          ctx.drawImage(avatarImg, 0, 0, faceW, faceH)
+          ctx.drawImage(avatarImg, (vw - faceW) / 2, vh * 0.08, faceW, faceH)
           ctx.globalAlpha = 1
           ctx.restore()
         }
@@ -306,10 +323,17 @@ export default function AvatarStudio({ onBack, user }) {
         ctx.moveTo(cx, vh * 0.12); ctx.lineTo(cx, vh * 0.79)
         ctx.moveTo(vw * 0.31, cy); ctx.lineTo(vw * 0.69, cy)
         ctx.stroke()
-        ctx.fillStyle = 'rgba(34,197,94,0.7)'
+
+        // Indicar status do FaceMesh
+        const statusColor = faceMeshStatus === 'ready' ? 'rgba(34,197,94,0.7)'
+          : faceMeshStatus === 'error' ? 'rgba(239,68,68,0.7)' : 'rgba(234,179,8,0.7)'
+        const statusText = faceMeshStatus === 'ready' ? '👤 Posicione seu rosto no centro'
+          : faceMeshStatus === 'error' ? '⚠️ Face tracking indisponível'
+          : '⏳ Carregando face tracking...'
+        ctx.fillStyle = statusColor
         ctx.font = `${Math.max(12, vw * 0.022)}px Inter, sans-serif`
         ctx.textAlign = 'center'
-        ctx.fillText('👤 Posicione seu rosto no centro', cx, vh * 0.9)
+        ctx.fillText(statusText, cx, vh * 0.9)
       }
 
       animFrameRef.current = requestAnimationFrame(drawFrame)
@@ -460,6 +484,10 @@ export default function AvatarStudio({ onBack, user }) {
           <span style={{ fontSize: '11px', color: '#64748b' }}>Câmera</span>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: activeAvatar ? '#8b5cf6' : '#64748b', marginLeft: 8 }} />
           <span style={{ fontSize: '11px', color: '#64748b' }}>Avatar</span>
+          {cameraActive && <>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', marginLeft: 8, background: faceOk ? '#22c55e' : faceMeshStatus === 'ready' ? '#eab308' : faceMeshStatus === 'error' ? '#ef4444' : '#64748b', transition: 'background 0.3s' }} />
+            <span style={{ fontSize: '11px', color: faceOk ? '#22c55e' : '#64748b' }}>{faceOk ? 'Rosto ✓' : faceMeshStatus === 'loading' ? 'Carregando...' : faceMeshStatus === 'error' ? 'Sem tracking' : 'Sem rosto'}</span>
+          </>}
           {recording && <>
             <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', marginLeft: 8, animation: 'pulse 1s infinite' }} />
             <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 700 }}>REC {formatTime(recordTime)}</span>
