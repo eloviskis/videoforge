@@ -237,7 +237,37 @@ export default function AvatarStudio({ onBack, user }) {
     let lastSendTime = 0
     const SEND_INTERVAL = 33
 
+    // Canvas offscreen reutilizável para máscara do avatar
+    const maskCanvas = document.createElement('canvas')
+    const maskCtx = maskCanvas.getContext('2d')
+
     function lerp(a, b, t) { return a + (b - a) * t }
+
+    // Desenha avatar com máscara elíptica suave no offscreen e retorna
+    function drawMaskedAvatar(img, w, h) {
+      const iw = Math.ceil(w) || 1
+      const ih = Math.ceil(h) || 1
+      if (maskCanvas.width !== iw || maskCanvas.height !== ih) {
+        maskCanvas.width = iw
+        maskCanvas.height = ih
+      }
+      maskCtx.clearRect(0, 0, iw, ih)
+      maskCtx.drawImage(img, 0, 0, iw, ih)
+      // Máscara elíptica com borda suave (feathering)
+      maskCtx.globalCompositeOperation = 'destination-in'
+      maskCtx.save()
+      maskCtx.translate(iw / 2, ih / 2)
+      maskCtx.scale(1, ih / iw) // alongar para elipse
+      const r = iw / 2
+      const grad = maskCtx.createRadialGradient(0, 0, 0, 0, 0, r)
+      grad.addColorStop(0, 'rgba(0,0,0,1)')
+      grad.addColorStop(0.6, 'rgba(0,0,0,1)')
+      grad.addColorStop(1, 'rgba(0,0,0,0)')
+      maskCtx.fillStyle = grad
+      maskCtx.fillRect(-iw / 2, -iw / 2, iw, iw) // quadrado no espaço escalado
+      maskCtx.restore()
+      maskCtx.globalCompositeOperation = 'source-over'
+    }
 
     function drawFrame() {
       if (!streamRef.current) return
@@ -291,25 +321,23 @@ export default function AvatarStudio({ onBack, user }) {
           const faceCx = (1 - sf.cx) * vw
           const faceCy = sf.cy * vh
           // Escalar avatar para cobrir rosto com margem (cabeça + cabelo)
-          const faceW = sf.width * vw * 1.8
-          const faceH = sf.height * vh * 1.5
+          const faceW = sf.width * vw * 2.0
+          const faceH = sf.height * vh * 2.2
+
+          // Desenhar avatar com máscara elíptica suave (gruda no rosto)
+          drawMaskedAvatar(avatarImg, faceW, faceH)
 
           ctx.save()
           ctx.translate(faceCx, faceCy)
           ctx.rotate(-sf.angle) // rotação invertida por espelhamento
-          ctx.globalAlpha = 0.93
-          ctx.drawImage(avatarImg, -faceW / 2, -faceH / 2, faceW, faceH)
-          ctx.globalAlpha = 1
+          ctx.drawImage(maskCanvas, -faceW / 2, -faceH / 2, faceW, faceH)
           ctx.restore()
         } else {
-          // Fallback: sem detecção, avatar centralizado
+          // Fallback: sem detecção, avatar centralizado com máscara suave
           const faceW = vw * 0.5
           const faceH = vh * 0.7
-          ctx.save()
-          ctx.globalAlpha = 0.92
-          ctx.drawImage(avatarImg, (vw - faceW) / 2, vh * 0.08, faceW, faceH)
-          ctx.globalAlpha = 1
-          ctx.restore()
+          drawMaskedAvatar(avatarImg, faceW, faceH)
+          ctx.drawImage(maskCanvas, (vw - faceW) / 2, vh * 0.08, faceW, faceH)
         }
       } else if (!avatarImg) {
         // Mostrar grid de tracking quando não tem avatar
