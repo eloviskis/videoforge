@@ -92,6 +92,18 @@ function warpTriangle(ctx, img, [[x1, y1], [x2, y2], [x3, y3]], [[dx1, dy1], [dx
   ctx.restore()
 }
 
+// Expande triângulo pelo centróide (elimina seams entre triângulos adjacentes)
+function expandTri([[x1, y1], [x2, y2], [x3, y3]], px) {
+  const cx = (x1 + x2 + x3) / 3, cy = (y1 + y2 + y3) / 3
+  const exp = ([x, y]) => { const dx = x - cx, dy = y - cy, l = Math.hypot(dx, dy) || 1; return [x + dx / l * px, y + dy / l * px] }
+  return [exp([x1, y1]), exp([x2, y2]), exp([x3, y3])]
+}
+
+// Oval do rosto para máscara (índices MediaPipe)
+const FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
+  397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
+  172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
+
 export default function AvatarStudio({ onBack, user }) {
   // ── State ──
   const [cameraActive, setCameraActive] = useState(false)
@@ -363,9 +375,12 @@ export default function AvatarStudio({ onBack, user }) {
     let lastSendTime = 0
     const SEND_INTERVAL = 33
 
-    // Canvas offscreen reutilizável para máscara do avatar
+    // Canvas offscreen reutilizável para máscara do avatar (fallback)
     const maskCanvas = document.createElement('canvas')
     const maskCtx = maskCanvas.getContext('2d')
+
+    // Canvas offscreen para mesh warping (elimina seams)
+    const warpCanvas = document.createElement('canvas')
 
     function lerp(a, b, t) { return a + (b - a) * t }
 
@@ -430,21 +445,56 @@ export default function AvatarStudio({ onBack, user }) {
         const triangles = avatarTrianglesRef.current
 
         if (liveLm && avatarLm && triangles && triangles.length > 0) {
-          // ── Mesh Warping: per-triangle affine warp (boca, olhos, cabeça) ──
+          // ── Mesh Warping: offscreen + expand triângulos + máscara oval ──
           const iw = avatarImg.naturalWidth
           const ih = avatarImg.naturalHeight
+
+          // Redimensionar offscreen se necessário
+          if (warpCanvas.width !== vw || warpCanvas.height !== vh) {
+            warpCanvas.width = vw
+            warpCanvas.height = vh
+          }
+          const wctx = warpCanvas.getContext('2d')
+          wctx.clearRect(0, 0, vw, vh)
+
+          // 1. Warp cada triângulo no offscreen (sem seams, com expansão 1.5px)
           for (const [a, b, c] of triangles) {
             const la = KEY_LM[a], lb = KEY_LM[b], lc = KEY_LM[c]
             warpTriangle(
-              ctx, avatarImg,
+              wctx, avatarImg,
               [[avatarLm[la].x * iw, avatarLm[la].y * ih],
                [avatarLm[lb].x * iw, avatarLm[lb].y * ih],
                [avatarLm[lc].x * iw, avatarLm[lc].y * ih]],
-              [[(1 - liveLm[la].x) * vw, liveLm[la].y * vh],
-               [(1 - liveLm[lb].x) * vw, liveLm[lb].y * vh],
-               [(1 - liveLm[lc].x) * vw, liveLm[lc].y * vh]]
+              expandTri([
+                [(1 - liveLm[la].x) * vw, liveLm[la].y * vh],
+                [(1 - liveLm[lb].x) * vw, liveLm[lb].y * vh],
+                [(1 - liveLm[lc].x) * vw, liveLm[lc].y * vh]
+              ], 1.5)
             )
           }
+
+          // 2. Máscara oval suave: blurra o polígono facial para bordas naturais
+          const ovalPts = FACE_OVAL.map(i => [(1 - liveLm[i].x) * vw, liveLm[i].y * vh])
+          const ocx = ovalPts.reduce((s, p) => s + p[0], 0) / ovalPts.length
+          const ocy = ovalPts.reduce((s, p) => s + p[1], 0) / ovalPts.length
+          // Expande oval para compensar o blur
+          const ovalExp = ovalPts.map(([x, y]) => {
+            const dx = x - ocx, dy = y - ocy, l = Math.hypot(dx, dy) || 1
+            return [x + dx / l * 10, y + dy / l * 10]
+          })
+          wctx.globalCompositeOperation = 'destination-in'
+          wctx.filter = 'blur(7px)'
+          wctx.beginPath()
+          wctx.moveTo(ovalExp[0][0], ovalExp[0][1])
+          for (let i = 1; i < ovalExp.length; i++) wctx.lineTo(ovalExp[i][0], ovalExp[i][1])
+          wctx.closePath()
+          wctx.fillStyle = '#000'
+          wctx.fill()
+          wctx.filter = 'none'
+          wctx.globalCompositeOperation = 'source-over'
+
+          // 3. Compositar face substituída sobre vídeo
+          ctx.drawImage(warpCanvas, 0, 0)
         } else {
           // ── Fallback: ellipse overlay (enquanto landmarks carregam) ──
           const face = faceDetectedRef.current
