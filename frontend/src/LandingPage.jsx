@@ -163,6 +163,7 @@ export default function LandingPage({ onGoLogin }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <img src="/logo.png" alt="VideoForge" style={{ width: '32px', height: '32px', borderRadius: '8px' }} loading="eager" />
           <strong style={{ fontSize: '18px', color: '#fff' }}>VideoForge</strong>
+          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', background: 'rgba(108,92,231,0.2)', color: '#a29bfe', border: '1px solid rgba(108,92,231,0.35)', borderRadius: '5px', padding: '2px 6px' }}>BETA</span>
         </div>
         <div className="hide-mobile" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <a href="#como-funciona" className="nav-link" style={{ color: '#94a3b8', textDecoration: 'none', fontSize: '14px', padding: '8px 12px' }}>Como funciona</a>
@@ -241,9 +242,18 @@ export default function LandingPage({ onGoLogin }) {
           }}>
             Publique Vídeos no YouTube Todo Dia — <span style={{ color: '#00d2a0' }}>Sem Gravar, Sem Editar, Sem Aparecer</span>
           </h1>
-          <p style={{ fontSize: '20px', color: '#94a3b8', lineHeight: 1.7, margin: '0 0 40px', maxWidth: '640px', marginLeft: 'auto', marginRight: 'auto' }}>
+          <p style={{ fontSize: '20px', color: '#94a3b8', lineHeight: 1.7, margin: '0 0 20px', maxWidth: '640px', marginLeft: 'auto', marginRight: 'auto' }}>
             A IA escreve o roteiro, gera a narração, monta o vídeo em 1080p e publica direto no seu canal. <strong style={{ color: '#e2e8f0' }}>Tudo automático.</strong>
           </p>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: '8px',
+            background: 'rgba(108,92,231,0.08)', border: '1px solid rgba(108,92,231,0.2)',
+            borderRadius: '99px', padding: '6px 16px', marginBottom: '32px',
+            fontSize: '13px', color: '#a29bfe',
+          }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#a29bfe', display: 'inline-block', animation: 'pulse 2s infinite' }} />
+            Projeto em constante evolução — novas funcionalidades toda semana
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
             <a href={checkoutUrl} target="_blank" rel="noopener noreferrer" className="cta-green" onClick={(e) => handleCTAClick('hero_comprar', e)}>
               Quero Começar Agora — R$ 59 →

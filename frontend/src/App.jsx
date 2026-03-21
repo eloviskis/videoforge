@@ -872,7 +872,7 @@ function App() {
     <>
     <div className="container">
       <div className="header">
-        <h1>🎬 VideoForge</h1>
+        <h1>🎬 VideoForge <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', background: 'rgba(108,92,231,0.25)', color: '#a29bfe', border: '1px solid rgba(108,92,231,0.4)', borderRadius: '6px', padding: '2px 7px', verticalAlign: 'middle', position: 'relative', top: '-3px' }}>BETA</span></h1>
         <p>Crie vídeos automaticamente com IA e publique no YouTube</p>
         <button 
           onClick={() => { setShowConfig(!showConfig); if (showConfig) setConfigBanner(null) }}

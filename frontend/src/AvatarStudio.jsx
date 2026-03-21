@@ -11,6 +11,87 @@ const STYLES = [
   { id: 'realistic', icon: '📸', label: 'Realista', desc: 'Fotorrealista com IA', time: '~8s', cost: '~$0.05' },
 ]
 
+// ── Mesh Warping Helpers ──
+// Subset of MediaPipe 468 landmarks: face oval + features
+const KEY_LM = [...new Set([
+  // Face oval (perimeter)
+  10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
+  397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
+  172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109,
+  // Left eye
+  33, 133, 160, 159, 158, 144, 145, 153,
+  // Right eye
+  362, 263, 387, 386, 385, 373, 374, 380,
+  // Left eyebrow
+  70, 63, 105, 66, 107,
+  // Right eyebrow
+  300, 293, 334, 296, 336,
+  // Nose
+  1, 2, 5, 4, 6, 168, 195, 197, 98, 327,
+  // Lips outer
+  61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291,
+  375, 321, 405, 314, 17, 84, 181, 91, 146,
+  // Lips inner
+  78, 308, 13, 14,
+  // Forehead / center
+  151, 9, 50, 280,
+])]
+
+function inCircum([ax, ay], [bx, by], [cx, cy], [px, py]) {
+  const D = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by))
+  if (Math.abs(D) < 1e-10) return false
+  const ux = ((ax * ax + ay * ay) * (by - cy) + (bx * bx + by * by) * (cy - ay) + (cx * cx + cy * cy) * (ay - by)) / D
+  const uy = ((ax * ax + ay * ay) * (cx - bx) + (bx * bx + by * by) * (ax - cx) + (cx * cx + cy * cy) * (bx - ax)) / D
+  return (px - ux) ** 2 + (py - uy) ** 2 < (ax - ux) ** 2 + (ay - uy) ** 2
+}
+
+function computeDelaunay(pts) {
+  const n = pts.length
+  if (n < 3) return []
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity
+  for (const [x, y] of pts) {
+    if (x < minX) minX = x; if (x > maxX) maxX = x
+    if (y < minY) minY = y; if (y > maxY) maxY = y
+  }
+  const dmax = Math.max(maxX - minX, maxY - minY) * 3 + 1
+  const mx = (minX + maxX) / 2, my = (minY + maxY) / 2
+  const allPts = [...pts, [mx - dmax, my - dmax], [mx, my + dmax], [mx + dmax, my - dmax]]
+  let tris = [[n, n + 1, n + 2]]
+  for (let i = 0; i < n; i++) {
+    const p = allPts[i]
+    let edges = []
+    tris = tris.filter(([a, b, c]) => {
+      if (inCircum(allPts[a], allPts[b], allPts[c], p)) {
+        edges.push([a, b], [b, c], [c, a])
+        return false
+      }
+      return true
+    })
+    edges = edges.filter((e, i) => !edges.some((f, j) => i !== j && e[0] === f[1] && e[1] === f[0]))
+    edges.forEach(([a, b]) => tris.push([a, b, i]))
+  }
+  return tris.filter(([a, b, c]) => a < n && b < n && c < n)
+}
+
+function warpTriangle(ctx, img, [[x1, y1], [x2, y2], [x3, y3]], [[dx1, dy1], [dx2, dy2], [dx3, dy3]]) {
+  const det = (x1 - x3) * (y2 - y3) - (x2 - x3) * (y1 - y3)
+  if (Math.abs(det) < 1e-6) return
+  const a = ((dx1 - dx3) * (y2 - y3) - (dx2 - dx3) * (y1 - y3)) / det
+  const c = ((dx2 - dx3) * (x1 - x3) - (dx1 - dx3) * (x2 - x3)) / det
+  const e = dx1 - a * x1 - c * y1
+  const b = ((dy1 - dy3) * (y2 - y3) - (dy2 - dy3) * (y1 - y3)) / det
+  const d = ((dy2 - dy3) * (x1 - x3) - (dy1 - dy3) * (x2 - x3)) / det
+  const f = dy1 - b * x1 - d * y1
+  ctx.save()
+  ctx.beginPath()
+  ctx.moveTo(dx1, dy1); ctx.lineTo(dx2, dy2); ctx.lineTo(dx3, dy3)
+  ctx.closePath()
+  ctx.clip()
+  ctx.setTransform(a, b, c, d, e, f)
+  ctx.drawImage(img, 0, 0)
+  ctx.restore()
+}
+
 export default function AvatarStudio({ onBack, user }) {
   // ── State ──
   const [cameraActive, setCameraActive] = useState(false)
@@ -38,6 +119,10 @@ export default function AvatarStudio({ onBack, user }) {
   const faceLandmarkerRef = useRef(null)
   const faceDetectedRef = useRef(null) // { cx, cy, width, height, angle }
   const faceMeshBusyRef = useRef(false)
+  const onResultsCallbackRef = useRef(null)   // override callback for avatar detection
+  const liveAllLandmarksRef = useRef(null)    // full 468 live landmarks each frame
+  const avatarLandmarksRef = useRef(null)     // avatar image rest-pose landmarks
+  const avatarTrianglesRef = useRef(null)     // Delaunay triangle indices into KEY_LM
   const [faceMeshStatus, setFaceMeshStatus] = useState('loading') // 'loading' | 'ready' | 'error'
   const [faceOk, setFaceOk] = useState(false)
 
@@ -77,8 +162,16 @@ export default function AvatarStudio({ onBack, user }) {
         })
         faceMesh.onResults((results) => {
           faceMeshBusyRef.current = false
+          // Avatar landmark detection takes priority
+          if (onResultsCallbackRef.current) {
+            const cb = onResultsCallbackRef.current
+            onResultsCallbackRef.current = null
+            cb(results)
+            return
+          }
           if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
             const lm = results.multiFaceLandmarks[0]
+            liveAllLandmarksRef.current = lm
             const topHead = lm[10]
             const chin = lm[152]
             const leftEar = lm[234]
@@ -93,6 +186,7 @@ export default function AvatarStudio({ onBack, user }) {
             faceDetectedRef.current = { cx, cy, width: faceW, height: faceH, angle }
             setFaceOk(true)
           } else {
+            liveAllLandmarksRef.current = null
             faceDetectedRef.current = null
             setFaceOk(false)
           }
@@ -134,6 +228,38 @@ export default function AvatarStudio({ onBack, user }) {
       setPresets(data.presets || [])
     } catch {}
   }
+
+  // ── Avatar Landmark Detection (rest pose) ──
+  async function detectAvatarFace(imgEl) {
+    if (!faceLandmarkerRef.current) return null
+    return new Promise((resolve) => {
+      onResultsCallbackRef.current = (results) => {
+        if (results.multiFaceLandmarks?.length > 0) resolve(results.multiFaceLandmarks[0])
+        else resolve(null)
+      }
+      faceLandmarkerRef.current.send({ image: imgEl }).catch(() => {
+        onResultsCallbackRef.current = null
+        resolve(null)
+      })
+    })
+  }
+
+  // When avatar changes: detect its rest-pose landmarks + compute Delaunay triangles
+  useEffect(() => {
+    avatarLandmarksRef.current = null
+    avatarTrianglesRef.current = null
+    if (!activeAvatar?.image_url) return
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = async () => {
+      const lm = await detectAvatarFace(img)
+      if (!lm) return
+      avatarLandmarksRef.current = lm
+      const pts = KEY_LM.map(i => [lm[i].x * img.naturalWidth, lm[i].y * img.naturalHeight])
+      avatarTrianglesRef.current = computeDelaunay(pts)
+    }
+    img.src = activeAvatar.image_url
+  }, [activeAvatar?.image_url])
 
   // ── Camera ──
   async function startCamera() {
@@ -299,45 +425,58 @@ export default function AvatarStudio({ onBack, user }) {
       ctx.restore()
 
       if (avatarImg && avatarImg.complete && avatarImg.naturalWidth > 0) {
-        const face = faceDetectedRef.current
+        const liveLm = liveAllLandmarksRef.current
+        const avatarLm = avatarLandmarksRef.current
+        const triangles = avatarTrianglesRef.current
 
-        if (face) {
-          // Suavizar movimentos com interpolação (smoothing)
-          const t = 0.3  // fator de suavização (maior = mais responsivo)
-          if (!smoothedFaceRef.current) {
-            smoothedFaceRef.current = { ...face }
-          } else {
-            const s = smoothedFaceRef.current
-            s.cx = lerp(s.cx, face.cx, t)
-            s.cy = lerp(s.cy, face.cy, t)
-            s.width = lerp(s.width, face.width, t)
-            s.height = lerp(s.height, face.height, t)
-            s.angle = lerp(s.angle, face.angle, t)
+        if (liveLm && avatarLm && triangles && triangles.length > 0) {
+          // ── Mesh Warping: per-triangle affine warp (boca, olhos, cabeça) ──
+          const iw = avatarImg.naturalWidth
+          const ih = avatarImg.naturalHeight
+          for (const [a, b, c] of triangles) {
+            const la = KEY_LM[a], lb = KEY_LM[b], lc = KEY_LM[c]
+            warpTriangle(
+              ctx, avatarImg,
+              [[avatarLm[la].x * iw, avatarLm[la].y * ih],
+               [avatarLm[lb].x * iw, avatarLm[lb].y * ih],
+               [avatarLm[lc].x * iw, avatarLm[lc].y * ih]],
+              [[(1 - liveLm[la].x) * vw, liveLm[la].y * vh],
+               [(1 - liveLm[lb].x) * vw, liveLm[lb].y * vh],
+               [(1 - liveLm[lc].x) * vw, liveLm[lc].y * vh]]
+            )
           }
-          const sf = smoothedFaceRef.current
-
-          // Coordenadas normalizadas (0-1) para pixels
-          // FaceMesh retorna coords do vídeo bruto; canvas é espelhado
-          const faceCx = (1 - sf.cx) * vw
-          const faceCy = sf.cy * vh
-          // Escalar avatar para cobrir rosto com margem (cabeça + cabelo)
-          const faceW = sf.width * vw * 2.0
-          const faceH = sf.height * vh * 2.2
-
-          // Desenhar avatar com máscara elíptica suave (gruda no rosto)
-          drawMaskedAvatar(avatarImg, faceW, faceH)
-
-          ctx.save()
-          ctx.translate(faceCx, faceCy)
-          ctx.rotate(-sf.angle) // rotação invertida por espelhamento
-          ctx.drawImage(maskCanvas, -faceW / 2, -faceH / 2, faceW, faceH)
-          ctx.restore()
         } else {
-          // Fallback: sem detecção, avatar centralizado com máscara suave
-          const faceW = vw * 0.5
-          const faceH = vh * 0.7
-          drawMaskedAvatar(avatarImg, faceW, faceH)
-          ctx.drawImage(maskCanvas, (vw - faceW) / 2, vh * 0.08, faceW, faceH)
+          // ── Fallback: ellipse overlay (enquanto landmarks carregam) ──
+          const face = faceDetectedRef.current
+          if (face) {
+            const t = 0.3
+            if (!smoothedFaceRef.current) {
+              smoothedFaceRef.current = { ...face }
+            } else {
+              const s = smoothedFaceRef.current
+              s.cx = lerp(s.cx, face.cx, t)
+              s.cy = lerp(s.cy, face.cy, t)
+              s.width = lerp(s.width, face.width, t)
+              s.height = lerp(s.height, face.height, t)
+              s.angle = lerp(s.angle, face.angle, t)
+            }
+            const sf = smoothedFaceRef.current
+            const faceCx = (1 - sf.cx) * vw
+            const faceCy = sf.cy * vh
+            const faceW = sf.width * vw * 2.0
+            const faceH = sf.height * vh * 2.2
+            drawMaskedAvatar(avatarImg, faceW, faceH)
+            ctx.save()
+            ctx.translate(faceCx, faceCy)
+            ctx.rotate(-sf.angle)
+            ctx.drawImage(maskCanvas, -faceW / 2, -faceH / 2, faceW, faceH)
+            ctx.restore()
+          } else {
+            const faceW = vw * 0.5
+            const faceH = vh * 0.7
+            drawMaskedAvatar(avatarImg, faceW, faceH)
+            ctx.drawImage(maskCanvas, (vw - faceW) / 2, vh * 0.08, faceW, faceH)
+          }
         }
       } else if (!avatarImg) {
         // Mostrar grid de tracking quando não tem avatar
