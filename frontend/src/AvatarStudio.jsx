@@ -445,19 +445,48 @@ export default function AvatarStudio({ onBack, user }) {
         const triangles = avatarTrianglesRef.current
 
         if (liveLm && avatarLm && triangles && triangles.length > 0) {
-          // ── Mesh Warping: offscreen + expand triângulos + máscara oval ──
+          // ── Pipeline: corpo inteiro → rosto animado → dentes ──
           const iw = avatarImg.naturalWidth
           const ih = avatarImg.naturalHeight
 
-          // Redimensionar offscreen se necessário
           if (warpCanvas.width !== vw || warpCanvas.height !== vh) {
-            warpCanvas.width = vw
-            warpCanvas.height = vh
+            warpCanvas.width = vw; warpCanvas.height = vh
           }
           const wctx = warpCanvas.getContext('2d')
-          wctx.clearRect(0, 0, vw, vh)
 
-          // 1. Warp cada triângulo no offscreen (sem seams, com expansão 1.5px)
+          // ── Escala ear-to-ear + anchor no nariz ──
+          const liveEarW = Math.hypot(
+            (1 - liveLm[234].x - (1 - liveLm[454].x)) * vw,
+            (liveLm[234].y - liveLm[454].y) * vh
+          )
+          const avatarEarW = Math.hypot(
+            (avatarLm[454].x - avatarLm[234].x) * iw,
+            (avatarLm[454].y - avatarLm[234].y) * ih
+          )
+          const scale = liveEarW / Math.max(avatarEarW, 1)
+          const ax = (1 - liveLm[1].x) * vw - avatarLm[1].x * iw * scale
+          const ay = liveLm[1].y * vh - avatarLm[1].y * ih * scale
+
+          // 1. Corpo inteiro: avatar escalado + máscara elipse corpo suave
+          const faceH = (liveLm[152].y - liveLm[10].y) * vh
+          const noseCx = (1 - liveLm[1].x) * vw
+          const noseCy = liveLm[1].y * vh
+
+          wctx.clearRect(0, 0, vw, vh)
+          wctx.drawImage(avatarImg, ax, ay, iw * scale, ih * scale)
+
+          wctx.globalCompositeOperation = 'destination-in'
+          wctx.filter = 'blur(22px)'
+          wctx.beginPath()
+          wctx.ellipse(noseCx, noseCy + faceH * 0.5, faceH * 1.1, faceH * 1.7, 0, 0, Math.PI * 2)
+          wctx.fillStyle = '#000'
+          wctx.fill()
+          wctx.filter = 'none'
+          wctx.globalCompositeOperation = 'source-over'
+          ctx.drawImage(warpCanvas, 0, 0)
+
+          // 2. Rosto mesh-warped em cima (expressões ao vivo)
+          wctx.clearRect(0, 0, vw, vh)
           for (const [a, b, c] of triangles) {
             const la = KEY_LM[a], lb = KEY_LM[b], lc = KEY_LM[c]
             warpTriangle(
@@ -472,12 +501,9 @@ export default function AvatarStudio({ onBack, user }) {
               ], 1.5)
             )
           }
-
-          // 2. Máscara oval suave: blurra o polígono facial para bordas naturais
           const ovalPts = FACE_OVAL.map(i => [(1 - liveLm[i].x) * vw, liveLm[i].y * vh])
           const ocx = ovalPts.reduce((s, p) => s + p[0], 0) / ovalPts.length
           const ocy = ovalPts.reduce((s, p) => s + p[1], 0) / ovalPts.length
-          // Expande oval para compensar o blur
           const ovalExp = ovalPts.map(([x, y]) => {
             const dx = x - ocx, dy = y - ocy, l = Math.hypot(dx, dy) || 1
             return [x + dx / l * 10, y + dy / l * 10]
@@ -492,9 +518,34 @@ export default function AvatarStudio({ onBack, user }) {
           wctx.fill()
           wctx.filter = 'none'
           wctx.globalCompositeOperation = 'source-over'
-
-          // 3. Compositar face substituída sobre vídeo
           ctx.drawImage(warpCanvas, 0, 0)
+
+          // 3. Dentes procedurais quando boca aberta
+          const mouthOpenPx = (liveLm[14].y - liveLm[13].y) * vh
+          if (mouthOpenPx > 6) {
+            const mL  = [(1 - liveLm[78].x)  * vw, liveLm[78].y  * vh]
+            const mR  = [(1 - liveLm[308].x) * vw, liveLm[308].y * vh]
+            const mU  = [(1 - liveLm[13].x)  * vw, liveLm[13].y  * vh]
+            const mD  = [(1 - liveLm[14].x)  * vw, liveLm[14].y  * vh]
+            const mw  = mR[0] - mL[0]
+            const mh  = mD[1] - mU[1]
+            const mcx = (mL[0] + mR[0]) / 2
+            // Interior escuro
+            ctx.beginPath()
+            ctx.ellipse(mcx, mU[1] + mh * 0.5, mw * 0.44, mh * 0.44, 0, 0, Math.PI * 2)
+            ctx.fillStyle = '#1a0e08'
+            ctx.fill()
+            // Dentes superiores
+            ctx.beginPath()
+            ctx.ellipse(mcx, mU[1] + mh * 0.22, mw * 0.38, mh * 0.28, 0, 0, Math.PI * 2)
+            ctx.fillStyle = '#f5f0e8'
+            ctx.fill()
+            // Dentes inferiores
+            ctx.beginPath()
+            ctx.ellipse(mcx, mD[1] - mh * 0.18, mw * 0.32, mh * 0.22, 0, 0, Math.PI * 2)
+            ctx.fillStyle = '#ede9e0'
+            ctx.fill()
+          }
         } else {
           // ── Fallback: ellipse overlay (enquanto landmarks carregam) ──
           const face = faceDetectedRef.current
