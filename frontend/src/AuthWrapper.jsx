@@ -7,6 +7,7 @@ import AdminPanel from './AdminPanel.jsx'
 import MinhaConta from './MinhaConta.jsx'
 import FeedbackWall from './FeedbackWall.jsx'
 import AvatarStudio from './AvatarStudio.jsx'
+import VTuberStudio from './VTuberStudio.jsx'
 import TalkingPhoto from './TalkingPhoto.jsx'
 import ThankYouPage from './ThankYouPage.jsx'
 import AfiliadosPage from './AfiliadosPage.jsx'
@@ -196,6 +197,10 @@ export default function AuthWrapper() {
     return <AvatarStudio onBack={() => setPage('app')} user={user} />
   }
 
+  if (page === 'vtuber') {
+    return <VTuberStudio onBack={() => setPage('app')} user={user} />
+  }
+
   if (page === 'talking') {
     return <TalkingPhoto onBack={() => setPage('app')} user={user} />
   }
@@ -244,6 +249,18 @@ export default function AuthWrapper() {
               }}
             >
               🎭 Avatar Studio
+            </button>
+
+            {/* VTuber Studio button */}
+            <button
+              onClick={() => setPage('vtuber')}
+              style={{
+                padding: '5px 14px', borderRadius: '6px', border: '1px solid rgba(167,139,250,0.35)',
+                background: 'rgba(167,139,250,0.12)', color: '#a78bfa', cursor: 'pointer', fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              🧬 VTuber Studio
             </button>
 
             {/* Talking Photo button */}
