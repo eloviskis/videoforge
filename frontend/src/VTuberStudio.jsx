@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ── CDN: carregamento sequencial ──
 const CDN = [
-  'https://cdn.jsdelivr.net/npm/three@0.142.0/build/three.min.js',
-  'https://cdn.jsdelivr.net/npm/three@0.142.0/examples/js/loaders/GLTFLoader.js',
-  'https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@1.0.12/lib/three-vrm.js',
+  'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js',
+  'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/js/loaders/GLTFLoader.js',
+  'https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.js',  // UMD → window.THREE_VRM
   'https://cdn.jsdelivr.net/npm/kalidokit@1.1.2/dist/kalidokit.umd.js',
   'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js',
   'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js',
@@ -125,7 +125,8 @@ export default function VTuberStudio({ onBack }) {
     const THREE = window.THREE
     const TVRM = window.THREE_VRM
     if (!THREE || !TVRM || !sceneRef.current) return
-    const { VRM, VRMUtils } = TVRM
+    // three-vrm v2: VRMLoaderPlugin em vez de VRM.from()
+    const { VRMLoaderPlugin, VRMUtils } = TVRM
 
     setPhaseMsg('Carregando modelo VRM...')
     if (vrmRef.current) {
@@ -136,19 +137,21 @@ export default function VTuberStudio({ onBack }) {
     }
 
     const loader = new THREE.GLTFLoader()
+    loader.crossOrigin = 'anonymous'
+    loader.register(parser => new VRMLoaderPlugin(parser))
+
     try {
       await new Promise((resolve, reject) => {
-        loader.load(url, async (gltf) => {
-          try {
-            const vrm = await VRM.from(gltf)
-            VRMUtils.removeUnnecessaryJoints(vrm.scene)
-            vrm.scene.rotation.y = Math.PI
-            sceneRef.current.add(vrm.scene)
-            vrmRef.current = vrm
-            setVrmLoaded(true)
-            setPhaseMsg('Modelo pronto! Ligue a câmera.')
-            resolve()
-          } catch (e) { reject(e) }
+        loader.load(url, (gltf) => {
+          const vrm = gltf.userData.vrm
+          if (!vrm) { reject(new Error('Arquivo não é um VRM válido')); return }
+          VRMUtils.removeUnnecessaryJoints(vrm.scene)
+          vrm.scene.rotation.y = Math.PI
+          sceneRef.current.add(vrm.scene)
+          vrmRef.current = vrm
+          setVrmLoaded(true)
+          setPhaseMsg('Modelo pronto! Ligue a câmera.')
+          resolve()
         }, undefined, reject)
       })
     } catch (e) {
@@ -214,40 +217,41 @@ export default function VTuberStudio({ onBack }) {
     mpCamRef.current = mpCam
   }
 
-  // ── KalidoKit: landmarks → rotações VRM ──
+  // ── KalidoKit: landmarks → rotações VRM v2 ──
   function onHolisticResults(results) {
     const vrm = vrmRef.current
     if (!vrm) return
     const THREE = window.THREE
     const K     = window.KalidoKit
-    const TVRM  = window.THREE_VRM
-    if (!THREE || !K || !TVRM) return
-    const { VRMSchema } = TVRM
-    const BoneName = VRMSchema.HumanoidBoneName
-    const BSName   = VRMSchema.BlendShapePresetName
+    if (!THREE || !K) return
 
-    const hasFace  = !!results.faceLandmarks
-    const hasPose  = !!results.poseLandmarks
-    const hasLH    = !!results.leftHandLandmarks
-    const hasRH    = !!results.rightHandLandmarks
+    const hasFace = !!results.faceLandmarks
+    const hasPose = !!results.poseLandmarks
+    const hasLH   = !!results.leftHandLandmarks
+    const hasRH   = !!results.rightHandLandmarks
     setTrackStatus({ face: hasFace, pose: hasPose, hands: hasLH || hasRH })
 
-    // Helper: aplica rotação Euler com slerp suave
+    // VRM v2: getNormalizedBoneNode(camelCase)
+    // KalidoKit usa PascalCase → converter: 'Head' → 'head'
+    const camel = s => s.charAt(0).toLowerCase() + s.slice(1)
+
     const rigRot = (boneName, rot, damp = 1, lerp = 0.25) => {
-      const bone = vrm.humanoid.getBoneNode(BoneName[boneName])
-      if (!bone || !rot) return
+      if (!rot) return
+      const bone = vrm.humanoid.getNormalizedBoneNode(camel(boneName))
+      if (!bone) return
       const q = new THREE.Quaternion().setFromEuler(
         new THREE.Euler(rot.x * damp, rot.y * damp, rot.z * damp, 'XYZ')
       )
       bone.quaternion.slerp(q, lerp)
     }
     const rigPos = (boneName, pos, damp = 1, lerp = 0.1) => {
-      const bone = vrm.humanoid.getBoneNode(BoneName[boneName])
-      if (!bone || !pos) return
+      if (!pos) return
+      const bone = vrm.humanoid.getNormalizedBoneNode(camel(boneName))
+      if (!bone) return
       bone.position.lerp(new THREE.Vector3(pos.x * damp, pos.y * damp, pos.z * damp), lerp)
     }
 
-    // ── ROSTO: cabeça + olhos + boca ──
+    // ── ROSTO ──
     if (hasFace) {
       try {
         const fRig = K.Face.solve(results.faceLandmarks, {
@@ -257,21 +261,22 @@ export default function VTuberStudio({ onBack }) {
           rigRot('Neck', fRig.head, 0.65, 0.3)
           rigRot('Head', fRig.head, 0.65, 0.3)
 
-          const bp = vrm.blendShapeProxy
-          if (bp) {
-            bp.setValue(BSName.BlinkL, 1 - (fRig.eye?.l ?? 1))
-            bp.setValue(BSName.BlinkR, 1 - (fRig.eye?.r ?? 1))
-            bp.setValue(BSName.A, fRig.mouth?.shape?.A ?? 0)
-            bp.setValue(BSName.E, fRig.mouth?.shape?.E ?? 0)
-            bp.setValue(BSName.I, fRig.mouth?.shape?.I ?? 0)
-            bp.setValue(BSName.O, fRig.mouth?.shape?.O ?? 0)
-            bp.setValue(BSName.U, fRig.mouth?.shape?.U ?? 0)
+          // VRM v2: expressionManager (não blendShapeProxy)
+          const em = vrm.expressionManager
+          if (em) {
+            em.setValue('blinkLeft',  1 - (fRig.eye?.l ?? 1))
+            em.setValue('blinkRight', 1 - (fRig.eye?.r ?? 1))
+            em.setValue('aa', fRig.mouth?.shape?.A ?? 0)
+            em.setValue('ee', fRig.mouth?.shape?.E ?? 0)
+            em.setValue('ih', fRig.mouth?.shape?.I ?? 0)
+            em.setValue('oh', fRig.mouth?.shape?.O ?? 0)
+            em.setValue('ou', fRig.mouth?.shape?.U ?? 0)
           }
         }
       } catch (_) {}
     }
 
-    // ── POSE: tronco + braços + pernas ──
+    // ── POSE ──
     if (hasPose) {
       try {
         const poseWorld = results.poseWorldLandmarks || results.ea
@@ -283,15 +288,12 @@ export default function VTuberStudio({ onBack }) {
           rigPos('Hips', pRig.Hips?.position
             ? { x: pRig.Hips.position.x, y: pRig.Hips.position.y + 1, z: -pRig.Hips.position.z }
             : null, 1, 0.07)
-
           rigRot('Chest', pRig.Spine, 0.5, 0.25)
           rigRot('Spine', pRig.Spine, 0.3, 0.25)
-
           rigRot('RightUpperArm', pRig.RightUpperArm, 1, 0.3)
           rigRot('RightLowerArm', pRig.RightLowerArm, 1, 0.3)
           rigRot('LeftUpperArm',  pRig.LeftUpperArm,  1, 0.3)
           rigRot('LeftLowerArm',  pRig.LeftLowerArm,  1, 0.3)
-
           rigRot('RightUpperLeg', pRig.RightUpperLeg, 1, 0.3)
           rigRot('RightLowerLeg', pRig.RightLowerLeg, 1, 0.3)
           rigRot('LeftUpperLeg',  pRig.LeftUpperLeg,  1, 0.3)
@@ -300,15 +302,13 @@ export default function VTuberStudio({ onBack }) {
       } catch (_) {}
     }
 
-    // ── MÃOS: punho + dedos ──
+    // ── MÃOS ──
     const applyHand = (landmarks, side) => {
       try {
         const hRig = K.Hand.solve(landmarks, side)
         if (!hRig) return
         Object.entries(hRig).forEach(([key, rot]) => {
-          if (!rot) return
-          // KalidoKit retorna 'LeftThumbProximal' → VRM 'LeftThumbProximal'
-          rigRot(key, rot, 1, 0.3)
+          if (rot) rigRot(key, rot, 1, 0.3)
         })
       } catch (_) {}
     }
