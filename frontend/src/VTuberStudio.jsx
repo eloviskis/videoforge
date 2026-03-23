@@ -54,7 +54,8 @@ export default function VTuberStudio({ onBack }) {
   const rpmSceneRef   = useRef(null)   // Group/Scene do avatar RPM
   const avatarTypeRef = useRef('vrm')  // 'vrm' | 'rpm'
 
-  const [showRpm, setShowRpm]   = useState(false)
+  const [showRpm, setShowRpm]     = useState(false)
+  const [rpmUrlInput, setRpmUrlInput] = useState('')
 
   // Mapeamento KalidoKit (VRM names) → Ready Player Me / Mixamo bone names
   const VRM_TO_RPM = {
@@ -635,28 +636,61 @@ export default function VTuberStudio({ onBack }) {
       {showRpm && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 1000,
-          background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+          background: 'rgba(0,0,0,0.88)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#e2e8f0' }}>
-            <span style={{ fontSize: 18, fontWeight: 700 }}>✨ Criar avatar com IA</span>
-            <span style={{ fontSize: 12, color: '#64748b' }}>Tire uma selfie ou escolha um estilo</span>
-            <button onClick={() => setShowRpm(false)} style={{
-              marginLeft: 'auto', padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(255,255,255,0.06)', color: '#94a3b8', cursor: 'pointer', fontSize: 13,
-            }}>✕ Fechar</button>
+          <div style={{ background: '#0f0f23', border: '1px solid rgba(167,139,250,0.2)', borderRadius: 20, padding: 32, width: '90vw', maxWidth: 520, display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#c4b5fd' }}>✨ Criar avatar com IA</h2>
+              <button onClick={() => setShowRpm(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 20 }}>✕</button>
+            </div>
+
+            {/* Passo 1 */}
+            <div style={{ background: 'rgba(167,139,250,0.06)', border: '1px solid rgba(167,139,250,0.15)', borderRadius: 12, padding: 16 }}>
+              <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: '#a78bfa' }}>Passo 1 — Crie seu avatar</p>
+              <p style={{ margin: '0 0 12px', fontSize: 12, color: '#94a3b8', lineHeight: 1.6 }}>
+                Abra o criador, tire uma selfie ou escolha um estilo. Quando terminar, copie a URL do avatar (.glb).
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <a href="https://readyplayer.me/avatar-creator" target="_blank" rel="noopener noreferrer" style={{
+                  padding: '8px 16px', borderRadius: 8, background: 'rgba(167,139,250,0.15)', border: '1px solid rgba(167,139,250,0.3)',
+                  color: '#c4b5fd', fontSize: 12, fontWeight: 600, textDecoration: 'none',
+                }}>🎭 Ready Player Me ↗</a>
+                <a href="https://avaturn.me" target="_blank" rel="noopener noreferrer" style={{
+                  padding: '8px 16px', borderRadius: 8, background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)',
+                  color: '#7dd3fc', fontSize: 12, fontWeight: 600, textDecoration: 'none',
+                }}>🧑 Avaturn ↗</a>
+              </div>
+            </div>
+
+            {/* Passo 2 */}
+            <div>
+              <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600, color: '#a78bfa' }}>Passo 2 — Cole a URL do avatar (.glb)</p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={rpmUrlInput}
+                  onChange={e => setRpmUrlInput(e.target.value)}
+                  placeholder="https://models.readyplayer.me/xxxxxx.glb"
+                  style={{
+                    flex: 1, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.04)', color: '#e2e8f0', fontSize: 12, outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={() => { if (rpmUrlInput.trim()) { loadRPMAvatar(rpmUrlInput.trim()); setRpmUrlInput('') } }}
+                  disabled={!rpmUrlInput.trim()}
+                  style={{
+                    padding: '10px 18px', borderRadius: 8, border: 'none', cursor: rpmUrlInput.trim() ? 'pointer' : 'not-allowed',
+                    background: rpmUrlInput.trim() ? 'linear-gradient(135deg,#a78bfa,#6d28d9)' : '#1e293b',
+                    color: '#fff', fontWeight: 700, fontSize: 13,
+                  }}
+                >Carregar</button>
+              </div>
+              <p style={{ margin: '8px 0 0', fontSize: 11, color: '#475569' }}>
+                No Ready Player Me: após criar, clique em <strong style={{ color: '#7c6faf' }}>Share</strong> → copie o link .glb
+              </p>
+            </div>
           </div>
-          <iframe
-            src="https://demo.readyplayer.me/avatar?frameApi&clearCache"
-            allow="camera *; microphone *"
-            style={{ width: '90vw', maxWidth: 900, height: '75vh', borderRadius: 16, border: 'none' }}
-            title="Ready Player Me"
-          />
-          <p style={{ fontSize: 12, color: '#475569', textAlign: 'center', maxWidth: 500 }}>
-            Crie seu avatar e clique em <strong style={{ color: '#a78bfa' }}>Done</strong> — ele será carregado automaticamente.
-            Para avatares personalizados use{' '}
-            <a href="https://readyplayer.me" target="_blank" rel="noopener noreferrer" style={{ color: '#7c6faf' }}>readyplayer.me</a>.
-          </p>
         </div>
       )}
     </div>
