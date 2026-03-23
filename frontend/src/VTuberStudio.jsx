@@ -2,8 +2,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ── CDN: carregamento sequencial ──
 const CDN = [
-  'https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js',
-  'https://cdn.jsdelivr.net/npm/three@0.155.0/examples/js/loaders/GLTFLoader.js',
+  'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js',
+  'https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/loaders/GLTFLoader.js',
   'https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.js',  // UMD → window.THREE_VRM
   'https://cdn.jsdelivr.net/npm/kalidokit@1.1.2/dist/kalidokit.umd.js',
   'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js',
