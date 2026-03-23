@@ -35,19 +35,36 @@ export default function VTuberStudio({ onBack }) {
   const [msg, setMsg]            = useState('')
   const [trackStatus, setTrackStatus] = useState({ face: false, pose: false, hands: false })
 
-  const sceneRef    = useRef(null)
-  const cameraRef   = useRef(null)
-  const rendererRef = useRef(null)
-  const vrmRef      = useRef(null)
-  const clockRef    = useRef(null)
-  const animRef     = useRef(null)
-  const holisticRef = useRef(null)
-  const mpCamRef    = useRef(null)
-  const streamRef   = useRef(null)
-  const recorderRef = useRef(null)
-  const chunksRef   = useRef([])
-  const timerRef    = useRef(null)
-  const bgCtxRef    = useRef(null)
+  const sceneRef      = useRef(null)
+  const cameraRef     = useRef(null)
+  const rendererRef   = useRef(null)
+  const vrmRef        = useRef(null)
+  const clockRef      = useRef(null)
+  const animRef       = useRef(null)
+  const holisticRef   = useRef(null)
+  const mpCamRef      = useRef(null)
+  const streamRef     = useRef(null)
+  const recorderRef   = useRef(null)
+  const chunksRef     = useRef([])
+  const timerRef      = useRef(null)
+  const bgCtxRef      = useRef(null)
+  // Ready Player Me
+  const rpmBonesRef   = useRef(null)   // { boneName: THREE.Bone }
+  const rpmMeshRef    = useRef(null)   // SkinnedMesh para morph targets
+  const rpmSceneRef   = useRef(null)   // Group/Scene do avatar RPM
+  const avatarTypeRef = useRef('vrm')  // 'vrm' | 'rpm'
+
+  const [showRpm, setShowRpm]   = useState(false)
+
+  // Mapeamento KalidoKit (VRM names) → Ready Player Me / Mixamo bone names
+  const VRM_TO_RPM = {
+    Hips: 'Hips', Spine: 'Spine', Chest: 'Spine1', UpperChest: 'Spine2',
+    Neck: 'Neck', Head: 'Head',
+    LeftUpperArm: 'LeftArm', LeftLowerArm: 'LeftForeArm', LeftHand: 'LeftHand',
+    RightUpperArm: 'RightArm', RightLowerArm: 'RightForeArm', RightHand: 'RightHand',
+    LeftUpperLeg: 'LeftUpLeg', LeftLowerLeg: 'LeftLeg', LeftFoot: 'LeftFoot',
+    RightUpperLeg: 'RightUpLeg', RightLowerLeg: 'RightLeg', RightFoot: 'RightFoot',
+  }
   const showBgRef   = useRef(true)
 
   useEffect(() => { showBgRef.current = showBg }, [showBg])
@@ -167,6 +184,87 @@ export default function VTuberStudio({ onBack }) {
     loadVRM(URL.createObjectURL(f))
   }
 
+  // ── Carregar avatar Ready Player Me (.glb) ──
+  const loadRPMAvatar = useCallback(async (glbUrl) => {
+    const THREE = window.THREE
+    if (!THREE || !sceneRef.current) return
+
+    // Remover VRM existente
+    if (vrmRef.current) {
+      sceneRef.current.remove(vrmRef.current.scene)
+      window.THREE_VRM?.VRMUtils?.deepDispose(vrmRef.current.scene)
+      vrmRef.current = null
+    }
+    // Remover RPM existente
+    if (rpmSceneRef.current) {
+      sceneRef.current.remove(rpmSceneRef.current)
+      rpmSceneRef.current = null
+    }
+    rpmBonesRef.current = null
+    rpmMeshRef.current  = null
+    setVrmLoaded(false)
+    setPhaseMsg('Carregando avatar Ready Player Me...')
+
+    // Adicionar parâmetros: morph targets ARKit para expressões faciais
+    const url = glbUrl.includes('?')
+      ? glbUrl + '&morphTargets=ARKit,Oculus Visemes'
+      : glbUrl + '?morphTargets=ARKit,Oculus Visemes&quality=high'
+
+    const loader = new THREE.GLTFLoader()
+    loader.crossOrigin = 'anonymous'
+    try {
+      await new Promise((resolve, reject) => {
+        loader.load(url, (gltf) => {
+          const root = gltf.scene
+
+          // Mapear todos os ossos pelo nome
+          const boneMap = {}
+          root.traverse(obj => {
+            if (obj.isBone || obj.type === 'Bone') boneMap[obj.name] = obj
+          })
+          rpmBonesRef.current = boneMap
+
+          // Achar SkinnedMesh com morph targets (rosto)
+          let faceMesh = null
+          root.traverse(obj => {
+            if (obj.isSkinnedMesh && obj.morphTargetDictionary && !faceMesh) faceMesh = obj
+          })
+          rpmMeshRef.current = faceMesh
+
+          // Posicionar na cena
+          root.rotation.y = Math.PI
+          root.position.set(0, -0.9, 0)
+          sceneRef.current.add(root)
+          rpmSceneRef.current = root
+          avatarTypeRef.current = 'rpm'
+
+          setVrmLoaded(true)
+          setPhaseMsg('Avatar pronto! Ligue a câmera.')
+          setShowRpm(false)
+          resolve()
+        }, undefined, reject)
+      })
+    } catch (e) {
+      setMsg('Erro ao carregar avatar: ' + e.message)
+      setTimeout(() => setMsg(''), 5000)
+      setPhaseMsg('Erro. Tente novamente.')
+    }
+  }, [])
+
+  // ── Receber URL do Ready Player Me via postMessage ──
+  useEffect(() => {
+    function onRpmMessage(ev) {
+      try {
+        const data = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data
+        if (data?.source === 'readyplayerme' && data?.eventName === 'v1.avatar.exported') {
+          loadRPMAvatar(data.data.url)
+        }
+      } catch (_) {}
+    }
+    window.addEventListener('message', onRpmMessage)
+    return () => window.removeEventListener('message', onRpmMessage)
+  }, [loadRPMAvatar])
+
   // ── Câmera + MediaPipe Holistic ──
   async function startCamera() {
     try {
@@ -217,13 +315,15 @@ export default function VTuberStudio({ onBack }) {
     mpCamRef.current = mpCam
   }
 
-  // ── KalidoKit: landmarks → rotações VRM v2 ──
+  // ── KalidoKit: landmarks → rotações VRM v2 / RPM ──
   function onHolisticResults(results) {
-    const vrm = vrmRef.current
-    if (!vrm) return
     const THREE = window.THREE
     const K     = window.KalidoKit
     if (!THREE || !K) return
+
+    const isVrm = avatarTypeRef.current === 'vrm' && vrmRef.current
+    const isRpm = avatarTypeRef.current === 'rpm' && rpmBonesRef.current
+    if (!isVrm && !isRpm) return
 
     const hasFace = !!results.faceLandmarks
     const hasPose = !!results.poseLandmarks
@@ -231,46 +331,68 @@ export default function VTuberStudio({ onBack }) {
     const hasRH   = !!results.rightHandLandmarks
     setTrackStatus({ face: hasFace, pose: hasPose, hands: hasLH || hasRH })
 
-    // VRM v2: getNormalizedBoneNode(camelCase)
-    // KalidoKit usa PascalCase → converter: 'Head' → 'head'
+    // VRM helper
     const camel = s => s.charAt(0).toLowerCase() + s.slice(1)
-
     const rigRot = (boneName, rot, damp = 1, lerp = 0.25) => {
       if (!rot) return
-      const bone = vrm.humanoid.getNormalizedBoneNode(camel(boneName))
-      if (!bone) return
-      const q = new THREE.Quaternion().setFromEuler(
-        new THREE.Euler(rot.x * damp, rot.y * damp, rot.z * damp, 'XYZ')
-      )
-      bone.quaternion.slerp(q, lerp)
+      if (isVrm) {
+        const bone = vrmRef.current.humanoid.getNormalizedBoneNode(camel(boneName))
+        if (!bone) return
+        bone.quaternion.slerp(
+          new THREE.Quaternion().setFromEuler(new THREE.Euler(rot.x * damp, rot.y * damp, rot.z * damp, 'XYZ')), lerp
+        )
+      } else {
+        const rpmName = VRM_TO_RPM[boneName] || boneName
+        const bone = rpmBonesRef.current[rpmName]
+        if (!bone) return
+        bone.quaternion.slerp(
+          new THREE.Quaternion().setFromEuler(new THREE.Euler(rot.x * damp, rot.y * damp, rot.z * damp, 'XYZ')), lerp
+        )
+      }
     }
     const rigPos = (boneName, pos, damp = 1, lerp = 0.1) => {
       if (!pos) return
-      const bone = vrm.humanoid.getNormalizedBoneNode(camel(boneName))
-      if (!bone) return
-      bone.position.lerp(new THREE.Vector3(pos.x * damp, pos.y * damp, pos.z * damp), lerp)
+      if (isVrm) {
+        const bone = vrmRef.current.humanoid.getNormalizedBoneNode(camel(boneName))
+        if (!bone) return
+        bone.position.lerp(new THREE.Vector3(pos.x * damp, pos.y * damp, pos.z * damp), lerp)
+      } else {
+        const rpmName = VRM_TO_RPM[boneName] || boneName
+        const bone = rpmBonesRef.current[rpmName]
+        if (!bone) return
+        bone.position.lerp(new THREE.Vector3(pos.x * damp, pos.y * damp, pos.z * damp), lerp)
+      }
     }
 
     // ── ROSTO ──
     if (hasFace) {
       try {
-        const fRig = K.Face.solve(results.faceLandmarks, {
-          runtime: 'mediapipe', video: videoRef.current,
-        })
+        const fRig = K.Face.solve(results.faceLandmarks, { runtime: 'mediapipe', video: videoRef.current })
         if (fRig) {
           rigRot('Neck', fRig.head, 0.65, 0.3)
           rigRot('Head', fRig.head, 0.65, 0.3)
 
-          // VRM v2: expressionManager (não blendShapeProxy)
-          const em = vrm.expressionManager
-          if (em) {
-            em.setValue('blinkLeft',  1 - (fRig.eye?.l ?? 1))
-            em.setValue('blinkRight', 1 - (fRig.eye?.r ?? 1))
-            em.setValue('aa', fRig.mouth?.shape?.A ?? 0)
-            em.setValue('ee', fRig.mouth?.shape?.E ?? 0)
-            em.setValue('ih', fRig.mouth?.shape?.I ?? 0)
-            em.setValue('oh', fRig.mouth?.shape?.O ?? 0)
-            em.setValue('ou', fRig.mouth?.shape?.U ?? 0)
+          if (isVrm) {
+            const em = vrmRef.current.expressionManager
+            if (em) {
+              em.setValue('blinkLeft',  1 - (fRig.eye?.l ?? 1))
+              em.setValue('blinkRight', 1 - (fRig.eye?.r ?? 1))
+              em.setValue('aa', fRig.mouth?.shape?.A ?? 0)
+              em.setValue('ee', fRig.mouth?.shape?.E ?? 0)
+              em.setValue('ih', fRig.mouth?.shape?.I ?? 0)
+              em.setValue('oh', fRig.mouth?.shape?.O ?? 0)
+              em.setValue('ou', fRig.mouth?.shape?.U ?? 0)
+            }
+          } else if (rpmMeshRef.current?.morphTargetDictionary) {
+            // RPM: morph targets ARKit
+            const dict = rpmMeshRef.current.morphTargetDictionary
+            const inf  = rpmMeshRef.current.morphTargetInfluences
+            const setMorph = (name, val) => { if (dict[name] !== undefined) inf[dict[name]] = Math.max(0, Math.min(1, val)) }
+            setMorph('eyeBlinkLeft',  1 - (fRig.eye?.l ?? 1))
+            setMorph('eyeBlinkRight', 1 - (fRig.eye?.r ?? 1))
+            setMorph('jawOpen',       fRig.mouth?.shape?.A ?? 0)
+            setMorph('mouthSmileLeft',  fRig.mouth?.shape?.E ?? 0)
+            setMorph('mouthSmileRight', fRig.mouth?.shape?.E ?? 0)
           }
         }
       } catch (_) {}
@@ -280,9 +402,7 @@ export default function VTuberStudio({ onBack }) {
     if (hasPose) {
       try {
         const poseWorld = results.poseWorldLandmarks || results.ea
-        const pRig = K.Pose.solve(poseWorld, results.poseLandmarks, {
-          runtime: 'mediapipe', video: videoRef.current,
-        })
+        const pRig = K.Pose.solve(poseWorld, results.poseLandmarks, { runtime: 'mediapipe', video: videoRef.current })
         if (pRig) {
           rigRot('Hips', pRig.Hips?.rotation, 1, 0.1)
           rigPos('Hips', pRig.Hips?.position
@@ -307,9 +427,7 @@ export default function VTuberStudio({ onBack }) {
       try {
         const hRig = K.Hand.solve(landmarks, side)
         if (!hRig) return
-        Object.entries(hRig).forEach(([key, rot]) => {
-          if (rot) rigRot(key, rot, 1, 0.3)
-        })
+        Object.entries(hRig).forEach(([key, rot]) => { if (rot) rigRot(key, rot, 1, 0.3) })
       } catch (_) {}
     }
     if (hasRH) applyHand(results.rightHandLandmarks, 'Right')
@@ -455,23 +573,39 @@ export default function VTuberStudio({ onBack }) {
         {/* ─── Sidebar ─── */}
         <div style={{ flex: '0 0 270px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* VRM upload */}
+          {/* Avatar section */}
           <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 20 }}>
-            <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>🧍 Modelo 3D (VRM)</h3>
-            <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 14px', lineHeight: 1.6 }}>
-              Baixe avatares gratuitos em{' '}
-              <a href="https://hub.vroid.com" target="_blank" rel="noopener noreferrer" style={{ color: '#a29bfe' }}>hub.vroid.com</a>
-              {' '}e carregue o arquivo <code style={{ background: 'rgba(255,255,255,0.07)', padding: '1px 5px', borderRadius: 4 }}>.vrm</code>
-            </p>
-            <label style={{
-              display: 'block', padding: '12px 16px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
-              background: vrmLoaded ? 'rgba(34,197,94,0.08)' : 'rgba(167,139,250,0.08)',
-              border: `1px dashed ${vrmLoaded ? 'rgba(34,197,94,0.3)' : 'rgba(167,139,250,0.3)'}`,
-              color: vrmLoaded ? '#86efac' : '#a78bfa', fontSize: 13, fontWeight: 600,
+            <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 700, color: '#a78bfa' }}>🧍 Modelo 3D</h3>
+
+            {/* Botão principal: Criar com IA */}
+            <button onClick={() => setShowRpm(true)} style={{
+              display: 'block', width: '100%', padding: '13px 16px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+              background: 'linear-gradient(135deg,rgba(167,139,250,0.18),rgba(56,189,248,0.12))',
+              border: '1px solid rgba(167,139,250,0.4)', color: '#c4b5fd', fontSize: 14, fontWeight: 700, marginBottom: 10,
             }}>
-              {vrmLoaded ? '✅ VRM carregado — clique para trocar' : '📂 Carregar arquivo .vrm'}
+              ✨ Criar avatar com IA
+              <div style={{ fontSize: 10, fontWeight: 400, color: '#7c6faf', marginTop: 2 }}>foto → avatar 3D (Ready Player Me)</div>
+            </button>
+
+            {/* Separador */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '12px 0', color: '#334155', fontSize: 11 }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
+              ou carregue um arquivo
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.06)' }} />
+            </div>
+
+            <label style={{
+              display: 'block', padding: '10px 16px', borderRadius: 10, cursor: 'pointer', textAlign: 'center',
+              background: vrmLoaded ? 'rgba(34,197,94,0.08)' : 'rgba(255,255,255,0.03)',
+              border: `1px dashed ${vrmLoaded ? 'rgba(34,197,94,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              color: vrmLoaded ? '#86efac' : '#64748b', fontSize: 12, fontWeight: 600,
+            }}>
+              {vrmLoaded ? `✅ ${avatarTypeRef.current === 'rpm' ? 'RPM' : 'VRM'} carregado — trocar` : '📂 .vrm ou .glb'}
               <input type="file" accept=".vrm,.glb" onChange={handleVRMFile} style={{ display: 'none' }} />
             </label>
+            <p style={{ fontSize: 11, color: '#475569', margin: '8px 0 0', lineHeight: 1.5 }}>
+              Avatares anime: <a href="https://hub.vroid.com" target="_blank" rel="noopener noreferrer" style={{ color: '#7c6faf' }}>hub.vroid.com</a>
+            </p>
           </div>
 
           {/* Como usar */}
@@ -506,6 +640,35 @@ export default function VTuberStudio({ onBack }) {
 
         </div>
       </div>
+
+      {/* ── Modal Ready Player Me ── */}
+      {showRpm && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#e2e8f0' }}>
+            <span style={{ fontSize: 18, fontWeight: 700 }}>✨ Criar avatar com IA</span>
+            <span style={{ fontSize: 12, color: '#64748b' }}>Tire uma selfie ou escolha um estilo</span>
+            <button onClick={() => setShowRpm(false)} style={{
+              marginLeft: 'auto', padding: '6px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)',
+              background: 'rgba(255,255,255,0.06)', color: '#94a3b8', cursor: 'pointer', fontSize: 13,
+            }}>✕ Fechar</button>
+          </div>
+          <iframe
+            src="https://demo.readyplayer.me/avatar?frameApi&clearCache"
+            allow="camera *; microphone *"
+            style={{ width: '90vw', maxWidth: 900, height: '75vh', borderRadius: 16, border: 'none' }}
+            title="Ready Player Me"
+          />
+          <p style={{ fontSize: 12, color: '#475569', textAlign: 'center', maxWidth: 500 }}>
+            Crie seu avatar e clique em <strong style={{ color: '#a78bfa' }}>Done</strong> — ele será carregado automaticamente.
+            Para avatares personalizados use{' '}
+            <a href="https://readyplayer.me" target="_blank" rel="noopener noreferrer" style={{ color: '#7c6faf' }}>readyplayer.me</a>.
+          </p>
+        </div>
+      )}
     </div>
   )
 }
