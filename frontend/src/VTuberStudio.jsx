@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import * as THREE from 'three'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
+import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm'
+import * as KalidoKit from 'kalidokit'
 
-// ── CDN: carregamento sequencial ──
-const CDN = [
-  'https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js',
-  'https://cdn.jsdelivr.net/npm/three@0.149.0/examples/js/loaders/GLTFLoader.js',
-  'https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@2.1.2/lib/three-vrm.js',  // UMD → window.THREE_VRM
-  'https://cdn.jsdelivr.net/npm/kalidokit@1.1.2/dist/kalidokit.umd.js',
+// ── CDN: apenas MediaPipe (precisa dos arquivos WASM no CDN) ──
+const CDN_MEDIAPIPE = [
   'https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js',
   'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js',
 ]
@@ -69,12 +69,12 @@ export default function VTuberStudio({ onBack }) {
 
   useEffect(() => { showBgRef.current = showBg }, [showBg])
 
-  // ── Carregar scripts CDN e iniciar Three.js ──
+  // ── Carregar MediaPipe do CDN (WASM) e iniciar Three.js ──
   useEffect(() => {
     let cancelled = false
     async function boot() {
       try {
-        for (const url of CDN) {
+        for (const url of CDN_MEDIAPIPE) {
           setPhaseMsg(`Carregando ${url.split('/').slice(-2).join('/')}...`)
           await loadScript(url)
           if (cancelled) return
@@ -92,9 +92,8 @@ export default function VTuberStudio({ onBack }) {
 
   // ── Three.js: cena + câmera + renderer + loop ──
   function initThree() {
-    const THREE = window.THREE
     const canvas = threeCanvasRef.current
-    if (!canvas || !THREE) return
+    if (!canvas) return
 
     const W = 640, H = 480
     const scene = new THREE.Scene()
@@ -107,7 +106,7 @@ export default function VTuberStudio({ onBack }) {
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true })
     renderer.setSize(W, H)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.outputEncoding = THREE.sRGBEncoding
+    renderer.outputColorSpace = THREE.SRGBColorSpace
     rendererRef.current = renderer
 
     // Iluminação
@@ -139,11 +138,7 @@ export default function VTuberStudio({ onBack }) {
 
   // ── Carregar VRM do arquivo ──
   const loadVRM = useCallback(async (url) => {
-    const THREE = window.THREE
-    const TVRM = window.THREE_VRM
-    if (!THREE || !TVRM || !sceneRef.current) return
-    // three-vrm v2: VRMLoaderPlugin em vez de VRM.from()
-    const { VRMLoaderPlugin, VRMUtils } = TVRM
+    if (!sceneRef.current) return
 
     setPhaseMsg('Carregando modelo VRM...')
     if (vrmRef.current) {
@@ -153,7 +148,7 @@ export default function VTuberStudio({ onBack }) {
       setVrmLoaded(false)
     }
 
-    const loader = new THREE.GLTFLoader()
+    const loader = new GLTFLoader()
     loader.crossOrigin = 'anonymous'
     loader.register(parser => new VRMLoaderPlugin(parser))
 
@@ -186,13 +181,12 @@ export default function VTuberStudio({ onBack }) {
 
   // ── Carregar avatar Ready Player Me (.glb) ──
   const loadRPMAvatar = useCallback(async (glbUrl) => {
-    const THREE = window.THREE
-    if (!THREE || !sceneRef.current) return
+    if (!sceneRef.current) return
 
     // Remover VRM existente
     if (vrmRef.current) {
       sceneRef.current.remove(vrmRef.current.scene)
-      window.THREE_VRM?.VRMUtils?.deepDispose(vrmRef.current.scene)
+      VRMUtils.deepDispose(vrmRef.current.scene)
       vrmRef.current = null
     }
     // Remover RPM existente
@@ -210,7 +204,7 @@ export default function VTuberStudio({ onBack }) {
       ? glbUrl + '&morphTargets=ARKit,Oculus Visemes'
       : glbUrl + '?morphTargets=ARKit,Oculus Visemes&quality=high'
 
-    const loader = new THREE.GLTFLoader()
+    const loader = new GLTFLoader()
     loader.crossOrigin = 'anonymous'
     try {
       await new Promise((resolve, reject) => {
@@ -317,10 +311,6 @@ export default function VTuberStudio({ onBack }) {
 
   // ── KalidoKit: landmarks → rotações VRM v2 / RPM ──
   function onHolisticResults(results) {
-    const THREE = window.THREE
-    const K     = window.KalidoKit
-    if (!THREE || !K) return
-
     const isVrm = avatarTypeRef.current === 'vrm' && vrmRef.current
     const isRpm = avatarTypeRef.current === 'rpm' && rpmBonesRef.current
     if (!isVrm && !isRpm) return
@@ -367,7 +357,7 @@ export default function VTuberStudio({ onBack }) {
     // ── ROSTO ──
     if (hasFace) {
       try {
-        const fRig = K.Face.solve(results.faceLandmarks, { runtime: 'mediapipe', video: videoRef.current })
+        const fRig = KalidoKit.Face.solve(results.faceLandmarks, { runtime: 'mediapipe', video: videoRef.current })
         if (fRig) {
           rigRot('Neck', fRig.head, 0.65, 0.3)
           rigRot('Head', fRig.head, 0.65, 0.3)
@@ -402,7 +392,7 @@ export default function VTuberStudio({ onBack }) {
     if (hasPose) {
       try {
         const poseWorld = results.poseWorldLandmarks || results.ea
-        const pRig = K.Pose.solve(poseWorld, results.poseLandmarks, { runtime: 'mediapipe', video: videoRef.current })
+        const pRig = KalidoKit.Pose.solve(poseWorld, results.poseLandmarks, { runtime: 'mediapipe', video: videoRef.current })
         if (pRig) {
           rigRot('Hips', pRig.Hips?.rotation, 1, 0.1)
           rigPos('Hips', pRig.Hips?.position
@@ -425,7 +415,7 @@ export default function VTuberStudio({ onBack }) {
     // ── MÃOS ──
     const applyHand = (landmarks, side) => {
       try {
-        const hRig = K.Hand.solve(landmarks, side)
+        const hRig = KalidoKit.Hand.solve(landmarks, side)
         if (!hRig) return
         Object.entries(hRig).forEach(([key, rot]) => { if (rot) rigRot(key, rot, 1, 0.3) })
       } catch (_) {}
