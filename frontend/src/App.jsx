@@ -218,6 +218,24 @@ function App() {
         }
       },
     },
+    shutterstockVideos: {
+      label: 'Shutterstock Vídeos',
+      icon: '🎞️',
+      warning: 'Shutterstock requer SHUTTERSTOCK_CLIENT_ID e SHUTTERSTOCK_CLIENT_SECRET. Crie sua conta em shutterstock.com/account/developers. ⚠️ Prévia com marca d\'água — download limpo exige assinatura (~$49+/mês).',
+      calcCost: () => ({
+        total: 'Variável (assinatura)',
+        detalhe: 'Prévia gratuita com marca d\'água. Download HD requer assinatura Shutterstock.',
+      }),
+    },
+    storyblocksVideos: {
+      label: 'Storyblocks Vídeos',
+      icon: '🎥',
+      warning: 'Storyblocks requer STORYBLOCKS_PUBLIC_KEY e STORYBLOCKS_PRIVATE_KEY. Conta em app.storyblocks.com → API Partner. Assinatura necessária para downloads (~$15+/mês).',
+      calcCost: () => ({
+        total: 'Variável (assinatura)',
+        detalhe: 'Banco com milhões de vídeos HD/4K. Assinatura mensal com downloads ilimitados.',
+      }),
+    },
   }
 
   // Mapeamento: tipo pago → chaves de API necessárias
@@ -228,6 +246,8 @@ function App() {
     veoGeneration: [],      // Google Vertex usa billing GCP, não chave simples
     soraGeneration: ['OPENAI_API_KEY'],
     didAvatar: ['DID_API_KEY'],
+    shutterstockVideos: ['SHUTTERSTOCK_CLIENT_ID', 'SHUTTERSTOCK_CLIENT_SECRET'],
+    storyblocksVideos: ['STORYBLOCKS_PUBLIC_KEY', 'STORYBLOCKS_PRIVATE_KEY'],
   }
 
   const [configBanner, setConfigBanner] = useState(null) // { message: string }
@@ -1379,12 +1399,17 @@ function App() {
                 <select value={livroForm.tipoVideo} onChange={e => setLivroForm(p => ({ ...p, tipoVideo: e.target.value }))}>
                   <optgroup label="✅ Gratuitos">
                     <option value="stockImages">📸 Imagens Stock 🟢</option>
-                    <option value="stockVideos">🎬 Vídeos Stock 🟢</option>
+                    <option value="stockVideos">🎬 Vídeos Stock (Pexels+Pixabay) 🟢</option>
+                    <option value="pixabayVideos">🎬 Vídeos Pixabay 🟢</option>
                     <option value="stickAnimation">🎨 Palitinho IA 🟢</option>
                     <option value="darkStickman">🖤 Dark Stickman 🟢</option>
                     <option value="geminiVeoGeneration">🎬 Gemini Veo 🟢</option>
                   </optgroup>
-                  <optgroup label="💳 Pagos">
+                  <optgroup label="💳 Pagos — Bancos de Vídeo">
+                    <option value="shutterstockVideos">🎞️ Shutterstock Vídeos 🟡</option>
+                    <option value="storyblocksVideos">🎥 Storyblocks Vídeos 🟡</option>
+                  </optgroup>
+                  <optgroup label="💳 Pagos — IA Generativa">
                     <option value="replicateGeneration">🤖 Replicate 🟡</option>
                     <option value="klingGeneration">🎥 Kling AI 🟡</option>
                     <option value="veoGeneration">🎬 Veo 3 🟡</option>
@@ -1519,13 +1544,18 @@ function App() {
               <select value={roteiroManual.tipoVideo} onChange={e => setRoteiroManual(p => ({ ...p, tipoVideo: e.target.value }))}>
                 <optgroup label="✅ Gratuitos">
                   <option value="stockImages">📸 Imagens Stock (Pexels) 🟢</option>
-                  <option value="stockVideos">🎬 Vídeos Stock (Pexels) 🟢</option>
+                  <option value="stockVideos">🎬 Vídeos Stock (Pexels + Pixabay) 🟢</option>
+                  <option value="pixabayVideos">🎬 Vídeos Pixabay (Primary) 🟢</option>
                   <option value="aiImageGeneration">🖼️ Imagens IA — Flux.1/DALL-E se configurado 🟢/🟡</option>
                   <option value="stickAnimation">🎨 Animação de Palitinho (IA) 🟢</option>
                   <option value="darkStickman">🖤 Dark Stickman (Texto Animado) 🟢</option>
                   <option value="geminiVeoGeneration">🎬 Gemini Veo (Google - Gratuito) 🟢</option>
                 </optgroup>
-                <optgroup label="💳 Pagos">
+                <optgroup label="💳 Pagos — Bancos de Vídeo Premium">
+                  <option value="shutterstockVideos">🎞️ Shutterstock Vídeos 🟡</option>
+                  <option value="storyblocksVideos">🎥 Storyblocks Vídeos 🟡</option>
+                </optgroup>
+                <optgroup label="💳 Pagos — IA Generativa">
                   <option value="replicateGeneration">🤖 Replicate / Wan 2.1 🟡</option>
                   <option value="klingGeneration">🎥 Kling AI (~R$0,06/cena) 🟡</option>
                   <option value="veoGeneration">🎬 Veo 3 (Google Vertex) 🟡</option>
@@ -1647,7 +1677,8 @@ function App() {
             <select name="tipoVideo" value={formData.tipoVideo} onChange={handleChange}>
               <optgroup label="✅ Gratuitos">
                 <option value="stockImages">📸 Imagens Stock (Pexels) 🟢</option>
-                <option value="stockVideos">🎬 Vídeos Stock (Pexels) 🟢</option>
+                <option value="stockVideos">🎬 Vídeos Stock (Pexels + Pixabay) 🟢</option>
+                <option value="pixabayVideos">🎬 Vídeos Pixabay (Primary) 🟢</option>
                 <option value="aiImageGeneration">🖼️ Imagens IA — Flux.1/DALL-E se configurado, senão Grátis 🟢/🟡</option>
                 <option value="stickAnimation">🎨 Animação de Palitinho (IA) 🟢</option>
                 <option value="darkStickman">🖤 Dark Stickman (Texto Animado) 🟢</option>
@@ -1656,7 +1687,11 @@ function App() {
               <optgroup label="🖥️ Open Source / Local">
                 <option value="localAIGeneration">🤖 IA Local - Open Source (CPU/GPU) 🟢</option>
               </optgroup>
-              <optgroup label="💳 Pagos">
+              <optgroup label="💳 Pagos — Bancos de Vídeo Premium">
+                <option value="shutterstockVideos">🎞️ Shutterstock Vídeos (Assinatura) 🟡</option>
+                <option value="storyblocksVideos">🎥 Storyblocks Vídeos (Assinatura) 🟡</option>
+              </optgroup>
+              <optgroup label="💳 Pagos — IA Generativa">
                 <option value="replicateGeneration">🤖 Replicate / Wan 2.1 (~$0.005-0.02) 🟡</option>
                 <option value="klingGeneration">🎥 Kling AI (~$0.01-0.04/cena) 🟡</option>
                 <option value="huggingfaceGeneration">🧠 Hugging Face (Créditos HF) 🟡</option>
@@ -1671,7 +1706,13 @@ function App() {
                 : formData.tipoVideo === 'darkStickman'
                 ? '🖤 Cenas com texto animado estilo canais dark — zoom, shake, efeitos dramáticos. Zero IA, 100% local e rápido!'
                 : formData.tipoVideo === 'stockVideos'
-                ? '🎬 Vídeos reais do Pexels em vez de imagens — mais dinâmico e profissional! 100% gratuito.'
+                ? '🎬 Vídeos reais do Pexels (+ Pixabay como fallback) — mais dinâmico e profissional! 100% gratuito.'
+                : formData.tipoVideo === 'pixabayVideos'
+                ? '🎬 Pixabay como fonte principal de vídeos, Pexels como fallback. Banco diferente = variedade maior de clips! 100% gratuito.'
+                : formData.tipoVideo === 'shutterstockVideos'
+                ? '🎞️ Banco Shutterstock com milhões de vídeos profissionais. Prévia com marca d\'água — download HD limpo requer assinatura.'
+                : formData.tipoVideo === 'storyblocksVideos'
+                ? '🎥 Storyblocks (Videoblocks): banco premium com vídeos HD/4K ilimitados. Requer assinatura mensal + chaves de API Partner.'
                                 : formData.tipoVideo === 'klingGeneration'
                 ? '🎥 Kling AI gera vídeos realistas por IA (~$0.01-0.04/cena). Requer chaves em platform.klingai.com'
                 : formData.tipoVideo === 'veoGeneration'
@@ -1704,8 +1745,8 @@ function App() {
             {!PAID_TYPES[formData.tipoVideo] && (
               <div style={{ marginTop: '8px', padding: '8px 14px', background: '#d4edda', border: '1px solid #28a745', borderRadius: '8px', fontSize: '12px', color: '#155724' }}>
                 ✅ <strong>Gratuito</strong> — Este tipo de vídeo não consome APIs pagas.
-                {formData.tipoVideo === 'stockImages' || formData.tipoVideo === 'stockVideos'
-                  ? ' Usa Pexels (gratuito, ilimitado).'
+                {['stockImages', 'stockVideos', 'pixabayVideos'].includes(formData.tipoVideo)
+                  ? ' Usa Pexels + Pixabay (gratuito, ilimitado).'
                   : formData.tipoVideo === 'geminiVeoGeneration'
                   ? ' Usa Google AI Studio (gratuito com limites diários).'
                   : formData.tipoVideo === 'localAIGeneration'
@@ -3287,11 +3328,16 @@ function App() {
                 <select value={reviewForm.tipoVideo} onChange={e => setReviewForm(p => ({ ...p, tipoVideo: e.target.value }))}>
                   <optgroup label="✅ Gratuitos">
                     <option value="stockImages">📸 Imagens Stock (Pexels)</option>
-                    <option value="stockVideos">🎬 Vídeos Stock (Pexels)</option>
+                    <option value="stockVideos">🎬 Vídeos Stock (Pexels+Pixabay)</option>
+                    <option value="pixabayVideos">🎬 Vídeos Pixabay</option>
                     <option value="darkStickman">🖤 Dark Stickman</option>
                     <option value="geminiVeoGeneration">🎬 Gemini Veo</option>
                   </optgroup>
-                  <optgroup label="💳 Pagos">
+                  <optgroup label="💳 Pagos — Bancos de Vídeo">
+                    <option value="shutterstockVideos">🎞️ Shutterstock Vídeos 🟡</option>
+                    <option value="storyblocksVideos">🎥 Storyblocks Vídeos 🟡</option>
+                  </optgroup>
+                  <optgroup label="💳 Pagos — IA Generativa">
                     <option value="replicateGeneration">🤖 Replicate</option>
                     <option value="klingGeneration">🎥 Kling AI</option>
                     <option value="didAvatar">🎭 D-ID Avatar Apresentador 🟡</option>

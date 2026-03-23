@@ -845,11 +845,38 @@ app.post('/api/videos/manual', async (req, res) => {
           video.videoUrl = videoPaths.host;
         } else if (video.tipoVideo === 'stockVideos') {
           video.status = 'buscando_visuais';
-          logStep(video, '🎬 Buscando vídeos stock (Pexels 🟢)...');
+          logStep(video, '🎬 Buscando vídeos stock (Pexels + Pixabay 🟢)...');
           const visuais = await buscarVisuaisVideo(roteiro.cenas);
           video.progresso = 65;
           video.status = 'renderizando';
           logStep(video, '🎬 Renderizando vídeo com clips stock...');
+          const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
+          video.videoUrl = videoPaths.host;
+        } else if (video.tipoVideo === 'pixabayVideos') {
+          video.status = 'buscando_visuais';
+          logStep(video, '🎬 Buscando vídeos no Pixabay 🟢...');
+          const visuais = await buscarVisuaisPixabay(roteiro.cenas);
+          video.progresso = 65;
+          video.status = 'renderizando';
+          logStep(video, '🎬 Renderizando vídeo com clips Pixabay...');
+          const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
+          video.videoUrl = videoPaths.host;
+        } else if (video.tipoVideo === 'shutterstockVideos') {
+          video.status = 'buscando_visuais';
+          logStep(video, '🎬 Buscando vídeos no Shutterstock 🟡...');
+          const visuais = await buscarVisuaisShutterstock(roteiro.cenas);
+          video.progresso = 65;
+          video.status = 'renderizando';
+          logStep(video, '🎬 Renderizando vídeo com clips Shutterstock...');
+          const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
+          video.videoUrl = videoPaths.host;
+        } else if (video.tipoVideo === 'storyblocksVideos') {
+          video.status = 'buscando_visuais';
+          logStep(video, '🎬 Buscando vídeos no Storyblocks 🟡...');
+          const visuais = await buscarVisuaisStoryblocks(roteiro.cenas);
+          video.progresso = 65;
+          video.status = 'renderizando';
+          logStep(video, '🎬 Renderizando vídeo com clips Storyblocks...');
           const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
           video.videoUrl = videoPaths.host;
         } else {
@@ -989,20 +1016,24 @@ app.post('/api/videos/review', async (req, res) => {
         video.progresso = 45;
 
         // ETAPA 3: Visuais + Renderização
-        if (video.tipoVideo === 'stockVideos') {
+        const isStockVideoMode = ['stockVideos', 'pixabayVideos', 'shutterstockVideos', 'storyblocksVideos'].includes(video.tipoVideo);
+        if (isStockVideoMode) {
           video.status = 'buscando_visuais';
-          logStep(video, '🎬 Buscando vídeos stock para o review...');
-          const visuais = await buscarVisuaisVideo(roteiro.cenas);
+          const fnMap = { pixabayVideos: buscarVisuaisPixabay, shutterstockVideos: buscarVisuaisShutterstock, storyblocksVideos: buscarVisuaisStoryblocks };
+          const buscaFn = fnMap[video.tipoVideo] || buscarVisuaisVideo;
+          const labelMap = { pixabayVideos: 'Pixabay 🟢', shutterstockVideos: 'Shutterstock 🟡', storyblocksVideos: 'Storyblocks 🟡' };
+          logStep(video, `🎬 Buscando vídeos stock (${labelMap[video.tipoVideo] || 'Pexels+Pixabay 🟢'}) para o review...`);
+          const visuais = await buscaFn(roteiro.cenas);
           video.visuais = visuais;
           video.progresso = 65;
-          
+
           let musicaPaths = null;
           if (process.env.PIXABAY_API_KEY) {
             logStep(video, '🎵 Buscando música de fundo...');
             const duracaoTotal = audioPaths.duracoesCenas?.reduce((a, b) => a + b, 0) || 60;
             musicaPaths = await gerarMusicaFundo(videoId, roteiro.nicho || categoria, duracaoTotal);
           }
-          
+
           video.status = 'renderizando';
           logStep(video, '🎬 Renderizando review com vídeos...');
           const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais, subtitlePaths, musicaPaths, video.estiloLegenda);
@@ -1537,11 +1568,14 @@ Retorne APENAS o texto da narração, nada mais.`;
       video.videoUrl = videoPaths.host;
       video.progresso = 90;
       
-    } else if (video.tipoVideo === 'stockVideos') {
-      // Pipeline Stock Videos (Pexels Video API 🟢)
+    } else if (['stockVideos', 'pixabayVideos', 'shutterstockVideos', 'storyblocksVideos'].includes(video.tipoVideo)) {
+      // Pipeline Stock Videos (Pexels/Pixabay/Shutterstock/Storyblocks)
       video.status = 'buscando_visuais';
-      logStep(video, '🎬 Buscando vídeos stock (Pexels 🟢)...');
-      const visuais = await buscarVisuaisVideo(roteiro.cenas);
+      const videoFnMap = { pixabayVideos: buscarVisuaisPixabay, shutterstockVideos: buscarVisuaisShutterstock, storyblocksVideos: buscarVisuaisStoryblocks };
+      const videoLabelMap = { pixabayVideos: 'Pixabay 🟢', shutterstockVideos: 'Shutterstock 🟡', storyblocksVideos: 'Storyblocks 🟡', stockVideos: 'Pexels+Pixabay 🟢' };
+      const buscaVideoFn = videoFnMap[video.tipoVideo] || buscarVisuaisVideo;
+      logStep(video, `🎬 Buscando vídeos stock (${videoLabelMap[video.tipoVideo]})...`);
+      const visuais = await buscaVideoFn(roteiro.cenas);
       video.progresso = 65;
 
       let musicaPaths = null;
@@ -3148,19 +3182,42 @@ async function buscarVisuaisVideo(cenas) {
       }
 
       if (!visuais.find(v => v.cena === cena.numero)) {
-        // Fallback: buscar imagem se não achou vídeo
-        const imgResp = await axios.get('https://api.pexels.com/v1/search', {
-          params: { query: queryPexels, per_page: 3, orientation: 'landscape' },
-          headers: { Authorization: PEXELS_API_KEY }
-        });
-        if (imgResp.data.photos?.[0]) {
-          visuais.push({
-            cena: cena.numero,
-            url: imgResp.data.photos[0].src.large2x,
-            tipo: 'imagem',
-            descricao: imgResp.data.photos[0].alt || queryPexels
-          });
-          console.log(`📸 Fallback imagem cena ${cena.numero}: "${queryPexels}"`);
+        // Fallback 1: tentar Pixabay vídeo antes de cair em imagem
+        let pixabayFound = false;
+        if (process.env.PIXABAY_API_KEY) {
+          try {
+            const pixResp = await axios.get('https://pixabay.com/api/videos/', {
+              params: { key: process.env.PIXABAY_API_KEY, q: queryPexels, video_type: 'film', per_page: 5, lang: 'en' }
+            });
+            if (pixResp.data.hits?.length > 0) {
+              const hit = pixResp.data.hits.find(h => !usedVideos.has(`pix_${h.id}`)) || pixResp.data.hits[0];
+              usedVideos.add(`pix_${hit.id}`);
+              const videoUrl = hit.videos.large?.url || hit.videos.medium?.url || hit.videos.small?.url;
+              if (videoUrl) {
+                visuais.push({ cena: cena.numero, url: videoUrl, tipo: 'video', descricao: queryPexels, duracao_video: hit.duration || 10 });
+                console.log(`✅ Pixabay vídeo fallback cena ${cena.numero}: "${queryPexels}" → ${hit.duration}s`);
+                pixabayFound = true;
+              }
+            }
+          } catch {}
+        }
+        // Fallback 2: imagem Pexels se nem Pexels nem Pixabay acharam vídeo
+        if (!pixabayFound) {
+          try {
+            const imgResp = await axios.get('https://api.pexels.com/v1/search', {
+              params: { query: queryPexels, per_page: 3, orientation: 'landscape' },
+              headers: { Authorization: PEXELS_API_KEY }
+            });
+            if (imgResp.data.photos?.[0]) {
+              visuais.push({
+                cena: cena.numero,
+                url: imgResp.data.photos[0].src.large2x,
+                tipo: 'imagem',
+                descricao: imgResp.data.photos[0].alt || queryPexels
+              });
+              console.log(`📸 Fallback imagem cena ${cena.numero}: "${queryPexels}"`);
+            }
+          } catch {}
         }
       }
 
@@ -3171,6 +3228,199 @@ async function buscarVisuaisVideo(cenas) {
   }
 
   return visuais.length > 0 ? visuais : buscarVisuais(cenas);
+}
+
+// ============================================
+// FUNÇÃO: Buscar Vídeos Stock do Pixabay (primary)
+// ============================================
+async function buscarVisuaisPixabay(cenas) {
+  const PIXABAY_KEY = process.env.PIXABAY_API_KEY;
+  if (!PIXABAY_KEY) {
+    console.warn('⚠️ PIXABAY_API_KEY não configurada, usando Pexels');
+    return buscarVisuaisVideo(cenas);
+  }
+
+  const visuais = [];
+  const usedVideos = new Set();
+
+  for (const cena of cenas) {
+    try {
+      let query = '';
+      if (cena.prompt_visual) {
+        query = cena.prompt_visual
+          .replace(/cinematic|high quality|professional|4k|documentary|dramatic|style|related|imagery|realistic|close-up|wide shot|medium shot|establishing shot|camera|lighting|bokeh|detailed|vibrant|moody|atmospheric/gi, '')
+          .replace(/\s+/g, ' ').trim().substring(0, 80);
+      }
+      if (!query || query.length < 5) {
+        query = (cena.descricao_visual || cena.texto_narracao || '').split('.')[0].trim().substring(0, 60);
+      }
+
+      const words = query.split(' ').filter(w => w.length > 3);
+      const queries = [query];
+      if (words.length > 2) queries.push(words.slice(0, 3).join(' '));
+      if (words.length > 1) queries.push(words.slice(0, 2).join(' '));
+
+      let found = false;
+      for (const q of queries) {
+        if (found) break;
+        try {
+          const resp = await axios.get('https://pixabay.com/api/videos/', {
+            params: { key: PIXABAY_KEY, q, video_type: 'film', per_page: 8, lang: 'en' }
+          });
+          if (resp.data.hits?.length > 0) {
+            const hit = resp.data.hits.find(h => !usedVideos.has(h.id)) || resp.data.hits[0];
+            usedVideos.add(hit.id);
+            const videoUrl = hit.videos.large?.url || hit.videos.medium?.url || hit.videos.small?.url;
+            if (videoUrl) {
+              visuais.push({ cena: cena.numero, url: videoUrl, tipo: 'video', descricao: q, duracao_video: hit.duration || 10 });
+              console.log(`✅ Pixabay vídeo cena ${cena.numero}: "${q}" → ${hit.duration}s`);
+              found = true;
+            }
+          }
+        } catch (e) { console.warn(`Pixabay falhou "${q}": ${e.message}`); }
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      // Fallback para Pexels se Pixabay não achou
+      if (!visuais.find(v => v.cena === cena.numero)) {
+        try {
+          const resp = await axios.get('https://api.pexels.com/videos/search', {
+            params: { query, per_page: 5, orientation: 'landscape' },
+            headers: { Authorization: PEXELS_API_KEY }
+          });
+          if (resp.data.videos?.length > 0) {
+            const vid = resp.data.videos[0];
+            const hdFile = (vid.video_files || []).find(f => f.quality === 'hd' && f.width >= 1280) || vid.video_files?.[0];
+            if (hdFile) {
+              visuais.push({ cena: cena.numero, url: hdFile.link, tipo: 'video', descricao: query, duracao_video: vid.duration || 10 });
+              console.log(`📹 Pexels fallback cena ${cena.numero}: "${query}"`);
+            }
+          }
+        } catch {}
+      }
+    } catch (error) {
+      console.error(`❌ Erro Pixabay cena ${cena.numero}:`, error.message);
+    }
+  }
+
+  return visuais.length > 0 ? visuais : buscarVisuais(cenas);
+}
+
+// ============================================
+// FUNÇÃO: Buscar Vídeos Stock do Shutterstock (pago)
+// ============================================
+async function buscarVisuaisShutterstock(cenas) {
+  const clientId = process.env.SHUTTERSTOCK_CLIENT_ID;
+  const clientSecret = process.env.SHUTTERSTOCK_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    console.warn('⚠️ SHUTTERSTOCK_CLIENT_ID/SECRET não configurado, usando Pexels+Pixabay');
+    return buscarVisuaisVideo(cenas);
+  }
+
+  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  const visuais = [];
+
+  for (const cena of cenas) {
+    try {
+      let query = (cena.prompt_visual || cena.descricao_visual || cena.texto_narracao || '')
+        .replace(/cinematic|high quality|professional|4k|documentary|dramatic/gi, '')
+        .replace(/\s+/g, ' ').trim().substring(0, 100);
+
+      const resp = await axios.get('https://api.shutterstock.com/v2/videos/search', {
+        params: { query, per_page: 5, orientation: 'horizontal', resolution: 'hd', safe: true },
+        headers: { Authorization: `Basic ${auth}` }
+      });
+
+      if (resp.data.data?.length > 0) {
+        const vid = resp.data.data[0];
+        // Shutterstock retorna preview_url (com marca d'água) — precisa de assinatura para versão limpa
+        const previewUrl = vid.assets?.preview_mp4?.url || vid.assets?.preview_webm?.url;
+        if (previewUrl) {
+          visuais.push({
+            cena: cena.numero,
+            url: previewUrl,
+            tipo: 'video',
+            descricao: query,
+            duracao_video: vid.duration || 10,
+            watermark: true
+          });
+          console.log(`✅ Shutterstock vídeo cena ${cena.numero}: "${query}"`);
+        }
+      }
+
+      if (!visuais.find(v => v.cena === cena.numero)) {
+        // Fallback para Pexels se Shutterstock não achou
+        const fallback = await buscarVisuaisVideo([cena]);
+        if (fallback.length > 0) visuais.push(fallback[0]);
+      }
+      await new Promise(r => setTimeout(r, 300));
+    } catch (error) {
+      console.error(`❌ Erro Shutterstock cena ${cena.numero}:`, error.message);
+      const fallback = await buscarVisuaisVideo([cena]);
+      if (fallback.length > 0) visuais.push(fallback[0]);
+    }
+  }
+
+  return visuais.length > 0 ? visuais : buscarVisuaisVideo(cenas);
+}
+
+// ============================================
+// FUNÇÃO: Buscar Vídeos Stock do Storyblocks (pago)
+// ============================================
+async function buscarVisuaisStoryblocks(cenas) {
+  const publicKey = process.env.STORYBLOCKS_PUBLIC_KEY;
+  const privateKey = process.env.STORYBLOCKS_PRIVATE_KEY;
+  if (!publicKey || !privateKey) {
+    console.warn('⚠️ STORYBLOCKS_PUBLIC_KEY/PRIVATE_KEY não configurado, usando Pexels+Pixabay');
+    return buscarVisuaisVideo(cenas);
+  }
+
+  const crypto = require('crypto');
+  const visuais = [];
+
+  for (const cena of cenas) {
+    try {
+      let keyword = (cena.prompt_visual || cena.descricao_visual || cena.texto_narracao || '')
+        .replace(/cinematic|high quality|professional|4k|documentary|dramatic/gi, '')
+        .replace(/\s+/g, ' ').trim().substring(0, 80);
+
+      // Storyblocks exige assinatura HMAC-SHA256
+      const expires = Math.floor(Date.now() / 1000) + 60;
+      const hmac = crypto.createHmac('sha256', privateKey).update(String(expires) + publicKey).digest('hex');
+
+      const resp = await axios.get('https://api.storyblocks.com/api/v2/videos/search', {
+        params: { keyword, num_results: 5, results_per_page: 5, project_id: 'videoforge', user_id: 'app', expires, hmac, publicKey }
+      });
+
+      if (resp.data.results?.length > 0) {
+        const vid = resp.data.results[0];
+        // Storyblocks retorna preview_url e download_url (precisa de assinatura para download)
+        const videoUrl = vid.preview_urls?.mp4_preview || vid.preview_url;
+        if (videoUrl) {
+          visuais.push({
+            cena: cena.numero,
+            url: videoUrl,
+            tipo: 'video',
+            descricao: keyword,
+            duracao_video: vid.duration || 10
+          });
+          console.log(`✅ Storyblocks vídeo cena ${cena.numero}: "${keyword}"`);
+        }
+      }
+
+      if (!visuais.find(v => v.cena === cena.numero)) {
+        const fallback = await buscarVisuaisVideo([cena]);
+        if (fallback.length > 0) visuais.push(fallback[0]);
+      }
+      await new Promise(r => setTimeout(r, 300));
+    } catch (error) {
+      console.error(`❌ Erro Storyblocks cena ${cena.numero}:`, error.message);
+      const fallback = await buscarVisuaisVideo([cena]);
+      if (fallback.length > 0) visuais.push(fallback[0]);
+    }
+  }
+
+  return visuais.length > 0 ? visuais : buscarVisuaisVideo(cenas);
 }
 
 // ============================================
