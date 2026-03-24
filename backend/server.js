@@ -816,12 +816,14 @@ app.post('/api/videos/manual', async (req, res) => {
           } catch (veoErr) {
             const isUnavailable = veoErr.message.includes('billing') || veoErr.message.includes('FAILED_PRECONDITION') || veoErr.message.includes('Nenhuma cena');
             if (isUnavailable) {
-              logStep(video, '⚠️ Gemini Veo indisponível (requer GCP billing). Usando imagens Pexels como alternativa...');
+              logStep(video, '⚠️ Veo 2 requer GCP billing ativado — sua conta Google Cloud não tem cobrança habilitada. Continuando com imagens Pexels...');
+              video.veoFallback = true;
+              video.veoFallbackReason = 'GCP billing não ativado na conta Google Cloud. Ative em console.cloud.google.com → Faturamento para usar Veo 2.';
               video.status = 'buscando_visuais';
               const visuais = await buscarVisuais(roteiro.cenas);
               video.progresso = 65;
               video.status = 'renderizando';
-              logStep(video, '🎬 Renderizando vídeo com imagens (fallback)...');
+              logStep(video, '🎬 Renderizando vídeo com imagens (fallback Pexels)...');
               videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
             } else {
               throw veoErr;
@@ -1503,12 +1505,14 @@ Retorne APENAS o texto da narração, nada mais.`;
       } catch (veoErr) {
         const isUnavailable = veoErr.message.includes('billing') || veoErr.message.includes('FAILED_PRECONDITION') || veoErr.message.includes('Nenhuma cena');
         if (isUnavailable) {
-          logStep(video, '⚠️ Gemini Veo indisponível (requer GCP billing). Usando imagens Pexels como alternativa...');
+          logStep(video, '⚠️ Veo 2 requer GCP billing ativado — sua conta Google Cloud não tem cobrança habilitada. Continuando com imagens Pexels...');
+          video.veoFallback = true;
+          video.veoFallbackReason = 'GCP billing não ativado na conta Google Cloud. Ative em console.cloud.google.com → Faturamento para usar Veo 2.';
           video.status = 'buscando_visuais';
           const visuais = await buscarVisuais(roteiro.cenas);
           video.progresso = 65;
           video.status = 'renderizando';
-          logStep(video, '🎬 Renderizando vídeo com imagens (fallback)...');
+          logStep(video, '🎬 Renderizando vídeo com imagens (fallback Pexels)...');
           videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
         } else {
           throw veoErr;
@@ -1873,6 +1877,11 @@ async function chamarGemini(prompt, timeout = 60000) {
         } catch(e) { /* não é JSON válido, usar como está */ }
       }
       
+      // Rejeitar se for HTML (API retornando página de docs)
+      if (pText.trimStart().startsWith('<')) {
+        console.warn(`  ⚠️ Pollinations ${pModel}: retornou HTML em vez de texto, pulando...`);
+        continue;
+      }
       if (pText && pText.length > 100) {
         console.log(`  ✅ Respondeu via Pollinations.ai POST (${pModel}) [${pText.length} chars]`);
         return pText;
@@ -1910,7 +1919,9 @@ async function chamarGemini(prompt, timeout = 60000) {
             const gExtracted = extrairConteudoOpenAI(gText);
             gText = gExtracted || JSON.stringify(gText);
           }
-          if (gText && gText.length > 100) {
+          if (typeof gText === 'string' && gText.trimStart().startsWith('<')) {
+            console.warn(`  ⚠️ Pollinations GET ${pModel}: retornou HTML, pulando...`);
+          } else if (gText && gText.length > 100) {
             console.log(`  ✅ Respondeu via Pollinations.ai GET (${pModel}) [${gText.length} chars]`);
             return gText;
           }

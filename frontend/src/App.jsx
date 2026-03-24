@@ -2360,6 +2360,11 @@ function App() {
                     </div>
 
                     {/* Editor de Cenas */}
+                    {video.status === 'pronto' && video.veoFallback && (
+                      <div style={{ marginTop: '8px', padding: '10px 14px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.35)', borderRadius: '8px', fontSize: '12px', color: '#92400e' }}>
+                        ⚠️ <strong>Veo 2 indisponível:</strong> {video.veoFallbackReason || 'GCP billing não ativado.'} O vídeo foi gerado com imagens Pexels.
+                      </div>
+                    )}
                     {video.status === 'pronto' && (
                       <div style={{ marginTop: '10px' }}>
                         <button
