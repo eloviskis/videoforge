@@ -55,7 +55,7 @@ function App() {
   const [paidModalInfo, setPaidModalInfo] = useState(null)
   const [restartingBackend, setRestartingBackend] = useState(false)
   const [modoRoteiro, setModoRoteiro] = useState('ia') // 'ia' | 'manual' | 'livro'
-  const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '' })
+  const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '', voz: '', vozClonada: '' })
   const [editorCenas, setEditorCenas] = useState({})
 
   // === LIVRO / SÉRIES STATE ===
@@ -1580,7 +1580,68 @@ function App() {
               <small style={{ color: '#888', fontSize: '0.82em' }}>
                 💡 Cada parágrafo separado por linha em branco vira uma cena. Mínimo 3 parágrafos recomendado.
               </small>
+
+              {/* Estimativa de duração */}
+              {roteiroManual.texto.trim() && (() => {
+                const cenas = roteiroManual.texto.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 10)
+                const totalPalavras = cenas.reduce((s, c) => s + c.split(/\s+/).length, 0)
+                const totalSeg = Math.round(totalPalavras / 2.5)
+                const min = Math.floor(totalSeg / 60)
+                const seg = totalSeg % 60
+                return (
+                  <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(102,126,234,0.07)', border: '1px solid rgba(102,126,234,0.2)', borderRadius: 8, display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12 }}>
+                    <span>🎬 <strong>{cenas.length}</strong> cenas</span>
+                    <span>📝 <strong>{totalPalavras}</strong> palavras</span>
+                    <span>⏱️ Duração estimada: <strong>{min > 0 ? `${min}min ` : ''}{seg}s</strong></span>
+                  </div>
+                )
+              })()}
             </div>
+
+            {/* Voz / Biblioteca de vozes clonadas */}
+            <details style={{ marginBottom: 16, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}
+              onToggle={e => { if (e.target.open && voiceLibrary.length === 0) carregarVoiceLibrary() }}>
+              <summary style={{ padding: '10px 14px', cursor: 'pointer', background: '#fafafa', fontWeight: 600, fontSize: 13, userSelect: 'none' }}>
+                🎤 Voz da narração {roteiroManual.vozClonada ? '— voz clonada selecionada ✅' : roteiroManual.voz ? `— ${roteiroManual.voz}` : ''}
+              </summary>
+              <div style={{ padding: '12px 14px' }}>
+                <div className="form-group" style={{ marginBottom: 10 }}>
+                  <label style={{ fontSize: 12, color: '#555' }}>Voz padrão (TTS)</label>
+                  <select value={roteiroManual.voz} onChange={e => setRoteiroManual(p => ({ ...p, voz: e.target.value, vozClonada: '' }))}
+                    style={{ padding: '7px 10px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, width: '100%' }}>
+                    <option value="">Padrão do sistema</option>
+                    {voices.map(v => <option key={v.voice_id} value={v.voice_id}>{v.name}</option>)}
+                  </select>
+                </div>
+
+                {voiceLibLoading && <p style={{ textAlign: 'center', color: '#999', fontSize: 13 }}>Carregando biblioteca...</p>}
+                {!voiceLibLoading && voiceLibrary.length === 0 && (
+                  <p style={{ fontSize: 12, color: '#999', padding: '8px 0' }}>Nenhuma voz clonada ainda. Acesse a aba <strong>Clonar Voz</strong> para criar.</p>
+                )}
+                {voiceLibrary.length > 0 && (
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <label style={{ fontSize: 12, color: '#555', fontWeight: 600 }}>Vozes clonadas</label>
+                    {voiceLibrary.map(v => (
+                      <div key={v.id} onClick={() => v.status === 'ready' && setRoteiroManual(p => ({ ...p, vozClonada: v.id, voz: '' }))}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: '#fff', borderRadius: 8, border: `1px solid ${roteiroManual.vozClonada === v.id ? '#667eea' : '#e0e0e0'}`, cursor: v.status === 'ready' ? 'pointer' : 'default' }}>
+                        <span style={{ fontSize: 20 }}>{v.status === 'ready' ? '🎤' : v.status === 'processing' ? '⏳' : '❌'}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13 }}>{v.nome}</div>
+                          <div style={{ fontSize: 11, color: '#999' }}>{v.status === 'ready' ? `${v.idioma || 'pt-BR'} • ${v.genero || ''}` : v.status === 'processing' ? 'Processando...' : 'Erro'}</div>
+                        </div>
+                        {v.status === 'ready' && (
+                          <button type="button" onClick={ev => { ev.stopPropagation(); previewVozClonada(v.id) }} disabled={!!playingPreview}
+                            style={{ padding: '3px 8px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 6, background: '#fff' }}>
+                            {playingPreview === v.id ? '🔊...' : '▶️'}
+                          </button>
+                        )}
+                        {roteiroManual.vozClonada === v.id && <span style={{ color: '#667eea', fontWeight: 700, fontSize: 12 }}>✓</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </details>
 
             <div className="form-group">
               <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
