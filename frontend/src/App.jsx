@@ -118,6 +118,7 @@ function App() {
   const [voiceLibLoading, setVoiceLibLoading] = useState(false)
   const [voiceCloneUploading, setVoiceCloneUploading] = useState(false)
   const [voiceCloneForm, setVoiceCloneForm] = useState({ nome: '', descricao: '', idioma: 'pt-BR', genero: '' })
+  const [voiceCloneFile, setVoiceCloneFile] = useState(null)
 
   // === GRAVAÇÃO DE ÁUDIO (microfone) ===
   const [isRecording, setIsRecording] = useState(false)
@@ -617,6 +618,7 @@ function App() {
       if (resp.data.success) {
         alert('Upload recebido! A clonagem está sendo processada...')
         setVoiceCloneForm({ nome: '', descricao: '', idioma: 'pt-BR', genero: '' })
+        setVoiceCloneFile(null)
         // Poll para atualizar a lista
         setTimeout(() => carregarVoiceLibrary(), 3000)
         setTimeout(() => carregarVoiceLibrary(), 10000)
@@ -1902,12 +1904,36 @@ function App() {
                     <option value="feminino">♀ Feminino</option>
                   </select>
                 </div>
+                {/* Seleção de arquivo */}
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <label htmlFor="voice-upload-input" style={{
+                    flex: 1, padding: '8px 12px', border: '2px dashed #ccc', borderRadius: '6px',
+                    fontSize: '12px', cursor: 'pointer', color: voiceCloneFile ? '#333' : '#999',
+                    background: voiceCloneFile ? '#f0f4ff' : '#fafafa', borderColor: voiceCloneFile ? '#667eea' : '#ccc',
+                    display: 'flex', alignItems: 'center', gap: 6,
+                  }}>
+                    <span>{voiceCloneFile ? '🎵' : '📁'}</span>
+                    <span>{voiceCloneFile ? voiceCloneFile.name : 'Clique para selecionar áudio...'}</span>
+                  </label>
                   <input type="file" accept=".mp3,.wav,.ogg,.webm,.m4a,audio/*" id="voice-upload-input"
-                    style={{ flex: 1, fontSize: '12px' }}
-                    onChange={e => { if (e.target.files[0]) clonarVoz(e.target.files[0]) }} disabled={voiceCloneUploading} />
-                  {voiceCloneUploading && <span style={{ fontSize: '12px', color: '#667eea' }}>⏳ Enviando...</span>}
+                    style={{ display: 'none' }}
+                    onChange={e => { if (e.target.files[0]) setVoiceCloneFile(e.target.files[0]) }}
+                    disabled={voiceCloneUploading} />
                 </div>
+
+                {/* Botão de confirmação — aparece quando arquivo selecionado */}
+                {voiceCloneFile && (
+                  <button type="button" onClick={() => {
+                    clonarVoz(voiceCloneFile).then(() => setVoiceCloneFile(null))
+                  }} disabled={voiceCloneUploading || !voiceCloneForm.nome.trim()} style={{
+                    padding: '10px', borderRadius: '8px', border: 'none', cursor: voiceCloneUploading || !voiceCloneForm.nome.trim() ? 'not-allowed' : 'pointer',
+                    background: voiceCloneUploading || !voiceCloneForm.nome.trim() ? '#c5cae9' : 'linear-gradient(135deg,#667eea,#764ba2)',
+                    color: '#fff', fontWeight: 700, fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}>
+                    {voiceCloneUploading ? '⏳ Enviando...' : !voiceCloneForm.nome.trim() ? '⚠️ Preencha o nome acima' : '🎤 Clonar voz agora'}
+                  </button>
+                )}
+
                 <small style={{ color: '#999', fontSize: '11px' }}>Formatos: MP3, WAV, OGG, M4A • Máx 25MB • Mínimo ~30s de áudio claro para melhor resultado</small>
               </div>
 
