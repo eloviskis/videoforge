@@ -119,6 +119,7 @@ function App() {
   const [voiceCloneUploading, setVoiceCloneUploading] = useState(false)
   const [voiceCloneForm, setVoiceCloneForm] = useState({ nome: '', descricao: '', idioma: 'pt-BR', genero: '' })
   const [voiceCloneFile, setVoiceCloneFile] = useState(null)
+  const [voiceCloneError, setVoiceCloneError] = useState('')
 
   // === GRAVAÇÃO DE ÁUDIO (microfone) ===
   const [isRecording, setIsRecording] = useState(false)
@@ -599,6 +600,7 @@ function App() {
       setVoiceLibrary(resp.data.voices || [])
     } catch (e) {
       console.error('Erro ao carregar biblioteca de vozes:', e)
+      setVoiceLibrary([])
     } finally {
       setVoiceLibLoading(false)
     }
@@ -607,6 +609,7 @@ function App() {
   const clonarVoz = async (file) => {
     if (!file || !voiceCloneForm.nome.trim()) return alert('Preencha o nome da voz e selecione um arquivo de áudio.')
     setVoiceCloneUploading(true)
+    setVoiceCloneError('')
     try {
       const fd = new FormData()
       fd.append('audio', file)
@@ -627,10 +630,11 @@ function App() {
     } catch (e) {
       const msg = e.response?.data?.error || e.message
       if (e.response?.data?.needsApiKey) {
+        setVoiceCloneError('ElevenLabs API Key não configurada. Clique em "Configurar agora" acima.')
         setConfigBanner({ message: '⚠️ Para usar clonagem de voz, configure sua ElevenLabs API Key.' })
         setShowConfig(true)
       } else {
-        alert('Erro ao clonar voz: ' + msg)
+        setVoiceCloneError('Erro: ' + msg)
       }
     } finally {
       setVoiceCloneUploading(false)
@@ -1942,8 +1946,23 @@ function App() {
                 Faça upload de um áudio (MP3, WAV) com a voz desejada. A IA irá clonar a voz e você poderá usá-la em todas as suas narrações.
               </p>
 
+              {/* Aviso ElevenLabs */}
+              {!apiKeys.find(k => k.key === 'ELEVENLABS_API_KEY')?.configured && (
+                <div style={{ marginBottom: 12, padding: '10px 14px', background: '#fff8e1', border: '1px solid #ffc107', borderRadius: 8, fontSize: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>⚠️</span>
+                  <div>
+                    <strong style={{ color: '#e65100' }}>ElevenLabs API Key não configurada</strong>
+                    <div style={{ color: '#555', marginTop: 3 }}>A clonagem de voz requer ElevenLabs (~$5/mês). Configure a chave para desbloquear.</div>
+                    <button type="button" onClick={() => { setShowConfig(true); setConfigBanner({ message: 'Configure a ElevenLabs API Key para clonar vozes.' }) }}
+                      style={{ marginTop: 6, padding: '4px 12px', fontSize: 12, cursor: 'pointer', border: '1px solid #ffa000', borderRadius: 6, background: '#fff3e0', color: '#e65100', fontWeight: 600 }}>
+                      ⚙️ Configurar agora
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Upload form */}
-              <div style={{ display: 'grid', gap: '8px', marginBottom: '16px', background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0' }}>
+              <div style={{ display: 'grid', gap: '8px', marginBottom: '16px', background: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid #e0e0e0', opacity: apiKeys.find(k => k.key === 'ELEVENLABS_API_KEY')?.configured ? 1 : 0.5, pointerEvents: apiKeys.find(k => k.key === 'ELEVENLABS_API_KEY')?.configured ? 'auto' : 'none' }}>
                 <input type="text" placeholder="Nome da voz (ex: Minha Voz, Narrador João)" value={voiceCloneForm.nome}
                   onChange={e => setVoiceCloneForm(prev => ({ ...prev, nome: e.target.value }))}
                   style={{ padding: '8px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px' }} />
@@ -1996,13 +2015,20 @@ function App() {
                 )}
 
                 <small style={{ color: '#999', fontSize: '11px' }}>Formatos: MP3, WAV, OGG, M4A • Máx 25MB • Mínimo ~30s de áudio claro para melhor resultado</small>
+                {voiceCloneError && (
+                  <div style={{ padding: '8px 12px', background: '#fdecea', border: '1px solid #f44336', borderRadius: 6, fontSize: 12, color: '#b71c1c', marginTop: 4 }}>
+                    ❌ {voiceCloneError}
+                  </div>
+                )}
               </div>
 
               {/* Voice library list */}
               {voiceLibLoading && <p style={{ textAlign: 'center', color: '#999' }}>Carregando biblioteca...</p>}
               {!voiceLibLoading && voiceLibrary.length === 0 && (
                 <p style={{ textAlign: 'center', color: '#999', fontSize: '13px', padding: '20px 0' }}>
-                  Nenhuma voz clonada ainda. Faça upload de um áudio acima para começar!
+                  {apiKeys.find(k => k.key === 'ELEVENLABS_API_KEY')?.configured
+                    ? 'Nenhuma voz clonada ainda. Faça upload de um áudio acima para começar!'
+                    : 'Configure a ElevenLabs API Key acima para começar a clonar vozes.'}
                 </p>
               )}
               {voiceLibrary.length > 0 && (
