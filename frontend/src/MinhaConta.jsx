@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import ApiKeyGuideModal, { getGuideForKey } from './ApiKeyGuideModal'
+import SetupWizard from './SetupWizard'
 
 const API_URL = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/api`
@@ -15,6 +16,8 @@ export default function MinhaConta({ onBack, user }) {
   const [apiSaving, setApiSaving] = useState(false)
   const [showValues, setShowValues] = useState({})
   const [guideKey, setGuideKey] = useState(null)
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [wizardGoal, setWizardGoal] = useState(null)
   const [socials, setSocials] = useState([])
   const [socialLoading, setSocialLoading] = useState(null) // platform being connected
   const [msg, setMsg] = useState('')
@@ -144,6 +147,16 @@ export default function MinhaConta({ onBack, user }) {
           )}
         </div>
         {msg && <div style={{ padding: '8px 16px', borderRadius: '8px', background: msg.startsWith('Erro') ? 'rgba(239,68,68,0.2)' : 'rgba(34,197,94,0.2)', color: msg.startsWith('Erro') ? '#fca5a5' : '#86efac', fontSize: '13px', fontWeight: 600, width: '100%' }}>{msg}</div>}
+      </div>
+
+      {/* Wizard button */}
+      <div style={{ marginBottom: '16px' }}>
+        <button onClick={() => { setWizardGoal(null); setWizardOpen(true) }} style={{
+          padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer',
+          background: 'linear-gradient(135deg,#a78bfa,#6d28d9)', color: '#fff', fontWeight: 700, fontSize: 14,
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>🪄 Configurar com Wizard</button>
+        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#475569' }}>Guia passo a passo para ativar cada funcionalidade — sem precisar entender de APIs.</p>
       </div>
 
       {/* Tabs */}
@@ -286,6 +299,7 @@ export default function MinhaConta({ onBack, user }) {
 
           {/* Guide Modal */}
           {guideKey && <ApiKeyGuideModal keyName={guideKey} onClose={() => setGuideKey(null)} />}
+          <SetupWizard open={wizardOpen} initialGoal={wizardGoal} onClose={() => setWizardOpen(false)} onSaved={loadApiKeys} />
 
           {/* Botão salvar */}
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginTop: '8px' }}>

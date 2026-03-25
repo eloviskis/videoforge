@@ -175,6 +175,8 @@ const KEY_ALIASES = {
   ELEVENLABS_VOICE_ID: 'ELEVENLABS_API_KEY',
 }
 
+export { GUIDES }
+
 export function getGuideForKey(keyName) {
   const resolved = KEY_ALIASES[keyName] || keyName
   return GUIDES[resolved] || null

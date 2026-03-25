@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import DocsTab from './DocsTab.jsx'
+import SetupWizard from './SetupWizard.jsx'
 import TimelineEditor from './TimelineEditor.jsx'
 import SocialAI from './SocialAI.jsx'
 
@@ -93,6 +94,8 @@ function App() {
   const [monitorVideoId, setMonitorVideoId] = useState(null)
   const [monitorVideo, setMonitorVideo] = useState(null)
   const [monitorMinimized, setMonitorMinimized] = useState(false)
+  const [wizardOpen, setWizardOpen] = useState(false)
+  const [wizardGoal, setWizardGoal] = useState(null)
   const monitorEndRef = useRef(null)
 
   // === CORTES STATE ===
@@ -1807,6 +1810,16 @@ function App() {
                 <span style={{ color: '#856404' }}>{PAID_TYPES[formData.tipoVideo].calcCost(formData.duracao).detalhe}</span>
                 <br />
                 <span style={{ color: '#856404', fontSize: '11px' }}>⚠️ {PAID_TYPES[formData.tipoVideo].warning}</span>
+              </div>
+            )}
+            {/* Banner contextual wizard */}
+            {({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2' })[formData.tipoVideo] && (
+              <div style={{ marginTop: '8px', padding: '10px 16px', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ fontSize: '12px', color: '#c4b5fd' }}>🪄 Precisa de ajuda para configurar esta opção? Nosso wizard te guia em minutos.</span>
+                <button
+                  onClick={() => { setWizardGoal(({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2' })[formData.tipoVideo]); setWizardOpen(true) }}
+                  style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#a78bfa,#6d28d9)', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >Configurar agora</button>
               </div>
             )}
             {!PAID_TYPES[formData.tipoVideo] && (
@@ -3713,6 +3726,7 @@ function App() {
         </div>
       )}
 
+      <SetupWizard open={wizardOpen} initialGoal={wizardGoal} onClose={() => setWizardOpen(false)} onSaved={() => {}} />
     </>
   )
 }
