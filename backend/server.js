@@ -2360,46 +2360,46 @@ function gerarRoteiroTemplate(topico, nicho, duracao, detalhes) {
   
   const templates = {
     intro: [
-      `Voc\u00ea j\u00e1 ouviu falar sobre ${topico}? Prepare-se, porque essa \u00e9 uma das hist\u00f3rias mais surpreendentes que voc\u00ea vai ouvir hoje. E acredite, a realidade \u00e9 mais bizarra que a fic\u00e7\u00e3o.`,
-      `O que estou prestes a contar pode parecer imposs\u00edvel. Mas ${topico} realmente aconteceu, e as consequ\u00eancias foram absolutamente extraordin\u00e1rias.`,
+      `Você já parou para pensar sobre ${topico}? Esse é um tema que esconde muito mais do que a maioria das pessoas imagina. Hoje vamos mergulhar fundo nessa história e descobrir detalhes surpreendentes que vão mudar a forma como você vê esse assunto. Prepare-se para uma jornada cheia de curiosidades e revelações. Cada informação que você vai conhecer é mais incrível que a anterior. Fique até o final porque o melhor está por vir!`,
+      `${topico} é um dos temas mais fascinantes e menos compreendidos do nosso tempo. Muita gente acha que sabe tudo sobre esse assunto, mas a verdade é bem diferente do que se imagina. Ao longo deste vídeo, vamos revelar dados e curiosidades que especialistas levaram anos para descobrir. Não importa se você já conhece um pouco sobre o tema, com certeza vai aprender algo novo hoje. A realidade sobre ${topico} é muito mais complexa e interessante do que parece à primeira vista. Vamos começar essa descoberta!`,
     ],
     desenvolvimento: [
-      `Para entender o que aconteceu, precisamos voltar ao contexto da \u00e9poca. O mundo vivia um momento de grandes transforma\u00e7\u00f5es, e ningu\u00e9m poderia prever o que estava por vir.`,
-      `Os detalhes dessa hist\u00f3ria s\u00e3o fascinantes. Cada novo fato descoberto revela uma camada ainda mais surpreendente do que realmente aconteceu.`,
-      `O mais incr\u00edvel \u00e9 que as pessoas envolvidas n\u00e3o faziam ideia da propor\u00e7\u00e3o que os eventos tomariam. Era apenas o come\u00e7o de algo muito maior.`,
-      `Especialistas tentaram explicar o fen\u00f4meno de diversas formas. Algumas teorias eram cient\u00edficas, outras beiravam o absurdo completo.`,
-      `Enquanto isso, as consequ\u00eancias se espalhavam como fogo em palha seca. O que come\u00e7ou como um evento local rapidamente ganhou propor\u00e7\u00f5es globais.`,
-      `As testemunhas da \u00e9poca descrevem cenas que parecem sa\u00eddas de um filme. Mas tudo isso realmente aconteceu, documentado e registrado para a posteridade.`,
-      `Muitos tentaram parar o que estava acontecendo, mas descobriram que era praticamente imposs\u00edvel. A situa\u00e7\u00e3o tinha vida pr\u00f3pria.`,
-      `Os registros hist\u00f3ricos mostram que as autoridades ficaram completamente perdidas. Ningu\u00e9m sabia ao certo como lidar com algo t\u00e3o inusitado.`,
-      `Com o passar do tempo, novas informa\u00e7\u00f5es vieram \u00e0 tona. E cada descoberta tornava a hist\u00f3ria ainda mais impressionante.`,
-      `O impacto desses eventos foi sentido por d\u00e9cadas. At\u00e9 hoje, pesquisadores debatem as verdadeiras causas e consequ\u00eancias do que aconteceu.`,
-      `Para as pessoas que viveram aquele momento, a experi\u00eancia foi transformadora. Nada voltou a ser como antes depois daquele dia.`,
-      `Historiadores apontam que esse foi um ponto de virada. Um daqueles eventos que dividem a hist\u00f3ria em antes e depois.`,
-      `A hist\u00f3ria est\u00e1 repleta de ironias. Justamente o que deveria evitar o problema acabou contribuindo para que ele se tornasse ainda maior.`,
+      `Para entender ${topico} de verdade, precisamos analisar os aspectos mais surpreendentes desse fenômeno. Pesquisadores dedicaram décadas estudando cada detalhe para chegar às conclusões que vamos compartilhar agora. O que muitos não sabem é que por trás desse tema existe uma história cheia de reviravoltas e descobertas inesperadas. Cada nova informação revelada pelos especialistas apenas aprofunda o mistério e aumenta nossa curiosidade. Os dados coletados ao longo do tempo mostram padrões que ninguém esperava encontrar. Isso muda completamente a forma de entender ${topico}.`,
+      `Um dos aspectos mais intrigantes de ${topico} é justamente o que fica escondido aos olhos do público em geral. Especialistas afirmam que apenas uma fração do que se sabe sobre esse tema chega às pessoas comuns. Por trás dos fatos mais divulgados existe uma camada de informações ainda mais rica e surpreendente. Quando os pesquisadores começaram a investigar mais a fundo, descobriram conexões que ninguém havia percebido antes. Esses achados revolucionaram completamente o entendimento sobre ${topico}. E o mais incrível é que isso estava à vista de todos o tempo todo.`,
+      `Os números relacionados a ${topico} são simplesmente impressionantes. Estudos realizados por universidades e institutos de pesquisa ao redor do mundo chegaram a conclusões que desafiam o senso comum. A maioria das pessoas ficaria chocada se soubesse a dimensão real desse fenômeno. O impacto de ${topico} no cotidiano das pessoas é muito maior do que qualquer estimativa inicial sugeria. Especialistas passaram anos analisando dados e cada descoberta abria caminho para novas e maiores revelações. Os resultados finais foram tão surpreendentes que muitos chegaram a questionar sua veracidade.`,
+      `A história de ${topico} está repleta de momentos que mudaram tudo. Existem episódios específicos que marcaram uma virada definitiva no entendimento sobre esse tema. Quando esses eventos vieram à tona, a comunidade científica precisou rever completamente suas teorias anteriores. O que parecia uma verdade absoluta foi questionado e substituído por uma visão muito mais complexa e fascinante. Cada novo capítulo dessa história revela camadas adicionais de complexidade que tornam o tema ainda mais intrigante. É exatamente esse tipo de descoberta que faz de ${topico} um assunto tão apaixonante.`,
+      `Poucos sabem que ${topico} tem uma conexão direta com aspectos do dia a dia que muitas vezes passam despercebidos. Pesquisadores que se dedicaram ao estudo desse fenômeno foram gradualmente percebendo padrões surpreendentes que estavam escondidos em plain sight. Quando essas conexões foram finalmente mapeadas e documentadas, o resultado foi revolucionário. Toda uma nova área de estudo surgiu a partir dessas descobertas iniciais sobre ${topico}. Os especialistas ficaram tão surpresos que muitos chegaram a publicar artigos questionando como ninguém havia percebido isso antes. Hoje esse conhecimento é fundamental para entender o tema em sua totalidade.`,
+      `Uma das curiosidades mais impressionantes sobre ${topico} é que as primeiras pessoas a estudá-lo seriamente foram ridicularizadas por seus contemporâneos. O que parecia uma teoria absurda no início foi gradualmente se confirmando à medida que as evidências se acumulavam. Essa é uma das histórias mais inspiradoras da ciência moderna: a perseverança de pesquisadores dedicados que não desistiram apesar das críticas. Décadas depois, suas descobertas sobre ${topico} são consideradas marcos fundamentais do conhecimento humano. Esse caminho de resistência e descoberta é parte essencial para entender por que esse tema é tão especial. A luta pelo reconhecimento da verdade tornou a história ainda mais fascinante.`,
+      `Quando se fala em ${topico}, é impossível não mencionar os impactos que esse fenômeno tem causado ao longo do tempo. As mudanças geradas por esse tema se espalharam por áreas completamente inesperadas da sociedade e da ciência. Comunidades inteiras foram transformadas pelo contato com essas descobertas. Especialistas de áreas completamente diferentes se reuniram para tentar compreender a extensão real desse fenômeno. O resultado dessas colaborações foi uma compreensão muito mais rica e multidimensional do tema. Hoje entendemos que ${topico} é muito mais do que um simples assunto isolado.`,
+      `O que torna ${topico} ainda mais fascinante são as teorias contraditórias que surgiram ao longo dos anos para explicá-lo. De um lado, pesquisadores conservadores defendiam visões tradicionais e bem estabelecidas. Do outro, cientistas mais ousados propunham explicações que pareciam revolucionárias demais para serem verdadeiras. Esse debate intelectual rico e apaixonado durou décadas e produziu algumas das melhores pesquisas já realizadas sobre o tema. No final, a verdade sobre ${topico} se mostrou ainda mais complexa do que qualquer uma das correntes havia imaginado. A síntese dessas visões diferentes criou um entendimento completamente novo e abrangente.`,
+      `Os registros mais antigos sobre ${topico} já mostram que esse fenômeno intrigava as pessoas desde tempos remotos. Civilizações diferentes, em épocas distintas, todas chegaram a conclusões surpreendentemente semelhantes sobre esse tema. Isso sugere que existe algo fundamentalmente fascinante em ${topico} que transcende cultura e época. Quando os historiadores começaram a cruzar essas informações antigas com as descobertas modernas, o resultado foi revelador. As conexões encontradas sugeriram que o entendimento atual do tema é apenas a continuação de uma longa tradição de curiosidade humana. Esse aspecto histórico adiciona uma dimensão completamente nova ao fascínio por ${topico}.`,
+      `Para compreender plenamente ${topico}, é necessário olhar além das explicações superficiais que circulam por aí. Muitas das informações mais divulgadas sobre esse tema são simplificações que deixam de lado os aspectos mais ricos e complexos. Especialistas que passaram anos mergulhados nesse estudo sabem que a realidade é muito mais nuançada do que o senso comum sugere. Cada camada adicional de análise revela novas perspectivas e contradições que tornam o tema mais fascinante. A profundidade de ${topico} é justamente o que explica por que tantos pesquisadores dedicaram suas carreiras a esse estudo. Quanto mais você aprende, mais percebe o quanto ainda há para descobrir.`,
+      `As descobertas mais recentes sobre ${topico} estão mudando rapidamente o que acreditávamos saber sobre esse tema. Tecnologias avançadas de análise permitiram que pesquisadores enxergassem aspectos que antes eram completamente invisíveis. Esses novos dados estão forçando uma revisão completa de teorias que pareciam bem estabelecidas. O ritmo acelerado de descobertas nessa área sugere que ainda estamos apenas no começo de uma era de grandes revelações sobre ${topico}. Especialistas de todo o mundo estão colaborando em pesquisas que prometem trazer respostas para perguntas que existem há décadas. Os próximos anos serão decisivos para a compreensão definitiva desse fenômeno.`,
+      `Um aspecto pouco conhecido de ${topico} que merece destaque especial é a forma como esse fenômeno afeta diretamente a vida cotidiana. Muitas pessoas não percebem, mas as consequências práticas desse tema estão presentes no dia a dia de maneiras surpreendentes. Quando os pesquisadores mapearam essas conexões com o cotidiano, os resultados foram reveladores para o grande público. As implicações práticas do entendimento correto de ${topico} vão muito além do que qualquer pessoa comum costuma imaginar. Esse conhecimento tem potencial para transformar comportamentos e perspectivas de forma significativa. Entender ${topico} em profundidade é uma das formas mais poderosas de transformar sua visão de mundo.`,
     ],
     conclusao: [
-      `E assim termina uma das hist\u00f3rias mais extraordin\u00e1rias j\u00e1 registradas. ${topico} nos lembra que a realidade, muitas vezes, supera qualquer fic\u00e7\u00e3o que possamos imaginar.`,
-      `Se essa hist\u00f3ria te surpreendeu, deixe seu like e se inscreva no canal. Toda semana trazemos hist\u00f3rias incr\u00edveis como essa. At\u00e9 a pr\u00f3xima!`,
+      `E assim chegamos ao final dessa incrível jornada pelo universo de ${topico}. Cada detalhe que descobrimos hoje mostra como esse tema é muito mais rico e complexo do que parece à primeira vista. As pesquisas continuam avançando e novas descobertas prometem nos surpreender ainda mais nos próximos anos. O conhecimento sobre ${topico} é uma das formas mais fascinantes de expandir nossa compreensão sobre o mundo. Esperamos que você tenha aprendido algo novo e valioso ao longo deste vídeo.`,
+      `Se esse conteúdo sobre ${topico} te surpreendeu e acrescentou algo novo ao seu conhecimento, deixe seu like e compartilhe com quem também vai achar interessante. Se inscreva no canal para não perder os próximos vídeos, onde vamos continuar explorando temas fascinantes como esse. Sua participação é o que nos motiva a trazer sempre conteúdos de qualidade. Até o próximo vídeo!`,
     ]
   };
-  
+
+  const topicoEn = topico.replace(/[^ws]/g, '').trim() || topico.split(' ').slice(0, 3).join(' ');
   const visualPrompts = [
-    `Dramatic cinematic establishing shot of 1960s setting, vintage film grain, warm color palette, documentary style`,
-    `Historical black and white photographs with dramatic zoom, archival footage style, aged paper texture`,
-    `Wide aerial shot of African landscape, dramatic clouds, golden hour lighting, National Geographic style`,
-    `Close-up of vintage newspaper headlines, dramatic lighting, shallow depth of field, journalistic photography`,
-    `Group of people in 1960s clothing, candid documentary moment, natural lighting, authentic period details`,
-    `Dramatic time-lapse of spreading phenomenon, visualization map, scientific documentary style`,
-    `Medical professionals in 1960s hospital, concerned expressions, vintage equipment, dramatic shadows`,
-    `Crowd scene with emotional expressions, documentary photography, black and white with selective color`,
-    `Historical building exterior, colonial architecture, dramatic sky, wide angle lens, cinematic composition`,
-    `Library research scene, stack of old books and documents, warm lamp lighting, scholarly atmosphere`,
-    `World map with spreading indicators, animated infographic style, vintage cartography aesthetic`,
-    `Dramatic sunset over historical location, silhouettes of people, emotional atmospheric lighting`,
-    `Close-up of historical artifacts and memorabilia, museum display style, professional macro photography`,
-    `Archive footage recreation, dramatic reenactment style, period-accurate costumes and setting`,
-    `Final reflective scene, modern view of historical location, then-and-now comparison, emotional`,
+    `${topicoEn} concept overview, professional photography, natural lighting, high resolution`,
+    `${topicoEn} close-up detail, macro photography, sharp focus, studio lighting`,
+    `${topicoEn} wide establishing shot, aerial view, golden hour, cinematic`,
+    `${topicoEn} documentary style, candid moment, photojournalism, authentic people`,
+    `${topicoEn} scientific research, laboratory, professional environment, modern`,
+    `${topicoEn} historical context, archival style, vintage photography`,
+    `${topicoEn} modern perspective, contemporary setting, high quality`,
+    `${topicoEn} nature and environment, outdoor, natural setting, landscape`,
+    `${topicoEn} people and community, social interaction, real people, candid`,
+    `${topicoEn} technology and innovation, futuristic, modern design`,
+    `${topicoEn} global scale, world map, international perspective, diverse`,
+    `${topicoEn} emotional impact, dramatic lighting, powerful composition`,
+    `${topicoEn} data and statistics, infographic style, clean design`,
+    `${topicoEn} microscopic or detailed view, zoomed in, scientific visualization`,
+    `${topicoEn} inspiring conclusion, hopeful, forward-looking, uplifting`,
   ];
   
   const cenas = [];
@@ -2854,6 +2854,9 @@ output_path = sys.argv[2]
 cenas_path = sys.argv[3]
 
 API_KEY = '${process.env.OPENAI_API_KEY || ''}'
+VOZ_EDGE = '${voz || 'pt-BR-AntonioNeural'}'
+VOZES_FEMININAS = ['francisca', 'thalita', 'leila', 'brenda', 'camila', 'fernanda', 'luana']
+openai_voice = 'nova' if any(f in VOZ_EDGE.lower() for f in VOZES_FEMININAS) else 'onyx'
 cenas = json.load(open(cenas_path))
 temp_dir = f'/media/temp/{video_id}'
 os.makedirs(temp_dir, exist_ok=True)
@@ -2881,7 +2884,7 @@ for i, texto in enumerate(cenas):
             r = requests.post(
                 'https://api.openai.com/v1/audio/speech',
                 headers={'Authorization': f'Bearer {API_KEY}', 'Content-Type': 'application/json'},
-                json={'model': 'tts-1-hd', 'voice': 'onyx', 'input': texto, 'response_format': 'mp3'},
+                json={'model': 'tts-1-hd', 'voice': openai_voice, 'input': texto, 'response_format': 'mp3'},
                 timeout=60
             )
             r.raise_for_status()
@@ -3163,12 +3166,14 @@ async function buscarVisuaisVideo(cenas) {
         if (found) break;
         try {
           const response = await axios.get('https://api.pexels.com/videos/search', {
-            params: { query: q, per_page: 8, orientation: 'landscape', size: 'medium' },
+            params: { query: q, per_page: 12, orientation: 'landscape', size: 'medium' },
             headers: { Authorization: PEXELS_API_KEY }
           });
 
           if (response.data.videos && response.data.videos.length > 0) {
-            const vid = response.data.videos.find(v => !usedVideos.has(v.id)) || response.data.videos[0];
+            const availableVids = response.data.videos.filter(v => !usedVideos.has(v.id));
+            const vidPool = availableVids.length > 0 ? availableVids : response.data.videos;
+            const vid = vidPool[Math.floor(Math.random() * Math.min(vidPool.length, 5))];
             usedVideos.add(vid.id);
             const files = vid.video_files || [];
             const hdFile = files.find(f => f.quality === 'hd' && f.width >= 1280)
@@ -3276,10 +3281,12 @@ async function buscarVisuaisPixabay(cenas) {
         if (found) break;
         try {
           const resp = await axios.get('https://pixabay.com/api/videos/', {
-            params: { key: PIXABAY_KEY, q, video_type: 'film', per_page: 8, lang: 'en' }
+            params: { key: PIXABAY_KEY, q, video_type: 'film', per_page: 15, lang: 'en' }
           });
           if (resp.data.hits?.length > 0) {
-            const hit = resp.data.hits.find(h => !usedVideos.has(h.id)) || resp.data.hits[0];
+            const available = resp.data.hits.filter(h => !usedVideos.has(h.id));
+            const pool = available.length > 0 ? available : resp.data.hits;
+            const hit = pool[Math.floor(Math.random() * Math.min(pool.length, 5))];
             usedVideos.add(hit.id);
             const videoUrl = hit.videos.large?.url || hit.videos.medium?.url || hit.videos.small?.url;
             if (videoUrl) {
