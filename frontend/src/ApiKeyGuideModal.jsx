@@ -152,6 +152,23 @@ const GUIDES = {
     tips: ['O plano gratuito dá 10.000 caracteres/mês — suficiente para testar.', 'As vozes do ElevenLabs são as mais realistas do mercado.', 'Você pode clonar sua própria voz no plano pago.'],
   },
 
+  HEYGEN_API_KEY: {
+    title: 'HeyGen (Avatar IA)',
+    icon: '🎭',
+    free: false,
+    color: '#6366f1',
+    estimatedTime: '3 min',
+    pricing: 'Plano grátis: 3 créditos/mês. Creator: $29/mês (15 créditos)',
+    steps: [
+      { title: 'Crie uma conta HeyGen', desc: 'Acesse o HeyGen e crie sua conta.', link: 'https://app.heygen.com', linkLabel: 'Criar conta HeyGen' },
+      { title: 'Acesse a página de API Key', desc: 'No painel da HeyGen, clique no ícone do perfil → API Key.', link: 'https://app.heygen.com/settings?nav=API', linkLabel: 'Página de API Key' },
+      { title: 'Gere e copie a chave', desc: 'Clique em "Generate API Key", dê um nome e copie a chave gerada.' },
+      { title: 'Cole no VideoForge', desc: 'Cole a chave no campo "HeyGen (Avatar IA)" do VideoForge.' },
+      { title: '(Opcional) Avatar ID', desc: 'Acesse Avatars, escolha um avatar e copie o ID da URL ou do painel. O padrão já usa um avatar público gratuito.', link: 'https://app.heygen.com/avatars', linkLabel: 'Avatares HeyGen' },
+    ],
+    tips: ['Plano gratuito dá 3 créditos/mês (~3 vídeos curtos).', 'Cada cena usa ~5 créditos. Para vídeos longos, assine o plano Creator.', 'O avatar padrão Daisy já está configurado — não precisa de Avatar ID para testar.'],
+  },
+
   PIXABAY_API_KEY: {
     title: 'Pixabay (Músicas)',
     icon: '🎵',
@@ -173,6 +190,8 @@ const KEY_ALIASES = {
   KLING_ACCESS_KEY_SECRET: 'KLING_ACCESS_KEY_ID',
   DID_PRESENTER_URL: 'DID_API_KEY',
   ELEVENLABS_VOICE_ID: 'ELEVENLABS_API_KEY',
+  HEYGEN_AVATAR_ID: 'HEYGEN_API_KEY',
+  HEYGEN_VOICE_ID: 'HEYGEN_API_KEY',
 }
 
 export { GUIDES }

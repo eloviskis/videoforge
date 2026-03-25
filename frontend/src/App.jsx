@@ -223,6 +223,19 @@ function App() {
         }
       },
     },
+    heygenAvatar: {
+      label: 'HeyGen Avatar IA',
+      icon: '🎭',
+      warning: 'HeyGen requer HEYGEN_API_KEY configurada. Crie sua conta em app.heygen.com.',
+      calcCost: (duracao) => {
+        const cenas = Math.round((duracao || 5) * 60 / 20)
+        const creditos = cenas * 5
+        return {
+          total: `~${creditos} créditos HeyGen`,
+          detalhe: `~5 créditos/cena × ${cenas} cenas. Plano Free dá 3 créditos/mês; plano Creator ~$29/mês dá 15 créditos.`,
+        }
+      },
+    },
     shutterstockVideos: {
       label: 'Shutterstock Vídeos',
       icon: '🎞️',
@@ -251,6 +264,7 @@ function App() {
     veoGeneration: [],      // Google Vertex usa billing GCP, não chave simples
     soraGeneration: ['OPENAI_API_KEY'],
     didAvatar: ['DID_API_KEY'],
+    heygenAvatar: ['HEYGEN_API_KEY'],
     shutterstockVideos: ['SHUTTERSTOCK_CLIENT_ID', 'SHUTTERSTOCK_CLIENT_SECRET'],
     storyblocksVideos: ['STORYBLOCKS_PUBLIC_KEY', 'STORYBLOCKS_PRIVATE_KEY'],
   }
@@ -1422,6 +1436,7 @@ function App() {
                     <option value="replicateGeneration">🤖 Replicate 🟡</option>
                     <option value="klingGeneration">🎥 Kling AI 🟡</option>
                     <option value="veoGeneration">🎬 Veo 3 🟡</option>
+                    <option value="heygenAvatar">🎭 HeyGen Avatar IA 🟡</option>
                   </optgroup>
                 </select>
               </div>
@@ -1569,6 +1584,7 @@ function App() {
                   <option value="klingGeneration">🎥 Kling AI (~R$0,06/cena) 🟡</option>
                   <option value="veoGeneration">🎬 Veo 3 (Google Vertex) 🟡</option>
                   <option value="didAvatar">🎭 D-ID Avatar Apresentador 🟡</option>
+                  <option value="heygenAvatar">🎭 HeyGen Avatar IA 🟡</option>
                 </optgroup>
               </select>
             </div>
@@ -1768,6 +1784,7 @@ function App() {
                 <option value="veoGeneration">🎬 Veo 3 (Google Vertex - Pago) 🟡</option>
                 <option value="soraGeneration">🌟 Sora (OpenAI - Pago) 🟡</option>
                 <option value="didAvatar">🎭 D-ID Avatar Apresentador (Pago) 🟡</option>
+                <option value="heygenAvatar">🎭 HeyGen Avatar IA (Pago) 🟡</option>
               </optgroup>
             </select>
             <small style={{ color: '#666', fontSize: '0.85em', marginTop: '5px', display: 'block' }}>
@@ -1801,6 +1818,8 @@ function App() {
                 ? '🖼️ Com OpenAI key → DALL-E 3 🟡 | Com Replicate key → Flux.1 🟡 | Sem chave → Stable Horde/Pollinations 🟢'
                 : formData.tipoVideo === 'didAvatar'
                 ? '🎭 Apresentador virtual animado lendo a narração. Requer DID_API_KEY + DID_PRESENTER_URL nas Configurações 🟡'
+                : formData.tipoVideo === 'heygenAvatar'
+                ? '🎭 Avatar IA ultra-realista da HeyGen com sincronismo labial perfeito. Requer HEYGEN_API_KEY nas Configurações 🟡'
                 : '📷 Busca imagens reais do Pexels. Com PIXABAY_API_KEY adiciona música de fundo 🟢 | Legendas Whisper automáticas 🟢'}
             </small>
             {PAID_TYPES[formData.tipoVideo] && (
@@ -1813,11 +1832,11 @@ function App() {
               </div>
             )}
             {/* Banner contextual wizard */}
-            {({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2' })[formData.tipoVideo] && (
+            {({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2', heygenAvatar: 'heygen', didAvatar: 'did' })[formData.tipoVideo] && (
               <div style={{ marginTop: '8px', padding: '10px 16px', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ fontSize: '12px', color: '#c4b5fd' }}>🪄 Precisa de ajuda para configurar esta opção? Nosso wizard te guia em minutos.</span>
                 <button
-                  onClick={() => { setWizardGoal(({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2' })[formData.tipoVideo]); setWizardOpen(true) }}
+                  onClick={() => { setWizardGoal(({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2', heygenAvatar: 'heygen', didAvatar: 'did' })[formData.tipoVideo]); setWizardOpen(true) }}
                   style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#a78bfa,#6d28d9)', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
                 >Configurar agora</button>
               </div>
@@ -3472,6 +3491,7 @@ function App() {
                     <option value="replicateGeneration">🤖 Replicate</option>
                     <option value="klingGeneration">🎥 Kling AI</option>
                     <option value="didAvatar">🎭 D-ID Avatar Apresentador 🟡</option>
+                    <option value="heygenAvatar">🎭 HeyGen Avatar IA 🟡</option>
                   </optgroup>
                 </select>
               </div>

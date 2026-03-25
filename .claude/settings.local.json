@@ -34,7 +34,10 @@
       "Bash(npm install -g @railway/cli)",
       "Bash(railway login --browserless)",
       "Bash(node desktop/prebuild.mjs)",
-      "Bash(npm run build:win)"
+      "Bash(npm run build:win)",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && docker compose -f docker-compose.vps.yml build frontend 2>&1 | grep -A 20 ''npm error\\\\|ERR\\\\|error''\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && git pull && docker compose -f docker-compose.vps.yml up -d --build frontend 2>&1 | tail -12\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && git pull && docker compose -f docker-compose.vps.yml up -d --build frontend 2>&1 | tail -8\")"
     ]
   }
 }

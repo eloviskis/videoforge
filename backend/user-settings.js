@@ -37,6 +37,9 @@ const USER_KEY_DEFS = [
   { key: 'HUGGINGFACE_API_TOKEN',   grupo: 'video', label: 'Hugging Face',             icon: '🤗', free: false, hint: 'https://huggingface.co/settings/tokens', desc: 'Modelos open-source de vídeo' },
   { key: 'DID_API_KEY',             grupo: 'video', label: 'D-ID (Avatar)',            icon: '👤', free: false, hint: 'https://studio.d-id.com/', desc: 'Avatar apresentador no vídeo' },
   { key: 'DID_PRESENTER_URL',       grupo: 'video', label: 'D-ID — URL do Apresentador', icon: '📸', free: false, hint: '' },
+  { key: 'HEYGEN_API_KEY',          grupo: 'video', label: 'HeyGen (Avatar IA)',         icon: '🎭', free: false, hint: 'https://app.heygen.com/api-key', desc: 'Avatar IA realista lendo a narração com sincronismo labial' },
+  { key: 'HEYGEN_AVATAR_ID',        grupo: 'video', label: 'HeyGen — Avatar ID',         icon: '🧑', free: false, hint: 'https://app.heygen.com/avatars' },
+  { key: 'HEYGEN_VOICE_ID',         grupo: 'video', label: 'HeyGen — Voice ID (opcional)', icon: '🎙️', free: false, hint: 'https://app.heygen.com/voices' },
   // TTS
   { key: 'ELEVENLABS_API_KEY',      grupo: 'tts',   label: 'ElevenLabs',               icon: '🗣️', free: false, hint: 'https://elevenlabs.io/subscription', desc: 'Vozes ultra-realistas para narração' },
   { key: 'ELEVENLABS_VOICE_ID',     grupo: 'tts',   label: 'ElevenLabs — Voice ID',    icon: '🎙️', free: false, hint: '' },

@@ -40,6 +40,14 @@ const GOALS = [
     badge: '~$0.50/seg', badgeColor: '#ef4444',
   },
   {
+    id: 'heygen', icon: '🎭', label: 'HeyGen Avatar IA',
+    desc: 'Avatar ultra-realista da HeyGen — fala com sincronismo labial em cada cena.',
+    apis: ['HEYGEN_API_KEY', 'HEYGEN_AVATAR_ID'],
+    badge: '~$29/mês', badgeColor: '#f59e0b',
+    guideLink: 'https://app.heygen.com/api-key',
+    guideLinkLabel: 'Obter chave HeyGen',
+  },
+  {
     id: 'youtube', icon: '📺', label: 'Publicar no YouTube',
     desc: 'Conecte seu canal e publique automaticamente ao terminar o vídeo.',
     apis: [], special: 'youtube',

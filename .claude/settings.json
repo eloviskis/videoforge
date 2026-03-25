@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && docker compose up -d --build backend frontend 2>&1 | tail -10\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && cat docker-compose.yml | grep ''services:'' -A 30 | grep ''^\\\\s\\\\{2\\\\}[a-z]'' | head -15\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && ls\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && cat docker-compose.vps.yml | grep -E ''^  [a-z]'' | head -15\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && docker compose -f docker-compose.vps.yml ps --services 2>&1 | head -10\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && git pull origin master && docker compose -f docker-compose.vps.yml up -d --build backend frontend 2>&1 | tail -15\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /opt/videoforge && git pull && docker compose -f docker-compose.vps.yml up -d --build frontend 2>&1 | tail -10\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"find / -name ''docker-compose.vps.yml'' -not -path ''*/proc/*'' 2>/dev/null | head -3\")",
+      "Bash(ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=no root@31.97.64.250 \"cd /root/videoforge && git pull && docker compose -f docker-compose.vps.yml up -d --build frontend 2>&1 | tail -15\")"
+    ]
+  }
+}

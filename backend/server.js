@@ -835,6 +835,12 @@ app.post('/api/videos/manual', async (req, res) => {
           logStep(video, '🎬 Gerando vídeo com Veo 3 (Google Vertex)...');
           const videoPaths = await gerarVideoVeo(videoId, roteiro, audioPaths);
           video.videoUrl = videoPaths.host;
+        } else if (video.tipoVideo === 'heygenAvatar') {
+          video.status = 'gerando_heygen';
+          logStep(video, '🎭 Gerando vídeo com HeyGen Avatar...');
+          const heyClips = await gerarVideoHeyGen(videoId, roteiro, audioPaths);
+          const heyVisuais = heyClips.map(c => ({ cena: c.cena, url: null, localPath: c.path, tipo: 'video' }));
+          video.videoUrl = (await renderizarVideo(videoId, roteiro, audioPaths, heyVisuais)).host;
         } else if (video.tipoVideo === 'replicateGeneration') {
           video.status = 'gerando_replicate';
           logStep(video, '🤖 Gerando vídeo com Replicate/Wan 2.1...');
@@ -1470,7 +1476,16 @@ Retorne APENAS o texto da narração, nada mais.`;
       const videoPaths = await gerarVideoVeo(videoId, roteiro, audioPaths);
       video.videoUrl = videoPaths.host;
       video.progresso = 90;
-      
+
+    } else if (video.tipoVideo === 'heygenAvatar') {
+      video.status = 'gerando_heygen';
+      video.progresso = 50;
+      logStep(video, '🎭 Gerando vídeo com HeyGen Avatar...');
+      const heyClips = await gerarVideoHeyGen(videoId, roteiro, audioPaths);
+      const heyVisuais = heyClips.map(c => ({ cena: c.cena, url: null, localPath: c.path, tipo: 'video' }));
+      video.videoUrl = (await renderizarVideo(videoId, roteiro, audioPaths, heyVisuais)).host;
+      video.progresso = 90;
+
     } else if (video.tipoVideo === 'replicateGeneration') {
       video.status = 'gerando_replicate';
       video.progresso = 50;
@@ -1751,12 +1766,12 @@ async function chamarGemini(prompt, timeout = 60000) {
   const openRouterKey = process.env.OPENROUTER_API_KEY;
   if (openRouterKey && openRouterKey.length > 10) {
     const openRouterModels = [
-      'google/gemini-2.0-flash-exp:free',
-      'google/gemma-3-27b-it:free',
-      'deepseek/deepseek-chat-v3-0324:free',
       'meta-llama/llama-3.3-70b-instruct:free',
-      'qwen/qwen-2.5-72b-instruct:free',
-      'mistralai/mistral-small-3.1-24b-instruct:free',
+      'deepseek/deepseek-r1:free',
+      'deepseek/deepseek-chat:free',
+      'microsoft/phi-4:free',
+      'google/gemma-3-27b-it:free',
+      'mistralai/mistral-7b-instruct:free',
     ];
     
     for (const orModel of openRouterModels) {
@@ -1836,10 +1851,24 @@ async function chamarGemini(prompt, timeout = 60000) {
   }
   
   // PRIORIDADE 4: Pollinations.ai Text — 100% gratuito, sem API key
-  // NOTA: 'openai' é o único modelo consistentemente respondendo (via o3-mini)
-  // O modelo retorna formato reasoning - extraímos via extrairConteudoOpenAI()
+  // Tentar primeiro o endpoint OpenAI-compatible (mais confiável)
+  try {
+    const pOpenAI = await axios.post('https://text.pollinations.ai/openai', {
+      model: 'openai',
+      messages: [{ role: 'user', content: prompt }],
+      seed: Math.floor(Math.random() * 100000),
+    }, { headers: { 'Content-Type': 'application/json' }, responseType: 'json', timeout: 60000 });
+    const pTxt = pOpenAI.data?.choices?.[0]?.message?.content;
+    if (pTxt && !pTxt.trimStart().startsWith('<') && pTxt.length > 10) {
+      console.log(`  ✅ Respondeu via Pollinations.ai /openai [${pTxt.length} chars]`);
+      return extrairConteudo(pTxt);
+    }
+  } catch (ePoOpenAI) {
+    console.warn(`  ⚠️ Pollinations /openai falhou: ${ePoOpenAI.message}`);
+  }
+
   const pollinationsModels = ['openai', 'mistral-large', 'llama', 'deepseek'];
-  
+
   for (const pModel of pollinationsModels) {
     // Tentar POST primeiro
     try {
@@ -2686,8 +2715,36 @@ Agora crie o código para a cena descrita. Seja CRIATIVO com o timing, as anima�
       console.log(`✅ Cena ${i + 1} código gerado (${durationInFrames} frames)`);
       
     } catch (error) {
-      console.error(`❌ Erro ao gerar código cena ${i + 1}:`, error.message);
-      throw error;
+      console.warn(`⚠️ IA falhou na cena ${i + 1}, usando template fallback: ${error.message}`);
+      // Fallback: stick figure SVG simples + texto — sem dependência de IA
+      const textoFallback = (cena.texto_narracao || '').replace(/`/g, "'").replace(/\\/g, '\\\\').substring(0, 300);
+      const codigoFallback = `import React from 'react';
+import { AbsoluteFill, useCurrentFrame, interpolate } from 'remotion';
+
+export const Scene${i + 1}: React.FC = () => {
+  const frame = useCurrentFrame();
+  const opacity = interpolate(frame, [0, 20], [0, 1], { extrapolateRight: 'clamp' });
+  const slideY = interpolate(frame, [0, 20], [30, 0], { extrapolateRight: 'clamp' });
+  return (
+    <AbsoluteFill style={{ background: '#0f0f23', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 80, gap: 40 }}>
+      <svg width="100" height="160" viewBox="0 0 100 160" style={{ opacity, transform: \`translateY(\${slideY}px)\` }}>
+        <circle cx="50" cy="22" r="18" fill="none" stroke="#a78bfa" strokeWidth="3"/>
+        <line x1="50" y1="40" x2="50" y2="105" stroke="#a78bfa" strokeWidth="3"/>
+        <line x1="50" y1="58" x2="22" y2="85" stroke="#a78bfa" strokeWidth="3"/>
+        <line x1="50" y1="58" x2="78" y2="85" stroke="#a78bfa" strokeWidth="3"/>
+        <line x1="50" y1="105" x2="28" y2="148" stroke="#a78bfa" strokeWidth="3"/>
+        <line x1="50" y1="105" x2="72" y2="148" stroke="#a78bfa" strokeWidth="3"/>
+      </svg>
+      <div style={{ color: '#e2e8f0', fontSize: 26, textAlign: 'center', lineHeight: 1.7, opacity, transform: \`translateY(\${slideY}px)\`, maxWidth: 1000, fontFamily: 'sans-serif' }}>
+        {\`${textoFallback}\`}
+      </div>
+    </AbsoluteFill>
+  );
+};`;
+      const filepath = resolve(generatedDir, `Scene${i + 1}.tsx`);
+      await fs.writeFile(filepath, codigoFallback, 'utf-8');
+      cenasCodigo.push({ numero: i + 1, filepath, durationInFrames, componentName: `Scene${i + 1}` });
+      console.log(`  📋 Cena ${i + 1} gerada com template fallback`);
     }
   }
   
@@ -7636,6 +7693,75 @@ function agendarCronNoticias(config) {
   });
 
   console.log(`⏰ Agendamento de notícias: ${horario} (cron: ${cronExpr})`);
+}
+
+// ============================================
+// FUNÇÃO: Gerar Vídeo com HeyGen Avatar AI
+// ============================================
+async function gerarVideoHeyGen(videoId, roteiro, audioPaths) {
+  const HEYGEN_KEY = process.env.HEYGEN_API_KEY;
+  if (!HEYGEN_KEY) throw new Error('HEYGEN_API_KEY não configurada. Configure em Minha Conta → API Keys.');
+
+  const avatarId  = process.env.HEYGEN_AVATAR_ID  || 'Daisy-inskirt-20220818';
+  const voiceId   = process.env.HEYGEN_VOICE_ID   || null;
+
+  const cenas = roteiro.cenas || [];
+  if (!cenas.length) throw new Error('Nenhuma cena no roteiro para HeyGen');
+
+  const videoPaths = [];
+  const headers = { 'X-Api-Key': HEYGEN_KEY, 'Content-Type': 'application/json' };
+
+  for (let idx = 0; idx < cenas.length; idx++) {
+    const cena = cenas[idx];
+    const cenaNum = idx + 1;
+    const outDocker = `/media/veo_clips/${videoId}_cena${cenaNum}.mp4`;
+    const outHost   = resolve(MEDIA_DIR, 'veo_clips', `${videoId}_cena${cenaNum}.mp4`);
+    await fs.mkdir(resolve(MEDIA_DIR, 'veo_clips'), { recursive: true });
+
+    const texto = (cena.texto_narracao || '').substring(0, 1500);
+    console.log(`  🎭 [HeyGen] Cena ${cenaNum}: "${texto.substring(0, 60)}..."`);
+
+    const voiceBlock = voiceId
+      ? { type: 'text', input_text: texto, voice_id: voiceId }
+      : { type: 'text', input_text: texto, voice_id: '1bd001e7e50f421d891986aad5158bc8' };
+
+    let resp;
+    try {
+      resp = await axios.post('https://api.heygen.com/v2/video/generate', {
+        video_inputs: [{
+          character: { type: 'avatar', avatar_id: avatarId, avatar_style: 'normal' },
+          voice: voiceBlock,
+          background: { type: 'color', value: '#0f0f23' },
+        }],
+        dimension: { width: 1280, height: 720 },
+      }, { headers, timeout: 30000 });
+    } catch (e) {
+      throw new Error(`HeyGen criar cena ${cenaNum}: ${e.response?.data?.message || e.message}`);
+    }
+
+    const heyVideoId = resp.data?.data?.video_id;
+    if (!heyVideoId) throw new Error(`HeyGen cena ${cenaNum}: video_id não retornado`);
+
+    // Poll até 5 min
+    let videoUrl = null;
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await new Promise(r => setTimeout(r, 5000));
+      const st = await axios.get(`https://api.heygen.com/v1/video_status.get?video_id=${heyVideoId}`, { headers, timeout: 15000 });
+      const status = st.data?.data?.status;
+      if (status === 'completed') { videoUrl = st.data.data.video_url; break; }
+      if (status === 'failed')    throw new Error(`HeyGen cena ${cenaNum} falhou: ${st.data?.data?.error || 'unknown'}`);
+      console.log(`  ⏳ [HeyGen] Cena ${cenaNum} status: ${status} (${attempt * 5}s)`);
+    }
+    if (!videoUrl) throw new Error(`HeyGen cena ${cenaNum}: timeout após 5min`);
+
+    // Download
+    const dlResp = await axios.get(videoUrl, { responseType: 'arraybuffer', timeout: 120000 });
+    await fs.writeFile(outHost, Buffer.from(dlResp.data));
+    console.log(`  ✅ [HeyGen] Cena ${cenaNum} baixada`);
+    videoPaths.push({ cena: cenaNum, path: outDocker, tipo: 'video' });
+  }
+
+  return videoPaths;
 }
 
 // Inicializar agendamento ao boot
