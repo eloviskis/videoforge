@@ -295,9 +295,8 @@ export default function AdminPanel({ onBack }) {
       if (resposta) fd.append('resposta', resposta)
       if (status) fd.append('status', status)
       if (mediaFile) fd.append('media', mediaFile)
-      const token = localStorage.getItem('token')
       const r = await fetch(`${API_URL}/admin/feedback/${id}`, {
-        method: 'PATCH', headers: { 'Authorization': `Bearer ${token}` }, body: fd
+        method: 'PATCH', headers: { 'Authorization': `Bearer ${localStorage.getItem('vf_token')}` }, body: fd
       })
       if (r.ok) {
         setMsg('✅ Feedback atualizado')
