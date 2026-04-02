@@ -723,7 +723,7 @@ app.get('/api/youtube/analyze-channel', async (req, res) => {
 // Rota manual — usa roteiro fornecido pelo usuário, pula o Gemini
 app.post('/api/videos/manual', async (req, res) => {
   try {
-    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda, voz, vozClonada } = req.body;
+    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda, voz, vozClonada, previewMode } = req.body;
     if (!titulo?.trim()) return res.status(400).json({ error: 'Título obrigatório' });
     if (!texto?.trim()) return res.status(400).json({ error: 'Roteiro (texto) obrigatório' });
 
@@ -731,17 +731,41 @@ app.post('/api/videos/manual', async (req, res) => {
     const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 10);
     if (paragrafos.length < 1) return res.status(400).json({ error: 'Roteiro muito curto. Separe as cenas com linha em branco.' });
 
+    // Gerar prompt_visual contextualizado para cada cena usando Gemini (se disponível)
+    const cenas = await Promise.all(paragrafos.map(async (texto_narracao, i) => {
+      let prompt_visual = `scene ${i + 1}: ${titulo}`;
+      try {
+        const geminiPrompt = `Based on this narration text for a video scene, generate a SHORT visual description in English (10-20 words) that describes what should be shown visually. Focus on concrete objects, people, actions, settings.
+
+Narration: "${texto_narracao.substring(0, 300)}"
+Video title: "${titulo.trim()}"
+
+Return ONLY the visual description, nothing else.`;
+        const result = await chamarGemini(geminiPrompt, 10000);
+        if (result?.trim() && result.trim().length > 5) {
+          prompt_visual = result.trim().replace(/^["']|["']$/g, '').substring(0, 150);
+        }
+      } catch (err) {
+        // Se Gemini falhar, usar primeira frase da narração como fallback
+        const primeiraFrase = texto_narracao.split(/[.!?]/)[0]?.trim();
+        if (primeiraFrase && primeiraFrase.length > 10) {
+          prompt_visual = primeiraFrase.substring(0, 120);
+        }
+      }
+      return {
+        numero: i + 1,
+        texto_narracao,
+        prompt_visual,
+        duracao_estimada: Math.max(10, Math.round(texto_narracao.split(' ').length / 2.5))
+      };
+    }));
+
     const roteiro = {
       titulo: titulo.trim(),
       descricao: `${titulo.trim()} — vídeo criado com roteiro manual no VideoForge.`,
       tags: ['videoforge', 'animação', tipoVideo],
       thumbnail_prompt: `${titulo.trim()}, eye-catching, dramatic`,
-      cenas: paragrafos.map((texto_narracao, i) => ({
-        numero: i + 1,
-        texto_narracao,
-        prompt_visual: `scene ${i + 1}: ${titulo}`,
-        duracao_estimada: Math.max(10, Math.round(texto_narracao.split(' ').length / 2.5))
-      }))
+      cenas
     };
 
     const videoId = uuidv4().split('-')[0];
@@ -757,6 +781,7 @@ app.post('/api/videos/manual', async (req, res) => {
       estiloLegenda: estiloLegenda || 'classic',
       voz: voz || null,
       vozClonada: vozClonada || null,
+      previewMode: previewMode || false,
       status: 'iniciando',
       progresso: 0,
       etapa: 'Iniciando com roteiro manual...',
@@ -791,6 +816,7 @@ app.post('/api/videos/manual', async (req, res) => {
           video.audioUrl = audioPaths.host;
           logStep(video, `🎙️ Narração gerada${clonedVoiceId ? ' (voz clonada)' : ''}! Iniciando visuais...`);
         }
+        video._audioPaths = audioPaths;
         video.progresso = 45;
 
         if (video.tipoVideo === 'stickAnimation') {
@@ -855,6 +881,13 @@ app.post('/api/videos/manual', async (req, res) => {
           video.status = 'buscando_visuais';
           logStep(video, '🎬 Buscando vídeos stock (Pexels + Pixabay 🟢)...');
           const visuais = await buscarVisuaisVideo(roteiro.cenas);
+          video.visuais = visuais;
+          if (video.previewMode) {
+            video.progresso = 60;
+            video.status = 'aguardando_revisao';
+            logStep(video, '👁️ Visuais prontos! Revise as cenas antes de renderizar.');
+            return;
+          }
           video.progresso = 65;
           video.status = 'renderizando';
           logStep(video, '🎬 Renderizando vídeo com clips stock...');
@@ -864,6 +897,13 @@ app.post('/api/videos/manual', async (req, res) => {
           video.status = 'buscando_visuais';
           logStep(video, '🎬 Buscando vídeos no Pixabay 🟢...');
           const visuais = await buscarVisuaisPixabay(roteiro.cenas);
+          video.visuais = visuais;
+          if (video.previewMode) {
+            video.progresso = 60;
+            video.status = 'aguardando_revisao';
+            logStep(video, '👁️ Visuais prontos! Revise as cenas antes de renderizar.');
+            return;
+          }
           video.progresso = 65;
           video.status = 'renderizando';
           logStep(video, '🎬 Renderizando vídeo com clips Pixabay...');
@@ -873,6 +913,13 @@ app.post('/api/videos/manual', async (req, res) => {
           video.status = 'buscando_visuais';
           logStep(video, '🎬 Buscando vídeos no Shutterstock 🟡...');
           const visuais = await buscarVisuaisShutterstock(roteiro.cenas);
+          video.visuais = visuais;
+          if (video.previewMode) {
+            video.progresso = 60;
+            video.status = 'aguardando_revisao';
+            logStep(video, '👁️ Visuais prontos! Revise as cenas antes de renderizar.');
+            return;
+          }
           video.progresso = 65;
           video.status = 'renderizando';
           logStep(video, '🎬 Renderizando vídeo com clips Shutterstock...');
@@ -882,6 +929,13 @@ app.post('/api/videos/manual', async (req, res) => {
           video.status = 'buscando_visuais';
           logStep(video, '🎬 Buscando vídeos no Storyblocks 🟡...');
           const visuais = await buscarVisuaisStoryblocks(roteiro.cenas);
+          video.visuais = visuais;
+          if (video.previewMode) {
+            video.progresso = 60;
+            video.status = 'aguardando_revisao';
+            logStep(video, '👁️ Visuais prontos! Revise as cenas antes de renderizar.');
+            return;
+          }
           video.progresso = 65;
           video.status = 'renderizando';
           logStep(video, '🎬 Renderizando vídeo com clips Storyblocks...');
@@ -891,6 +945,13 @@ app.post('/api/videos/manual', async (req, res) => {
           video.status = 'buscando_visuais';
           logStep(video, '🖼️ Buscando imagens stock...');
           const visuais = await buscarVisuais(roteiro.cenas);
+          video.visuais = visuais;
+          if (video.previewMode) {
+            video.progresso = 60;
+            video.status = 'aguardando_revisao';
+            logStep(video, '👁️ Visuais prontos! Revise as cenas antes de renderizar.');
+            return;
+          }
           video.progresso = 65;
           video.status = 'renderizando';
           logStep(video, '🎬 Renderizando vídeo com imagens...');
@@ -6426,6 +6487,163 @@ app.put('/api/videos/:id/cenas/:num/media', async (req, res) => {
   video.visuais[num - 1].descricao = `Mídia substituída manualmente`;
   
   res.json({ success: true, message: `Mídia da cena ${num} atualizada`, cena: video.visuais[num - 1] });
+});
+
+// ============================================
+// PREVIEW: Confirmar visuais e continuar renderização
+// ============================================
+app.post('/api/videos/:id/confirmar-visuais', async (req, res) => {
+  const video = videos.get(req.params.id);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado' });
+  if (video.status !== 'aguardando_revisao') {
+    return res.status(400).json({ error: `Vídeo não está aguardando revisão (status: ${video.status})` });
+  }
+
+  const roteiro = video.roteiro;
+  const visuais = video.visuais;
+  const videoId = video.id;
+
+  // Recuperar audioPaths salvo
+  const audioPaths = video._audioPaths;
+  if (!audioPaths) return res.status(400).json({ error: 'Dados de áudio perdidos. Recrie o vídeo.' });
+
+  res.json({ success: true, message: 'Renderização iniciada!' });
+
+  // Continuar pipeline assíncrono
+  (async () => {
+    try {
+      video.progresso = 65;
+      video.status = 'renderizando';
+      logStep(video, '🎬 Renderizando vídeo com visuais aprovados...');
+
+      let subtitlePaths = null;
+      if (video.legendas !== false) {
+        video.status = 'gerando_legendas';
+        logStep(video, '💬 Gerando legendas (Whisper)...');
+        subtitlePaths = await gerarSubtitulos(videoId, audioPaths);
+        video.subtitlePath = subtitlePaths?.host || null;
+        if (subtitlePaths) logStep(video, '💬 Legendas geradas!');
+      }
+
+      const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
+      video.videoUrl = videoPaths.host;
+
+      video.progresso = 90;
+      video.status = 'finalizando';
+      logStep(video, '✨ Finalizando vídeo...');
+      video.progresso = 95;
+
+      if (video.publicarYoutube) {
+        logStep(video, '📺 Publicando no YouTube...');
+        const youtubeId = await publicarNoYoutube(videoId, videoPaths, roteiro);
+        video.youtubeId = youtubeId;
+        logStep(video, `🎉 Publicado no YouTube! ID: ${youtubeId}`);
+      }
+
+      video.status = 'pronto';
+      video.progresso = 100;
+      logStep(video, '✅ Vídeo pronto!');
+      salvarHistoricoVideos();
+    } catch (err) {
+      video.status = 'erro';
+      logStep(video, `❌ Erro: ${err.message}`);
+      console.error('Erro ao renderizar após revisão:', err);
+    }
+  })();
+});
+
+// ============================================
+// PREVIEW: Regenerar visual de uma cena específica
+// ============================================
+app.post('/api/videos/:id/cenas/:num/regenerar', async (req, res) => {
+  const video = videos.get(req.params.id);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado' });
+  if (video.status !== 'aguardando_revisao') {
+    return res.status(400).json({ error: 'Vídeo não está em modo de revisão' });
+  }
+
+  const num = parseInt(req.params.num);
+  const cena = video.roteiro?.cenas?.[num - 1];
+  if (!cena) return res.status(400).json({ error: `Cena ${num} não encontrada` });
+
+  try {
+    const isVideoType = ['stockVideos', 'pixabayVideos', 'shutterstockVideos', 'storyblocksVideos'].includes(video.tipoVideo);
+
+    let novoVisual;
+    if (isVideoType) {
+      const resultados = await buscarVisuaisVideo([cena]);
+      novoVisual = resultados[0];
+    } else if (video.tipoVideo === 'aiImageGeneration') {
+      const resultados = await buscarVisuaisAI([cena]);
+      novoVisual = resultados[0];
+    } else {
+      const resultados = await buscarVisuais([cena]);
+      novoVisual = resultados[0];
+    }
+
+    if (novoVisual && video.visuais) {
+      video.visuais[num - 1] = novoVisual;
+    }
+
+    res.json({ success: true, visual: novoVisual });
+  } catch (err) {
+    res.status(500).json({ error: `Erro ao regenerar cena ${num}: ${err.message}` });
+  }
+});
+
+// ============================================
+// PREVIEW: Buscar alternativas de mídia (Pexels) para escolha manual
+// ============================================
+app.get('/api/videos/buscar-midia', async (req, res) => {
+  const { query, tipo } = req.query;
+  if (!query) return res.status(400).json({ error: 'Query obrigatória' });
+
+  try {
+    const results = [];
+
+    if (tipo === 'video' && PEXELS_API_KEY && PEXELS_API_KEY !== 'sua_chave_aqui') {
+      const resp = await axios.get('https://api.pexels.com/videos/search', {
+        params: { query, per_page: 12, orientation: 'landscape', size: 'medium' },
+        headers: { Authorization: PEXELS_API_KEY }
+      });
+      for (const vid of (resp.data.videos || [])) {
+        const hdFile = vid.video_files?.find(f => f.quality === 'hd' && f.width >= 1280)
+          || vid.video_files?.find(f => f.quality === 'hd')
+          || vid.video_files?.[0];
+        if (hdFile) {
+          results.push({
+            url: hdFile.link,
+            tipo: 'video',
+            thumbnail: vid.image,
+            descricao: `Pexels video: ${query}`,
+            duracao: vid.duration,
+            fonte: 'pexels'
+          });
+        }
+      }
+    } else {
+      // Buscar imagens
+      if (PEXELS_API_KEY && PEXELS_API_KEY !== 'sua_chave_aqui') {
+        const resp = await axios.get('https://api.pexels.com/v1/search', {
+          params: { query, per_page: 12, orientation: 'landscape', size: 'large' },
+          headers: { Authorization: PEXELS_API_KEY }
+        });
+        for (const foto of (resp.data.photos || [])) {
+          results.push({
+            url: foto.src.large2x,
+            tipo: 'imagem',
+            thumbnail: foto.src.medium,
+            descricao: foto.alt || query,
+            fonte: 'pexels'
+          });
+        }
+      }
+    }
+
+    res.json({ results });
+  } catch (err) {
+    res.status(500).json({ error: `Erro na busca: ${err.message}` });
+  }
 });
 
 // ============================================

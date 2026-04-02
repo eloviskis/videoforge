@@ -13,6 +13,178 @@ const API_URL = import.meta.env.VITE_API_URL
     ? 'http://localhost:3001/api'
     : `${window.location.origin}/api`)
 
+// VITE_API_URL: configure no Vercel apontando para o backend no Railway
+// Em dev usa localhost:3001, em produção sem VITE_API_URL usa mesma origin
+const API_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : (window.location.port === '3000'
+    ? 'http://localhost:3001/api'
+    : `${window.location.origin}/api`)
+
+// ============================================
+// COMPONENTE: Preview de Cenas (revisar visuais antes de renderizar)
+// ============================================
+function ScenePreviewPanel({ videoId, API_URL: apiUrl, onConfirm }) {
+  const [cenas, setCenas] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searchingFor, setSearchingFor] = useState(null) // cena número sendo buscada
+  const [regenerating, setRegenerating] = useState(null)
+  const [confirming, setConfirming] = useState(false)
+
+  useEffect(() => {
+    loadCenas()
+  }, [videoId])
+
+  const loadCenas = async () => {
+    try {
+      setLoading(true)
+      const r = await axios.get(`${apiUrl}/videos/${videoId}/cenas`)
+      setCenas(r.data.cenas || [])
+    } catch (err) {
+      console.error('Erro ao carregar cenas:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const regenerarCena = async (num) => {
+    setRegenerating(num)
+    try {
+      await axios.post(`${apiUrl}/videos/${videoId}/cenas/${num}/regenerar`)
+      await loadCenas()
+    } catch (err) {
+      alert('Erro: ' + (err.response?.data?.error || err.message))
+    } finally {
+      setRegenerating(null)
+    }
+  }
+
+  const buscarAlternativas = async (num, tipo) => {
+    if (!searchQuery.trim()) { alert('Digite um termo de busca'); return }
+    setSearchingFor(num)
+    try {
+      const r = await axios.get(`${apiUrl}/videos/buscar-midia`, { params: { query: searchQuery, tipo } })
+      setSearchResults(r.data.results || [])
+    } catch (err) {
+      alert('Erro na busca: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
+  const selecionarMidia = async (num, url, tipo) => {
+    try {
+      await axios.put(`${apiUrl}/videos/${videoId}/cenas/${num}/media`, { url, tipo })
+      await loadCenas()
+      setSearchResults([])
+      setSearchingFor(null)
+      setSearchQuery('')
+    } catch (err) {
+      alert('Erro: ' + (err.response?.data?.error || err.message))
+    }
+  }
+
+  const handleConfirm = async () => {
+    setConfirming(true)
+    try {
+      await onConfirm()
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 10, color: '#94a3b8' }}>Carregando cenas...</div>
+
+  return (
+    <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+      {cenas.map((cena, idx) => (
+        <div key={cena.numero} style={{
+          padding: '8px', marginBottom: '8px', background: '#16213e',
+          borderRadius: '8px', border: '1px solid #334155'
+        }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+            {/* Thumbnail */}
+            <div style={{ width: '100px', height: '60px', flexShrink: 0, borderRadius: '4px', overflow: 'hidden', background: '#0f0f23' }}>
+              {cena.media?.url && cena.media.tipo === 'imagem' && (
+                <img src={cena.media.url} alt={`Cena ${cena.numero}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
+              {cena.media?.url && cena.media.tipo === 'video' && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: '#8b5cf6', fontSize: '20px' }}>🎬</div>
+              )}
+              {cena.media?.thumbnail && (
+                <img src={cena.media.thumbnail} alt={`Cena ${cena.numero}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              )}
+              {!cena.media?.url && !cena.media?.thumbnail && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: '#6b7280', fontSize: '10px' }}>Sem mídia</div>
+              )}
+            </div>
+            {/* Info */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '10px', color: '#8b5cf6', fontWeight: 'bold' }}>Cena {cena.numero}</div>
+              <div style={{ fontSize: '10px', color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {cena.texto_narracao?.substring(0, 80)}...
+              </div>
+              <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                <button onClick={() => regenerarCena(cena.numero)} disabled={regenerating === cena.numero}
+                  style={{ fontSize: '9px', padding: '2px 6px', cursor: 'pointer', border: '1px solid #6366f1', borderRadius: '4px', background: '#1e1b4b', color: '#a5b4fc' }}>
+                  {regenerating === cena.numero ? '⏳...' : '🔄 Nova'}
+                </button>
+                <button onClick={() => { setSearchingFor(cena.numero); setSearchResults([]) }}
+                  style={{ fontSize: '9px', padding: '2px 6px', cursor: 'pointer', border: '1px solid #6366f1', borderRadius: '4px', background: '#1e1b4b', color: '#a5b4fc' }}>
+                  🔍 Buscar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Painel de busca manual */}
+          {searchingFor === cena.numero && (
+            <div style={{ marginTop: '6px', padding: '6px', background: '#0f172a', borderRadius: '6px' }}>
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Buscar imagens/vídeos..."
+                  onKeyDown={e => e.key === 'Enter' && buscarAlternativas(cena.numero, cena.media?.tipo || 'imagem')}
+                  style={{ flex: 1, fontSize: '10px', padding: '4px 6px', background: '#1e293b', border: '1px solid #475569', borderRadius: '4px', color: '#e2e8f0' }} />
+                <button onClick={() => buscarAlternativas(cena.numero, cena.media?.tipo || 'imagem')}
+                  style={{ fontSize: '9px', padding: '2px 6px', cursor: 'pointer', border: '1px solid #6366f1', borderRadius: '4px', background: '#4f46e5', color: '#fff' }}>
+                  Buscar
+                </button>
+                <button onClick={() => { setSearchingFor(null); setSearchResults([]) }}
+                  style={{ fontSize: '9px', padding: '2px 6px', cursor: 'pointer', border: '1px solid #6b7280', borderRadius: '4px', background: 'transparent', color: '#94a3b8' }}>
+                  ✕
+                </button>
+              </div>
+              {searchResults.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', maxHeight: '120px', overflowY: 'auto' }}>
+                  {searchResults.slice(0, 12).map((r, ri) => (
+                    <div key={ri} onClick={() => selecionarMidia(cena.numero, r.url, r.tipo)}
+                      style={{ cursor: 'pointer', borderRadius: '4px', overflow: 'hidden', border: '1px solid #475569', height: '40px' }}>
+                      <img src={r.thumbnail || r.url} alt={r.descricao || ''}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Botão confirmar */}
+      <button onClick={handleConfirm} disabled={confirming}
+        style={{
+          width: '100%', padding: '8px', marginTop: '6px', cursor: 'pointer',
+          background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: '#fff',
+          border: 'none', borderRadius: '8px', fontWeight: 'bold', fontSize: '12px'
+        }}>
+        {confirming ? '⏳ Renderizando...' : '✅ Aprovar visuais e renderizar vídeo'}
+      </button>
+    </div>
+  )
+}
+
 function App() {
   const [videos, setVideos] = useState([])
   const [loading, setLoading] = useState(false)
@@ -56,7 +228,7 @@ function App() {
   const [paidModalInfo, setPaidModalInfo] = useState(null)
   const [restartingBackend, setRestartingBackend] = useState(false)
   const [modoRoteiro, setModoRoteiro] = useState('ia') // 'ia' | 'manual' | 'livro'
-  const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '', voz: '', vozClonada: '' })
+  const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '', voz: '', vozClonada: '', previewMode: false })
   const [editorCenas, setEditorCenas] = useState({})
 
   // === LIVRO / SÉRIES STATE ===
@@ -791,6 +963,7 @@ function App() {
       gerando_roteiro: '🤖',
       gerando_narracao: '🎙️',
       buscando_visuais: '🖼️',
+      aguardando_revisao: '👁️',
       renderizando: '🎬',
       publicando: '📺',
       concluido: '✅',
@@ -1479,8 +1652,10 @@ function App() {
             e.preventDefault()
             if (!roteiroManual.titulo.trim()) { alert('Informe o título do vídeo'); return }
             if (!roteiroManual.texto.trim()) { alert('Cole o roteiro abaixo'); return }
-            if (!config.gemini_configured) {
-              setConfigBanner({ message: '⚠️ Configure a API do Gemini antes de criar vídeos!' })
+            // Gemini só é obrigatório para tipos que dependem de busca de visuais com IA
+            const tiposNaoRequerGemini = ['darkStickman', 'stickAnimation', 'heygenAvatar', 'didAvatar', 'klingGeneration', 'replicateGeneration', 'veoGeneration']
+            if (!config.gemini_configured && !tiposNaoRequerGemini.includes(roteiroManual.tipoVideo)) {
+              setConfigBanner({ message: '⚠️ Configure a API do Gemini antes de criar vídeos com este tipo!' })
               setShowConfig(true); return
             }
             const missingManual = verificarChavesPagas(roteiroManual.tipoVideo)
@@ -1590,8 +1765,31 @@ function App() {
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
                 <span>📝 Roteiro (cada parágrafo = 1 cena)</span>
+                <label style={{ fontSize: '11px', color: '#667eea', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  📁 Importar arquivo
+                  <input type="file" accept=".txt,.json,.srt,.md" style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      if (!file) return
+                      const text = await file.text()
+                      let parsed = text
+                      // Tentar parsear JSON com campo "cenas" ou "texto"
+                      try {
+                        const json = JSON.parse(text)
+                        if (json.cenas && Array.isArray(json.cenas)) {
+                          parsed = json.cenas.map(c => c.texto_narracao || c.texto || c.narration || '').join('\n\n')
+                        } else if (json.texto) {
+                          parsed = json.texto
+                        }
+                        if (json.titulo) setRoteiroManual(p => ({ ...p, titulo: json.titulo }))
+                      } catch { /* não é JSON, usar texto bruto */ }
+                      setRoteiroManual(p => ({ ...p, texto: parsed }))
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
               </label>
               <textarea
                 value={roteiroManual.texto}
@@ -1675,6 +1873,21 @@ function App() {
                 {!config.youtube_connected && <span style={{ fontSize: '12px', color: '#999' }}>(conecte nas configurações)</span>}
               </label>
             </div>
+
+            {/* Preview Mode - revisar visuais antes de renderizar */}
+            {!['darkStickman', 'stickAnimation', 'heygenAvatar', 'didAvatar', 'klingGeneration', 'replicateGeneration', 'veoGeneration', 'geminiVeoGeneration'].includes(roteiroManual.tipoVideo) && (
+              <div className="form-group">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={roteiroManual.previewMode}
+                    onChange={e => setRoteiroManual(p => ({ ...p, previewMode: e.target.checked }))}
+                    style={{ width: 'auto' }} />
+                  <span>👁️ Revisar visuais antes de renderizar</span>
+                </label>
+                <small style={{ color: '#888', fontSize: '0.8em', display: 'block', marginTop: 2 }}>
+                  Você poderá ver e trocar as imagens/vídeos de cada cena antes do vídeo ser montado
+                </small>
+              </div>
+            )}
 
             <button type="submit" className="btn btn-primary" disabled={loading}>
               {loading ? '⏳ Criando...' : '🎬 Criar Vídeo com Meu Roteiro'}
@@ -2484,6 +2697,24 @@ function App() {
                         ⚠️ <strong>Veo 2 indisponível:</strong> {video.veoFallbackReason || 'GCP billing não ativado.'} O vídeo foi gerado com imagens Pexels.
                       </div>
                     )}
+
+                    {/* Preview / Revisão de visuais */}
+                    {video.status === 'aguardando_revisao' && (
+                      <div style={{ marginTop: '10px', padding: '12px', background: '#fffbeb', border: '2px solid #f59e0b', borderRadius: '10px' }}>
+                        <div style={{ fontWeight: 'bold', color: '#92400e', marginBottom: '8px', fontSize: '14px' }}>
+                          👁️ Revise os visuais antes de renderizar
+                        </div>
+                        <ScenePreviewPanel videoId={video.id} API_URL={API_URL} onConfirm={async () => {
+                          try {
+                            await axios.post(`${API_URL}/videos/${video.id}/confirmar-visuais`)
+                            await carregarVideos()
+                          } catch (err) {
+                            alert('Erro: ' + (err.response?.data?.error || err.message))
+                          }
+                        }} />
+                      </div>
+                    )}
+
                     {video.status === 'pronto' && (
                       <div style={{ marginTop: '10px' }}>
                         <button
@@ -3009,6 +3240,20 @@ function App() {
             </div>
 
             {/* Link para download se pronto */}
+            {monitorVideo.status === 'aguardando_revisao' && (
+              <div style={{ marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#fbbf24' }}>👁️ Revise os visuais de cada cena</span>
+                </div>
+                <ScenePreviewPanel videoId={monitorVideoId} API_URL={API_URL} onConfirm={async () => {
+                  try {
+                    await axios.post(`${API_URL}/videos/${monitorVideoId}/confirmar-visuais`)
+                  } catch (err) {
+                    alert('Erro: ' + (err.response?.data?.error || err.message))
+                  }
+                }} />
+              </div>
+            )}
             {['pronto','concluido'].includes(monitorVideo.status) && monitorVideo.videoUrl && (
               <a href={monitorVideo.videoUrl} target="_blank" rel="noreferrer" style={{
                 display: 'block', marginTop: '10px', textAlign: 'center',
