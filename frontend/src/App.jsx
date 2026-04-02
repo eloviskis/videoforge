@@ -1837,7 +1837,14 @@ function App() {
                   <select value={roteiroManual.voz} onChange={e => setRoteiroManual(p => ({ ...p, voz: e.target.value, vozClonada: '' }))}
                     style={{ padding: '7px 10px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13, width: '100%' }}>
                     <option value="">Padrão do sistema</option>
-                    {voices.map(v => <option key={v.voice_id} value={v.voice_id}>{v.name}</option>)}
+                    {availableVoices?.byLang && Object.entries(availableVoices.byLang)
+                      .sort(([a],[b]) => a.localeCompare(b))
+                      .map(([locale, voiceList]) => (
+                        <optgroup key={locale} label={`🌍 ${locale} (${voiceList.length})`}>
+                          {voiceList.map(v => <option key={v.id} value={v.id}>{v.gender === 'Male' ? '♂' : '♀'} {v.name}</option>)}
+                        </optgroup>
+                      ))
+                    }
                   </select>
                 </div>
 
