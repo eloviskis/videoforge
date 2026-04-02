@@ -43,6 +43,12 @@ const USER_KEY_DEFS = [
   // TTS
   { key: 'ELEVENLABS_API_KEY',      grupo: 'tts',   label: 'ElevenLabs',               icon: '🗣️', free: false, hint: 'https://elevenlabs.io/subscription', desc: 'Vozes ultra-realistas para narração' },
   { key: 'ELEVENLABS_VOICE_ID',     grupo: 'tts',   label: 'ElevenLabs — Voice ID',    icon: '🎙️', free: false, hint: '' },
+  // ComfyUI — Motor de IA local/remoto
+  { key: 'COMFYUI_URL',              grupo: 'comfyui', label: 'ComfyUI — URL do Servidor',       icon: '🖥️', free: true,  hint: 'Ex: http://192.168.1.100:8188', desc: 'URL do seu servidor ComfyUI (local ou cloud GPU como RunPod)' },
+  { key: 'COMFYUI_CHECKPOINT',       grupo: 'comfyui', label: 'ComfyUI — Modelo/Checkpoint',     icon: '🧠', free: true,  hint: 'Nome do .safetensors em models/checkpoints', desc: 'Ex: dreamshaper_8.safetensors, juggernautXL.safetensors, flux1-dev.safetensors' },
+  { key: 'COMFYUI_STEPS',            grupo: 'comfyui', label: 'ComfyUI — Steps de Inferência',   icon: '⚙️', free: true,  hint: 'Padrão: 25', desc: 'Mais steps = mais qualidade, mais lento. Recomendado: 20-30' },
+  { key: 'COMFYUI_CFG',              grupo: 'comfyui', label: 'ComfyUI — CFG Scale',             icon: '🎛️', free: true,  hint: 'Padrão: 7.0', desc: 'Quanto o modelo segue o prompt (1-15). Recomendado: 5-8' },
+  { key: 'COMFYUI_WORKFLOW_JSON',    grupo: 'comfyui', label: 'ComfyUI — Workflow JSON (avançado)', icon: '📋', free: true,  hint: 'Cole o JSON exportado do ComfyUI', desc: 'Workflow personalizado. Exporte via Save (API Format) no ComfyUI e cole aqui.' },
   // Mídia
   { key: 'PIXABAY_API_KEY',         grupo: 'media', label: 'Pixabay (Música)',          icon: '🎵', free: true,  hint: 'https://pixabay.com/api/docs/', desc: 'Músicas de fundo gratuitas para vídeos' },
 ];

@@ -877,6 +877,22 @@ Return ONLY the visual description, nothing else.`;
           logStep(video, '🎥 Gerando vídeo com Kling AI...');
           const videoPaths = await gerarVideoKling(videoId, roteiro, audioPaths);
           video.videoUrl = videoPaths.host;
+        } else if (video.tipoVideo === 'comfyuiGeneration') {
+          video.status = 'gerando_comfyui';
+          logStep(video, '🎨 Gerando imagens com ComfyUI...');
+          const visuais = await gerarVisuaisComfyUI(roteiro.cenas, videoId);
+          video.visuais = visuais;
+          if (video.previewMode) {
+            video.progresso = 60;
+            video.status = 'aguardando_revisao';
+            logStep(video, '👁️ Visuais ComfyUI prontos! Revise as cenas antes de renderizar.');
+            return;
+          }
+          video.progresso = 65;
+          video.status = 'renderizando';
+          logStep(video, '🎬 Renderizando vídeo com imagens ComfyUI...');
+          const videoPaths = await renderizarVideo(videoId, roteiro, audioPaths, visuais);
+          video.videoUrl = videoPaths.host;
         } else if (video.tipoVideo === 'stockVideos') {
           video.status = 'buscando_visuais';
           logStep(video, '🎬 Buscando vídeos stock (Pexels + Pixabay 🟢)...');
@@ -4408,6 +4424,162 @@ Context: ${cena.texto_narracao || ''}`.trim().substring(0, 500);
 }
 
 // ============================================
+// FUNÇÃO: Gerar Imagens/Vídeos com ComfyUI (servidor do usuário)
+// ============================================
+async function gerarVisuaisComfyUI(cenas, videoId) {
+  const COMFYUI_URL = (process.env.COMFYUI_URL || '').replace(/\/+$/, '');
+  if (!COMFYUI_URL) {
+    throw new Error('COMFYUI_URL não configurada. Defina a URL do seu servidor ComfyUI (ex: http://192.168.1.100:8188)');
+  }
+
+  // Testar conexão
+  try {
+    await axios.get(`${COMFYUI_URL}/system_stats`, { timeout: 10000 });
+  } catch (err) {
+    throw new Error(`Não foi possível conectar ao ComfyUI em ${COMFYUI_URL}: ${err.message}`);
+  }
+
+  const COMFYUI_WORKFLOW = process.env.COMFYUI_WORKFLOW || 'default_txt2img';
+  const visuais = [];
+
+  for (let i = 0; i < cenas.length; i++) {
+    const cena = cenas[i];
+    const prompt = cena.prompt_visual || cena.descricao_visual || cena.titulo || `scene ${i + 1}`;
+
+    console.log(`🎨 [ComfyUI] Cena ${i + 1}/${cenas.length}: "${prompt.substring(0, 80)}..."`);
+
+    // Montar workflow baseado no tipo selecionado
+    let workflow;
+    if (COMFYUI_WORKFLOW === 'custom' && process.env.COMFYUI_WORKFLOW_JSON) {
+      // Workflow JSON customizado pelo usuário
+      try {
+        workflow = JSON.parse(process.env.COMFYUI_WORKFLOW_JSON);
+        // Substituir o prompt no primeiro nó CLIPTextEncode encontrado
+        for (const nodeId of Object.keys(workflow)) {
+          const node = workflow[nodeId];
+          if (node.class_type === 'CLIPTextEncode' && node.inputs?.text) {
+            node.inputs.text = prompt;
+            break;
+          }
+        }
+      } catch (e) {
+        throw new Error('COMFYUI_WORKFLOW_JSON inválido: ' + e.message);
+      }
+    } else {
+      // Workflow padrão: txt2img com Stable Diffusion / Flux
+      const ckpt = process.env.COMFYUI_CHECKPOINT || '';
+      workflow = {
+        "1": {
+          "class_type": "CheckpointLoaderSimple",
+          "inputs": { "ckpt_name": ckpt }
+        },
+        "2": {
+          "class_type": "CLIPTextEncode",
+          "inputs": { "text": prompt, "clip": ["1", 1] }
+        },
+        "3": {
+          "class_type": "CLIPTextEncode",
+          "inputs": { "text": "blurry, low quality, watermark, text, ugly, distorted", "clip": ["1", 1] }
+        },
+        "4": {
+          "class_type": "EmptyLatentImage",
+          "inputs": { "width": 1280, "height": 720, "batch_size": 1 }
+        },
+        "5": {
+          "class_type": "KSampler",
+          "inputs": {
+            "model": ["1", 0],
+            "positive": ["2", 0],
+            "negative": ["3", 0],
+            "latent_image": ["4", 0],
+            "seed": Math.floor(Math.random() * 2 ** 32),
+            "steps": parseInt(process.env.COMFYUI_STEPS || '25'),
+            "cfg": parseFloat(process.env.COMFYUI_CFG || '7.0'),
+            "sampler_name": process.env.COMFYUI_SAMPLER || "euler_ancestral",
+            "scheduler": "normal",
+            "denoise": 1
+          }
+        },
+        "6": {
+          "class_type": "VAEDecode",
+          "inputs": { "samples": ["5", 0], "vae": ["1", 2] }
+        },
+        "7": {
+          "class_type": "SaveImage",
+          "inputs": { "images": ["6", 0], "filename_prefix": `videoforge_${videoId}_cena${i + 1}` }
+        }
+      };
+    }
+
+    // Enfileirar no ComfyUI
+    const clientId = `videoforge-${videoId}-${i}`;
+    let promptId;
+    try {
+      const resp = await axios.post(`${COMFYUI_URL}/prompt`, {
+        prompt: workflow,
+        client_id: clientId
+      }, { timeout: 30000 });
+      promptId = resp.data.prompt_id;
+    } catch (err) {
+      const errMsg = err.response?.data?.error || err.message;
+      console.error(`❌ [ComfyUI] Erro ao enfileirar cena ${i + 1}: ${errMsg}`);
+      // Fallback para Pexels
+      visuais.push({ cena: i + 1, url: '', tipo: 'imagem', erro: errMsg });
+      continue;
+    }
+
+    // Polling até concluir (máx 5 min por cena)
+    const maxWait = 300000;
+    const startTime = Date.now();
+    let outputImages = null;
+
+    while (Date.now() - startTime < maxWait) {
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        const histResp = await axios.get(`${COMFYUI_URL}/history/${promptId}`, { timeout: 10000 });
+        const histEntry = histResp.data[promptId];
+        if (histEntry && histEntry.outputs) {
+          // Procurar output de imagem em qualquer nó
+          for (const nodeId of Object.keys(histEntry.outputs)) {
+            const output = histEntry.outputs[nodeId];
+            if (output.images && output.images.length > 0) {
+              outputImages = output.images;
+              break;
+            }
+          }
+          if (outputImages) break;
+        }
+      } catch { /* polling continua */ }
+    }
+
+    if (!outputImages || outputImages.length === 0) {
+      console.error(`⏰ [ComfyUI] Timeout na cena ${i + 1}`);
+      visuais.push({ cena: i + 1, url: '', tipo: 'imagem', erro: 'Timeout: ComfyUI não completou em 5 minutos' });
+      continue;
+    }
+
+    // Baixar a imagem gerada
+    const img = outputImages[0];
+    const imgUrl = `${COMFYUI_URL}/view?filename=${encodeURIComponent(img.filename)}&subfolder=${encodeURIComponent(img.subfolder || '')}&type=${img.type || 'output'}`;
+
+    try {
+      const imgResp = await axios.get(imgUrl, { responseType: 'arraybuffer', timeout: 30000 });
+      const ext = img.filename.split('.').pop() || 'png';
+      const localPath = resolve(MEDIA_DIR, 'imagens', `${videoId}_comfyui_cena${i + 1}.${ext}`);
+      await fs.mkdir(resolve(MEDIA_DIR, 'imagens'), { recursive: true });
+      await fs.writeFile(localPath, imgResp.data);
+      visuais.push({ cena: i + 1, url: imgUrl, localPath, tipo: 'imagem' });
+      console.log(`✅ [ComfyUI] Cena ${i + 1} salva: ${localPath}`);
+    } catch (err) {
+      console.error(`❌ [ComfyUI] Erro ao baixar imagem da cena ${i + 1}: ${err.message}`);
+      visuais.push({ cena: i + 1, url: imgUrl, tipo: 'imagem', erro: err.message });
+    }
+  }
+
+  return visuais;
+}
+
+// ============================================
 // FUNÇÃO: Gerar Vídeo com Replicate API (Wan - requer créditos)
 // ============================================
 async function gerarVideoReplicate(videoId, roteiro, audioPaths) {
@@ -6649,6 +6821,47 @@ app.get('/api/videos/buscar-midia', async (req, res) => {
 // ============================================
 // EXPORTAR ROTEIRO / LEGENDAS
 // ============================================
+
+// ============================================
+// COMFYUI: Testar conexão e listar modelos
+// ============================================
+app.get('/api/comfyui/test', async (req, res) => {
+  const url = (req.query.url || process.env.COMFYUI_URL || '').replace(/\/+$/, '');
+  if (!url) return res.status(400).json({ error: 'URL do ComfyUI não fornecida' });
+
+  try {
+    const statsResp = await axios.get(`${url}/system_stats`, { timeout: 10000 });
+    const stats = statsResp.data;
+
+    // Tentar listar modelos (checkpoints)
+    let models = [];
+    try {
+      const modelsResp = await axios.get(`${url}/models/checkpoints`, { timeout: 10000 });
+      models = modelsResp.data || [];
+    } catch { /* servidor pode não ter checkpoints ainda */ }
+
+    // Info de GPU
+    const device = stats.devices?.[0] || {};
+    const vramGB = device.vram_total ? (device.vram_total / (1024 ** 3)).toFixed(1) : '?';
+
+    res.json({
+      success: true,
+      version: stats.system?.comfyui_version || 'desconhecida',
+      gpu: device.name || 'CPU only',
+      vram: `${vramGB} GB`,
+      os: stats.system?.os || '?',
+      models,
+      pytorch: stats.system?.pytorch_version || '?'
+    });
+  } catch (err) {
+    res.status(502).json({
+      success: false,
+      error: `Não foi possível conectar: ${err.message}`,
+      hint: 'Verifique se o ComfyUI está rodando e acessível na URL informada. Use --listen 0.0.0.0 para aceitar conexões externas.'
+    });
+  }
+});
+
 app.get('/api/videos/:id/roteiro', (req, res) => {
   const video = videos.get(req.params.id);
   if (!video) return res.status(404).json({ error: 'Vídeo não encontrado' });
@@ -6764,6 +6977,14 @@ const API_KEY_DEFINITIONS = [
   { key: 'HUGGINGFACE_API_TOKEN', label: 'Hugging Face', group: 'apis', free: false, freeLabel: 'PAGO' },
   { key: 'LOCAL_AI_MODEL', label: 'Modelo IA Local (modelscope/zeroscope/cogvideox)', group: 'apis', free: true, freeLabel: 'GRÁTIS' },
   { key: 'LOCAL_AI_STEPS', label: 'IA Local — Steps de Inferência (padrão: 20)', group: 'apis', free: true, freeLabel: 'GRÁTIS' },
+
+  // ── ComfyUI — Motor de IA local/remoto ─────────────────────────────────
+  { key: 'COMFYUI_URL', label: 'ComfyUI — URL do Servidor', group: 'apis', free: true, freeLabel: 'SEU SERVIDOR', hint: 'Ex: http://192.168.1.100:8188 ou https://runpod-xxx.proxy.runpod.net' },
+  { key: 'COMFYUI_CHECKPOINT', label: 'ComfyUI — Checkpoint/Modelo', group: 'apis', free: true, freeLabel: 'SEU SERVIDOR', hint: 'Nome do modelo em models/checkpoints (ex: dreamshaper_8.safetensors)' },
+  { key: 'COMFYUI_STEPS', label: 'ComfyUI — Steps (padrão: 25)', group: 'apis', free: true, freeLabel: 'SEU SERVIDOR' },
+  { key: 'COMFYUI_CFG', label: 'ComfyUI — CFG Scale (padrão: 7)', group: 'apis', free: true, freeLabel: 'SEU SERVIDOR' },
+  { key: 'COMFYUI_WORKFLOW', label: 'ComfyUI — Tipo de Workflow (default_txt2img / custom)', group: 'apis', free: true, freeLabel: 'SEU SERVIDOR' },
+  { key: 'COMFYUI_WORKFLOW_JSON', label: 'ComfyUI — Workflow JSON (para custom)', group: 'apis', free: true, freeLabel: 'SEU SERVIDOR' },
 
   // ── Música de fundo ────────────────────────────────────────────────────────
   { key: 'PIXABAY_API_KEY', label: 'Pixabay — Música de fundo', group: 'apis', free: true, freeLabel: 'GRÁTIS', hint: 'https://pixabay.com/api/docs/' },

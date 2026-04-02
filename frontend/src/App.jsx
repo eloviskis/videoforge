@@ -418,6 +418,18 @@ function App() {
         detalhe: 'Banco com milhões de vídeos HD/4K. Assinatura mensal com downloads ilimitados.',
       }),
     },
+    comfyuiGeneration: {
+      label: 'ComfyUI (Seu Servidor)',
+      icon: '🖥️',
+      warning: 'Requer um servidor ComfyUI rodando com GPU. Pode ser local (seu PC com placa NVIDIA) ou cloud (RunPod ~$0.20-0.40/hora). Configure a URL em "Suas Chaves de API".',
+      calcCost: (duracao) => {
+        const n = calcNumCenas(duracao)
+        return {
+          total: 'Seu servidor',
+          detalhe: `${n} imagens geradas no SEU ComfyUI. Custo = energia/aluguel da GPU.`,
+        }
+      },
+    },
   }
 
   // Mapeamento: tipo pago → chaves de API necessárias
@@ -431,6 +443,7 @@ function App() {
     heygenAvatar: ['HEYGEN_API_KEY'],
     shutterstockVideos: ['SHUTTERSTOCK_CLIENT_ID', 'SHUTTERSTOCK_CLIENT_SECRET'],
     storyblocksVideos: ['STORYBLOCKS_PUBLIC_KEY', 'STORYBLOCKS_PRIVATE_KEY'],
+    comfyuiGeneration: ['COMFYUI_URL'],
   }
 
   const [configBanner, setConfigBanner] = useState(null) // { message: string }
@@ -1602,6 +1615,7 @@ function App() {
                     <option value="klingGeneration">🎥 Kling AI 🟡</option>
                     <option value="veoGeneration">🎬 Veo 3 🟡</option>
                     <option value="heygenAvatar">🎭 HeyGen Avatar IA 🟡</option>
+                    <option value="comfyuiGeneration">🖥️ ComfyUI 🟡</option>
                   </optgroup>
                 </select>
               </div>
@@ -1645,7 +1659,7 @@ function App() {
             if (!roteiroManual.titulo.trim()) { alert('Informe o título do vídeo'); return }
             if (!roteiroManual.texto.trim()) { alert('Cole o roteiro abaixo'); return }
             // Gemini só é obrigatório para tipos que dependem de busca de visuais com IA
-            const tiposNaoRequerGemini = ['darkStickman', 'stickAnimation', 'heygenAvatar', 'didAvatar', 'klingGeneration', 'replicateGeneration', 'veoGeneration']
+            const tiposNaoRequerGemini = ['darkStickman', 'stickAnimation', 'heygenAvatar', 'didAvatar', 'klingGeneration', 'replicateGeneration', 'veoGeneration', 'comfyuiGeneration']
             if (!config.gemini_configured && !tiposNaoRequerGemini.includes(roteiroManual.tipoVideo)) {
               setConfigBanner({ message: '⚠️ Configure a API do Gemini antes de criar vídeos com este tipo!' })
               setShowConfig(true); return
@@ -1977,6 +1991,7 @@ function App() {
               </optgroup>
               <optgroup label="🖥️ Open Source / Local">
                 <option value="localAIGeneration">🤖 IA Local - Open Source (CPU/GPU) 🟢</option>
+                <option value="comfyuiGeneration">🖥️ ComfyUI — Seu Servidor de IA (Local/Cloud) 🟢/🟡</option>
               </optgroup>
               <optgroup label="💳 Pagos — Bancos de Vídeo Premium">
                 <option value="shutterstockVideos">🎞️ Shutterstock Vídeos (Assinatura) 🟡</option>
@@ -2025,6 +2040,8 @@ function App() {
                 ? '🎭 Apresentador virtual animado lendo a narração. Requer DID_API_KEY + DID_PRESENTER_URL nas Configurações 🟡'
                 : formData.tipoVideo === 'heygenAvatar'
                 ? '🎭 Avatar IA ultra-realista da HeyGen com sincronismo labial perfeito. Requer HEYGEN_API_KEY nas Configurações 🟡'
+                : formData.tipoVideo === 'comfyuiGeneration'
+                ? '🖥️ Gera imagens com SEU servidor ComfyUI (Stable Diffusion, Flux, SDXL, etc). Precisa de GPU NVIDIA. Configure a URL em "Suas Chaves de API".'
                 : '📷 Busca imagens reais do Pexels. Com PIXABAY_API_KEY adiciona música de fundo 🟢 | Legendas Whisper automáticas 🟢'}
             </small>
             {PAID_TYPES[formData.tipoVideo] && (
@@ -2037,11 +2054,11 @@ function App() {
               </div>
             )}
             {/* Banner contextual wizard */}
-            {({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2', heygenAvatar: 'heygen', didAvatar: 'did' })[formData.tipoVideo] && (
+            {({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2', heygenAvatar: 'heygen', didAvatar: 'did', comfyuiGeneration: 'comfyui' })[formData.tipoVideo] && (
               <div style={{ marginTop: '8px', padding: '10px 16px', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <span style={{ fontSize: '12px', color: '#c4b5fd' }}>🪄 Precisa de ajuda para configurar esta opção? Nosso wizard te guia em minutos.</span>
                 <button
-                  onClick={() => { setWizardGoal(({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2', heygenAvatar: 'heygen', didAvatar: 'did' })[formData.tipoVideo]); setWizardOpen(true) }}
+                  onClick={() => { setWizardGoal(({ klingGeneration: 'kling', replicateGeneration: 'replicate', geminiVeoGeneration: 'veo2', veoGeneration: 'veo2', heygenAvatar: 'heygen', didAvatar: 'did', comfyuiGeneration: 'comfyui' })[formData.tipoVideo]); setWizardOpen(true) }}
                   style={{ padding: '6px 14px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#a78bfa,#6d28d9)', color: '#fff', fontWeight: 700, fontSize: '12px', cursor: 'pointer', whiteSpace: 'nowrap' }}
                 >Configurar agora</button>
               </div>

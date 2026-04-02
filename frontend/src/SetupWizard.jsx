@@ -53,6 +53,20 @@ const GOALS = [
     apis: [], special: 'youtube',
     badge: 'GRÁTIS', badgeColor: '#22c55e',
   },
+  {
+    id: 'comfyui', icon: '🖥️', label: 'ComfyUI (Seu Servidor)',
+    desc: 'Gere imagens com Stable Diffusion, Flux, SDXL no seu próprio servidor GPU.',
+    apis: ['COMFYUI_URL'], special: 'comfyui',
+    badge: 'SEU HARDWARE', badgeColor: '#3b82f6',
+  },
+]
+
+const COMFYUI_STEPS = [
+  { title: '1. Instale o ComfyUI', desc: 'Baixe e instale no seu PC com GPU NVIDIA (mínimo 4GB VRAM), ou alugue uma GPU na cloud.', link: 'https://github.com/comfyanonymous/ComfyUI/releases', linkLabel: 'Download ComfyUI' },
+  { title: '2. Baixe um modelo', desc: 'Coloque um arquivo .safetensors na pasta models/checkpoints do ComfyUI. Recomendamos dreamshaper ou juggernautXL.', link: 'https://civitai.com/models', linkLabel: 'Buscar modelos no CivitAI' },
+  { title: '3. Inicie o ComfyUI com --listen', desc: 'Execute: python main.py --listen 0.0.0.0 para aceitar conexões de rede. A API ficará em http://SEU-IP:8188' },
+  { title: '4. Configure a URL aqui', desc: 'No campo COMFYUI_URL abaixo, cole a URL do seu servidor (ex: http://192.168.1.100:8188). Para cloud (RunPod), use a URL do proxy fornecida.' },
+  { title: '5. Teste a conexão', desc: 'Após salvar, clique em "Testar Conexão" para verificar se o VideoForge consegue se comunicar com seu ComfyUI.' },
 ]
 
 const VEO2_STEPS = [
@@ -79,12 +93,15 @@ export default function SetupWizard({ open, onClose, onSaved, initialGoal }) {
   const [err, setErr] = useState('')
   const [existing, setExisting] = useState({})   // keys já configuradas
   const [veo2Step, setVeo2Step] = useState(0)
+  const [comfyuiStep, setComfyuiStep] = useState(0)
+  const [comfyuiTest, setComfyuiTest] = useState(null)
+  const [comfyuiTesting, setComfyuiTesting] = useState(false)
 
   useEffect(() => {
     if (open) {
       setScreen(initialGoal ? 'api' : 'goals')
       setGoal(initialGoal ? GOALS.find(g => g.id === initialGoal) || null : null)
-      setApiIdx(0); setVals({}); setSaved([]); setErr(''); setVeo2Step(0)
+      setApiIdx(0); setVals({}); setSaved([]); setErr(''); setVeo2Step(0); setComfyuiStep(0); setComfyuiTest(null)
       loadExisting()
     }
   }, [open, initialGoal])
@@ -107,6 +124,7 @@ export default function SetupWizard({ open, onClose, onSaved, initialGoal }) {
     setGoal(g)
     if (g.special === 'veo2') { setScreen('veo2'); return }
     if (g.special === 'youtube') { setScreen('youtube'); return }
+    if (g.special === 'comfyui') { setScreen('comfyui'); return }
     setApiIdx(0); setScreen('api')
   }
 
@@ -324,6 +342,92 @@ export default function SetupWizard({ open, onClose, onSaved, initialGoal }) {
               : <button onClick={() => { setScreen('done'); onSaved?.() }} style={btn(true)}>Concluir ✓</button>
             }
             {veo2Step > 0 && <button onClick={() => setVeo2Step(i => i - 1)} style={btn(false)}>← Anterior</button>}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── ComfyUI screen ── */
+  if (screen === 'comfyui') {
+    const s = COMFYUI_STEPS[comfyuiStep]
+    const testConnection = async () => {
+      const url = vals['COMFYUI_URL'] || existing['COMFYUI_URL'] || ''
+      if (!url) { setComfyuiTest({ ok: false, msg: 'Preencha a URL do servidor primeiro.' }); return }
+      setComfyuiTesting(true); setComfyuiTest(null)
+      try {
+        const r = await fetch(`/api/comfyui/test?url=${encodeURIComponent(url)}`)
+        const d = await r.json()
+        if (d.ok) setComfyuiTest({ ok: true, msg: `✅ Conectado! GPU: ${d.gpu || 'N/A'} | VRAM: ${d.vram || '?'} | Modelos: ${d.models?.length || 0}` })
+        else setComfyuiTest({ ok: false, msg: `❌ Falha: ${d.error || 'Sem resposta'}` })
+      } catch (e) { setComfyuiTest({ ok: false, msg: `❌ Erro: ${e.message}` }) }
+      setComfyuiTesting(false)
+    }
+    return (
+      <div style={overlay}>
+        <div style={card}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <button onClick={() => setScreen('goals')} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 13 }}>← Voltar</button>
+            <span style={{ fontSize: 12, color: '#64748b' }}>🖥️ ComfyUI — passo {comfyuiStep + 1} de {COMFYUI_STEPS.length}</span>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 20 }}>✕</button>
+          </div>
+
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 4, marginBottom: 24, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${((comfyuiStep + 1) / COMFYUI_STEPS.length) * 100}%`, background: 'linear-gradient(90deg,#3b82f6,#8b5cf6)', borderRadius: 4, transition: 'width 0.4s' }} />
+          </div>
+
+          <div style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 12, padding: '10px 16px', marginBottom: 24, fontSize: 12, color: '#93c5fd' }}>
+            🖥️ O ComfyUI roda no <strong>seu próprio hardware</strong> (local ou cloud). Você precisa de uma GPU com pelo menos 6GB VRAM. Sem custo do VideoForge!
+          </div>
+
+          <div style={{ display: 'flex', gap: 14, marginBottom: 28 }}>
+            <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(59,130,246,0.15)', color: '#93c5fd', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{comfyuiStep + 1}</span>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16, color: '#e2e8f0', marginBottom: 8 }}>{s.title}</div>
+              <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6 }}>{s.desc}</div>
+              {s.link && <a href={s.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: '#60a5fa' }}>{s.linkLabel} ↗</a>}
+            </div>
+          </div>
+
+          {comfyuiStep === COMFYUI_STEPS.length - 1 && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6, display: 'block' }}>URL do seu servidor ComfyUI:</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={vals['COMFYUI_URL'] || existing['COMFYUI_URL'] || ''}
+                  onChange={e => setVals(v => ({ ...v, COMFYUI_URL: e.target.value }))}
+                  placeholder="http://127.0.0.1:8188"
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: '#e2e8f0', fontSize: 14 }}
+                />
+                <button onClick={testConnection} disabled={comfyuiTesting} style={{ ...btn(true), whiteSpace: 'nowrap', opacity: comfyuiTesting ? 0.6 : 1 }}>
+                  {comfyuiTesting ? '⏳ Testando...' : '🔌 Testar'}
+                </button>
+              </div>
+              {comfyuiTest && (
+                <div style={{ marginTop: 8, fontSize: 12, padding: '8px 12px', borderRadius: 8, background: comfyuiTest.ok ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', color: comfyuiTest.ok ? '#86efac' : '#fca5a5', border: `1px solid ${comfyuiTest.ok ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                  {comfyuiTest.msg}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {comfyuiStep < COMFYUI_STEPS.length - 1
+              ? <button onClick={() => setComfyuiStep(i => i + 1)} style={btn(true)}>Próximo passo →</button>
+              : <button onClick={async () => {
+                  const url = vals['COMFYUI_URL']
+                  if (url) {
+                    setSaving(true)
+                    try {
+                      await fetch('/api/user/apikeys', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` }, body: JSON.stringify({ COMFYUI_URL: url }) })
+                      setSaved(p => [...p, 'COMFYUI_URL'])
+                    } catch {}
+                    setSaving(false)
+                  }
+                  setScreen('done'); onSaved?.()
+                }} style={btn(true)}>{saving ? 'Salvando...' : 'Salvar e concluir ✓'}</button>
+            }
+            {comfyuiStep > 0 && <button onClick={() => setComfyuiStep(i => i - 1)} style={btn(false)}>← Anterior</button>}
           </div>
         </div>
       </div>
