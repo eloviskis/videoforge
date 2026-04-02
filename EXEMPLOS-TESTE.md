@@ -1,27 +1,28 @@
 # 🧪 Exemplos de Teste - VideoForge
 
-## Testar Sistema de Animações
+> ⚠️ Todos os endpoints requerem autenticação JWT. Obtenha um token via login primeiro.
 
-### 1. Teste Rápido do Remotion (Standalone)
+## 🔑 Obter Token de Autenticação
 
 ```bash
-./testar-animacoes.sh
-```
+# Login para obter token JWT
+TOKEN=$(curl -s -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"seu@email.com","password":"suasenha"}' | jq -r '.token')
 
-Este script vai:
-- Verificar instalação do Remotion
-- Criar uma cena de teste simples (3 segundos)
-- Renderizar e salvar em `/tmp/videoforge-test-animation.mp4`
+echo "Token: $TOKEN"
+```
 
 ---
 
-## Testar via API (Pipeline Completo)
+## 🎬 Testar Criação de Vídeos
 
-### 2. Vídeo com Imagens Stock (Pexels)
+### 1. Vídeo com Imagens Stock (Pexels) — Gratuito
 
 ```bash
 curl -X POST http://localhost:3001/api/videos \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{
     "titulo": "5 Curiosidades sobre o Espaço",
     "nicho": "curiosidades",
@@ -32,217 +33,310 @@ curl -X POST http://localhost:3001/api/videos \
   }'
 ```
 
-**Resposta esperada:**
-```json
-{
-  "success": true,
-  "videoId": "a1b2c3d4",
-  "message": "Vídeo criado! Pipeline iniciado."
-}
-```
-
-### 3. Vídeo com Animação de Palitinho (IA)
+### 2. Vídeo com Vídeos Stock (Pexels + Pixabay) — Gratuito
 
 ```bash
 curl -X POST http://localhost:3001/api/videos \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "10 Lugares Incríveis para Visitar",
+    "nicho": "viagens",
+    "duracao": 8,
+    "tipoVideo": "stockVideos"
+  }'
+```
+
+### 3. Vídeo com Animação de Palitinho — Gratuito
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{
     "titulo": "Como Nasceu a Internet",
     "nicho": "tecnologia",
     "duracao": 5,
     "detalhes": "História da criação da internet de forma simples",
-    "publicarYoutube": false,
     "tipoVideo": "stickAnimation"
   }'
 ```
 
-**Pipeline de Animação:**
-1. ✅ Gemini gera roteiro (6+ cenas)
-2. ✅ gTTS + FFmpeg cria narração por cena
-3. ✅ Gemini gera código TypeScript/Remotion para cada cena
-4. ✅ Remotion renderiza cada cena (1080p, 25fps)
-5. ✅ FFmpeg concatena clips + adiciona áudio
+### 4. Vídeo Dark Stickman (100% local) — Gratuito
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "A Casa Abandonada",
+    "nicho": "terror",
+    "duracao": 5,
+    "tipoVideo": "darkStickman"
+  }'
+```
+
+### 5. Vídeo com Imagens IA Grátis (Stable Horde/Pollinations)
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "Futuro da Tecnologia em 2050",
+    "nicho": "tecnologia",
+    "duracao": 5,
+    "tipoVideo": "aiImageGeneration"
+  }'
+```
+
+### 6. Vídeo com Gemini Veo (Google — Gratuito com limites)
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "A Beleza do Oceano",
+    "nicho": "natureza",
+    "duracao": 3,
+    "tipoVideo": "geminiVeoGeneration"
+  }'
+```
+
+### 7. Vídeo com ComfyUI (seu servidor IA)
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "Paisagens Fantásticas de Ficção Científica",
+    "nicho": "arte",
+    "duracao": 5,
+    "tipoVideo": "comfyuiGeneration"
+  }'
+```
+
+### 8. Vídeo com Replicate / Wan 2.1 (pago)
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "Receitas Japonesas Tradicionais",
+    "nicho": "culinária",
+    "duracao": 5,
+    "tipoVideo": "replicateGeneration"
+  }'
+```
+
+### 9. Vídeo com Kling AI (pago)
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "Vida Selvagem na Savana",
+    "nicho": "natureza",
+    "duracao": 5,
+    "tipoVideo": "klingGeneration"
+  }'
+```
+
+### 10. Vídeo com Preview de Cenas (qualquer tipo)
+
+```bash
+curl -X POST http://localhost:3001/api/videos \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "Os Maiores Mistérios do Universo",
+    "nicho": "ciência",
+    "duracao": 5,
+    "tipoVideo": "stockImages",
+    "previewMode": true
+  }'
+```
 
 ---
 
-## Monitorar Progresso
+## ✍️ Testar Roteiro Manual
+
+```bash
+curl -X POST http://localhost:3001/api/videos/manual \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "titulo": "Meu Vídeo Personalizado",
+    "roteiro": "Cena 1: Introdução ao tema. A tecnologia está mudando o mundo.\nCena 2: A inteligência artificial está revolucionando tudo.\nCena 3: O futuro é agora. Conclusão motivacional.",
+    "tipoVideo": "stockImages",
+    "voz": "pt-BR-FranciscaNeural"
+  }'
+```
+
+---
+
+## ⭐ Testar Vídeo Resenha
+
+```bash
+curl -X POST http://localhost:3001/api/videos/review \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{
+    "nomeProduto": "iPhone 16 Pro",
+    "categoria": "smartphones",
+    "pontosPositivos": "Câmera incrível, performance excelente, bateria duradoura",
+    "pontosNegativos": "Preço alto, sem USB-C completo",
+    "notaGeral": 9,
+    "faixaPreco": "R$ 7.000 - R$ 10.000",
+    "tipoVideo": "stockImages"
+  }'
+```
+
+---
+
+## 🔌 Testar Conexão ComfyUI
+
+```bash
+curl -s "http://localhost:3001/api/comfyui/test?url=http://seu-ip:8188" \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+**Resposta esperada (sucesso):**
+```json
+{
+  "ok": true,
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "vram": "24GB",
+  "models": ["dreamshaper_8.safetensors", "sdxl_base.safetensors"],
+  "version": "0.3.6"
+}
+```
+
+---
+
+## 📊 Monitorar Progresso
 
 ### Listar Vídeos
 
 ```bash
-curl -s http://localhost:3001/api/videos | python3 -m json.tool
+curl -s http://localhost:3001/api/videos \
+  -H "Authorization: Bearer $TOKEN" | jq '.[0:3]'
 ```
 
 ### Ver Detalhes de um Vídeo
 
 ```bash
-VIDEO_ID="a1b2c3d4"  # Substitua pelo ID do seu vídeo
-curl -s http://localhost:3001/api/videos/$VIDEO_ID | python3 -m json.tool
+VIDEO_ID="seu-video-id"
+curl -s http://localhost:3001/api/videos/$VIDEO_ID \
+  -H "Authorization: Bearer $TOKEN" | jq '{status, progresso, etapa}'
 ```
 
-**Campos importantes:**
-- `status`: iniciando, gerando_roteiro, gerando_narracao, gerando_animacao, renderizando, concluido, erro
-- `progresso`: 0-100
-- `etapa`: Descrição do que está acontecendo
-- `videoUrl`: Path do vídeo final (quando concluído)
-
-### Ver Logs em Tempo Real
+### Listar Cenas (após preview)
 
 ```bash
-tail -f /tmp/videoforge-backend.log
+curl -s http://localhost:3001/api/videos/$VIDEO_ID/cenas \
+  -H "Authorization: Bearer $TOKEN" | jq
+```
+
+### Confirmar Visuais e Renderizar
+
+```bash
+curl -X POST http://localhost:3001/api/videos/$VIDEO_ID/confirmar-visuais \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Status possíveis:** `iniciando` → `gerando_roteiro` → `gerando_narracao` → `buscando_imagens` / `gerando_visuais` → `aguardando_revisao` (preview) → `renderizando` → `concluido` / `erro`
+
+---
+
+## 🎙️ Testar Vozes
+
+### Listar Vozes TTS Disponíveis
+
+```bash
+curl -s http://localhost:3001/api/tts/voices \
+  -H "Authorization: Bearer $TOKEN" | jq '.total'
+```
+
+### Preview de Voz
+
+```bash
+curl -X POST http://localhost:3001/api/tts/preview \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"voice":"pt-BR-FranciscaNeural","text":"Olá, esta é uma demonstração de voz."}' \
+  --output preview.mp3
 ```
 
 ---
 
-## Estrutura de Resposta Completa
+## 📺 Testar YouTube SEO
 
-```json
-{
-  "id": "a1b2c3d4",
-  "titulo": "Como Nasceu a Internet",
-  "nicho": "tecnologia",
-  "duracao": 5,
-  "detalhes": "História da criação da internet de forma simples",
-  "publicarYoutube": false,
-  "tipoVideo": "stickAnimation",
-  "status": "concluido",
-  "progresso": 100,
-  "etapa": "Vídeo pronto!",
-  "criado_em": "2026-02-10T18:30:45.123Z",
-  "roteiro": {
-    "titulo": "Como Nasceu a Internet: A Revolução Digital",
-    "descricao": "Descubra a história fascinante...",
-    "tags": ["tecnologia", "internet", "história", "inovação"],
-    "cenas": [
-      {
-        "numero": 1,
-        "texto_narracao": "No início dos anos 60...",
-        "prompt_visual": "scientists working with early computers in 1960s lab",
-        "duracao_estimada": 12
-      }
-    ]
-  },
-  "audioUrl": "/home/eloi/.../media/audios/a1b2c3d4.mp3",
-  "videoUrl": "/home/eloi/.../media/videos/a1b2c3d4.mp4"
-}
+```bash
+curl -X POST http://localhost:3001/api/youtube/generate-seo \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"titulo":"5 Curiosidades sobre o Espaço","nicho":"ciência"}'
 ```
 
 ---
 
-## Troubleshooting
+## 🏥 Health Check
 
-### Vídeo travado em "gerando_animacao"
-
-**Causa:** Gemini pode demorar para gerar código complexo
-
-**Solução:**
 ```bash
-# Ver logs
-tail -50 /tmp/videoforge-backend.log | grep "Cena"
-```
-
-### Erro: "Remotion not found"
-
-**Solução:**
-```bash
-cd remotion-animations
-npm install
-```
-
-### Timeout ao renderizar
-
-**Causa:** Cenas muito longas (>30s) podem exceder timeout
-
-**Solução:** Modificar timeout em `server.js`:
-```js
-// Linha ~905 em renderizarAnimacaoRemotion
-timeout: 300000 // 5 minutos
-```
-
-### Animação ficou estranha
-
-**Causa:** IA gerou código inesperado
-
-**Soluções:**
-1. Reprocesse o vídeo
-2. Mude o prompt para ser mais específico
-3. Use detalhes mais descritivos
-
-**Exemplo de bom detalhamento:**
-```json
-{
-  "titulo": "Como Funciona a Fotossíntese",
-  "detalhes": "Explique de forma simples, passo a passo. Use analogias. Mostre o processo visualmente com personagens representando moléculas."
-}
+curl -s http://localhost:3001/api/health | jq
 ```
 
 ---
 
-## Performance Esperada
+## ⏱️ Performance Esperada
 
-### Stock Images (Pexels)
+### Gratuitos (Stock / Dark Stickman)
 
-| Duração | Tempo Total |
-|---------|-------------|
-| 5 min   | ~2-3 min    |
-| 10 min  | ~4-6 min    |
-| 15 min  | ~7-10 min   |
+| Tipo | Duração 5min | Duração 10min |
+|------|-------------|---------------|
+| Stock Images | ~2-3 min | ~4-6 min |
+| Stock Vídeos | ~3-5 min | ~6-10 min |
+| Dark Stickman | ~2-4 min | ~5-8 min |
 
 ### Animações (Remotion)
 
 | Duração | Cenas | Tempo Total |
 |---------|-------|-------------|
-| 5 min   | 6     | ~8-12 min   |
-| 10 min  | 10    | ~15-20 min  |
-| 15 min  | 15    | ~25-35 min  |
+| 5 min | 6 | ~8-12 min |
+| 10 min | 10 | ~15-20 min |
 
-**Nota:** Animações demoram mais porque:
-1. Gemini precisa gerar código para cada cena
-2. Remotion renderiza frame-by-frame em alta qualidade
-3. FFmpeg faz duas passagens (clips individuais + concatenação)
+### IA Generativa (Pago)
 
----
-
-## Assistir Vídeo Gerado
-
-### Linux (VLC)
-
-```bash
-vlc /home/eloi/Área\ de\ trabalho/VideoForge/media/videos/a1b2c3d4.mp4
-```
-
-### Pelo Frontend
-
-1. Acesse http://localhost:3000
-2. Clique no vídeo na lista
-3. Player embarcado irá carregar
+| Tipo | Tempo/Cena | Nota |
+|------|-----------|------|
+| ComfyUI | ~15-60s | Depende do modelo/hardware |
+| Replicate | ~30s-2min | Wan 2.1 / Flux.1 |
+| Kling | ~1-5min | Alta qualidade |
+| Veo | ~30s-2min | Google Vertex |
 
 ---
 
-## Próximos Passos
+## 🛠️ Comandos Úteis
 
-Após confirmar que o sistema funciona:
-
-1. ✅ Testar vídeo de animação curto (5 minutos)
-2. ✅ Comparar qualidade: Stock Images vs Animações
-3. ✅ Deploy para VPS (quando pronto)
-4. ✅ Configurar YouTube OAuth para publicação automática
-
-**Comandos úteis:**
 ```bash
-# Limpar vídeos antigos
-rm -rf /home/eloi/Área\ de\ trabalho/VideoForge/media/temp/*
-rm -rf /home/eloi/Área\ de\ trabalho/VideoForge/media/videos/*
+# Ver logs em tempo real
+docker logs videoforge-backend -f --tail 50
 
 # Reiniciar backend
-pkill -f "node.*server.js"
-cd backend && node server.js
+docker restart videoforge-backend
 
-# Ver todos os processos VideoForge
-ps aux | grep -E "(node|remotion|ffmpeg)" | grep -v grep
+# Limpar vídeos antigos
+docker exec videoforge-backend rm -rf /app/media/temp/*
+
+# Shell no container
+docker exec -it videoforge-backend sh
 ```
 
 ---
 
-**VideoForge 2.0** 🎨  
-*Agora com animações geradas por IA!*
+**VideoForge v2.0** 🧪

@@ -2,247 +2,301 @@
 
 ## 🚀 Sistema 100% Funcional!
 
-Agora o VideoForge está completamente integrado e pronto para:
-- ✅ Gerar roteiros com Gemini AI
-- ✅ Criar narração com Edge TTS  
-- ✅ Buscar imagens com Pexels
+O VideoForge é uma plataforma completa de automação de vídeos com 20+ tipos de geração:
+- ✅ Gerar roteiros com Gemini AI (ou roteiro manual/livro/resenha)
+- ✅ Criar narração com Edge TTS (200+ vozes), ElevenLabs, OpenAI ou voz clonada
+- ✅ Buscar visuais: Pexels, Pixabay, Shutterstock, Storyblocks, IA generativa
+- ✅ Gerar imagens/vídeos com IA: ComfyUI, Replicate, Kling, Veo, Sora, DALL-E
+- ✅ Preview de cenas antes de renderizar
 - ✅ Renderizar vídeos com FFmpeg
-- ✅ **Publicar automaticamente no YouTube**
+- ✅ Publicar em YouTube, Twitter/X, Facebook, LinkedIn, TikTok
+- ✅ Pipeline de notícias (RSS automático)
+- ✅ Gerador de cortes (Shorts/Reels)
+- ✅ Avatar/Foto falante (D-ID, HeyGen)
 
 ---
 
 ## 📝 Configuração Passo a Passo
 
-### 1️⃣ Obter API Keys (5-10 minutos)
+### 1️⃣ APIs Gratuitas (OBRIGATÓRIAS — 5 minutos)
 
-#### **Google Gemini API** (Obrigatório)
+#### **Google Gemini API** (Obrigatório — Grátis)
 1. Acesse: https://aistudio.google.com/apikey
 2. Faça login com sua conta Google
 3. Clique em "Get API Key" → "Create API Key"
 4. Copie a chave gerada
 
-#### **Pexels API** (Opcional mas recomendado)
+#### **Pexels API** (Recomendado — Grátis)
 1. Acesse: https://www.pexels.com/api/
 2. Clique em "Get Started"
 3. Preencha o cadastro gratuito
 4. Copie a API Key do dashboard
 
+> 💡 Com apenas essas duas chaves você já pode criar vídeos com imagens stock, stickman e dark stickman!
+
+---
+
+### 2️⃣ APIs Opcionais (melhoram o resultado)
+
+#### **ElevenLabs** (Vozes premium + Clonagem — Freemium)
+1. Acesse: https://elevenlabs.io
+2. Crie sua conta
+3. Vá em Profile → API Key
+4. Copie a API Key
+5. No VideoForge: ⚙️ Minha Conta → Minhas API Keys → ELEVENLABS_API_KEY
+
+#### **OpenAI** (GPT + DALL-E 3 + TTS — Pago)
+1. Acesse: https://platform.openai.com/api-keys
+2. Crie uma API Key
+3. Configure créditos de uso
+4. No VideoForge: ⚙️ Minha Conta → Minhas API Keys → OPENAI_API_KEY
+
+#### **Replicate** (Wan 2.1 / Flux.1 — Pay-per-use)
+1. Acesse: https://replicate.com
+2. Crie conta → Settings → API Tokens
+3. Copie o token
+4. No VideoForge: ⚙️ Minha Conta → Minhas API Keys → REPLICATE_API_TOKEN
+5. Ou use o **🧙 Setup Wizard** para configuração guiada!
+
+#### **Kling AI** (Vídeos cinematográficos — Pago)
+1. Acesse: https://klingai.com
+2. Crie conta → API Settings
+3. Copie Access Key ID e Secret
+4. No VideoForge: ⚙️ Minha Conta → Minhas API Keys → KLING_ACCESS_KEY_ID + SECRET
+5. Ou use o **🧙 Setup Wizard**!
+
+#### **ComfyUI** (Seu próprio servidor IA — Seu hardware)
+1. Instale ComfyUI no seu PC/servidor com GPU: https://github.com/comfyanonymous/ComfyUI
+2. Baixe um modelo (ex: DreamShaper, SDXL, Flux)
+3. Inicie com `--listen 0.0.0.0` para acesso remoto
+4. No VideoForge: use o **🧙 Setup Wizard → ComfyUI** (5 passos guiados com teste de conexão)
+5. Configure a URL (ex: `http://seu-ip:8188`)
+
+#### **D-ID** (Avatar apresentador — Pago)
+1. Acesse: https://studio.d-id.com
+2. Crie conta → Settings → API Key
+3. No VideoForge: ⚙️ Minha Conta → Minhas API Keys → DID_API_KEY
+
+#### **HeyGen** (Avatar IA realista — Pago)
+1. Acesse: https://heygen.com
+2. Crie conta → API Settings
+3. Copie API Key + Avatar ID
+4. No VideoForge: ⚙️ Minha Conta → Minhas API Keys
+
+#### **Pixabay** (Músicas de fundo — Grátis)
+1. Acesse: https://pixabay.com/api/docs/
+2. Cadastre-se e obtenha a key
+3. No VideoForge: ⚙️ Minha Conta → Minhas API Keys → PIXABAY_API_KEY
+
+---
+
+### 3️⃣ YouTube e Redes Sociais
+
 #### **YouTube API** (Para publicação automática)
 
-##### Passo 1: Criar Projeto no Google Cloud
+##### Criar Projeto no Google Cloud
 1. Acesse: https://console.cloud.google.com/
-2. Clique em "Select a project" → "New Project"
-3. Nome: `VideoForge`
-4. Clique em "Create"
+2. Clique em "Select a project" → "New Project" → Nome: `VideoForge`
+3. No menu lateral: "APIs & Services" → "Library"
+4. Busque "YouTube Data API v3" → "Enable"
 
-##### Passo 2: Ativar YouTube Data API v3
-1. No menu lateral, vá em "APIs & Services" → "Library"
-2. Busque por "YouTube Data API v3"
-3. Clique em "Enable"
-
-##### Passo 3: Criar Credenciais OAuth 2.0
+##### Criar Credenciais OAuth 2.0
 1. Vá em "APIs & Services" → "Credentials"
-2. Clique em "+ CREATE CREDENTIALS" → "OAuth client ID"
-3. Se pedir, configure a "OAuth consent screen":
-   - User Type: **External**
-   - App name: `VideoForge`
-   - User support email: seu email
-   - Developer contact: seu email
-   - Clique em "Save and Continue" até o final
-   - Em "Test users", adicione seu email
-4. Volte para "Credentials" → "Create OAuth client ID"
-5. Application type: **Web application**
-6. Name: `VideoForge Web Client`
-7. Authorized redirect URIs: `http://localhost:3001/api/youtube/callback`
-8. Clique em "Create"
-9. **Copie o Client ID e Client Secret**
+2. "+ CREATE CREDENTIALS" → "OAuth client ID"
+3. Configure a "OAuth consent screen" (External, adicione seu email como test user)
+4. Application type: **Web application**
+5. Authorized redirect URIs: `https://seudominio.com/api/youtube/callback`
+6. Copie **Client ID** e **Client Secret**
+
+##### Conectar no VideoForge
+1. No app: ⚙️ Minha Conta → Redes Sociais → YouTube → Conectar
+2. Autorize pelo Google OAuth
+3. Pronto! Pode publicar no YouTube direto do VideoForge
+
+#### **Outras Redes (Twitter, Facebook, LinkedIn, TikTok)**
+1. No app: ⚙️ Minha Conta → Redes Sociais
+2. Clique "Conectar" na rede desejada
+3. Autorize pelo OAuth
+
+> ⚠️ Para cada rede, é necessário ter os Client ID/Secret configurados como variáveis de ambiente no backend.
 
 ---
 
-### 2️⃣ Configurar o Backend
+### 4️⃣ Configurar o Backend
 
-1. Copie o arquivo de exemplo:
 ```bash
-cd backend
+# Clone e configure
+cd videoforge/backend
 cp .env.example .env
-```
-
-2. Edite o arquivo `.env`:
-```bash
 nano .env
-# ou
-code .env
 ```
 
-3. Cole suas chaves:
 ```env
-# Google Gemini API (obrigatório)
-GEMINI_API_KEY=AIzaSy... (sua chave aqui)
-
-# Pexels API (opcional)
+# Mínimo para funcionar:
+GEMINI_API_KEY=AIzaSy...
 PEXELS_API_KEY=sua_chave_pexels
+JWT_SECRET=um_segredo_forte_aqui
 
-# YouTube API (para publicação automática)
+# YouTube (se quiser publicar):
 YOUTUBE_CLIENT_ID=123456789-abc.apps.googleusercontent.com
 YOUTUBE_CLIENT_SECRET=GOCSPX-abc123
-YOUTUBE_REDIRECT_URI=http://localhost:3001/api/youtube/callback
-
-# Configurações gerais
-PORT=3001
-N8N_URL=http://localhost:5678
-```
-
-4. Instale as novas dependências:
-```bash
-cd backend
-npm install
+YOUTUBE_REDIRECT_URI=https://seudominio.com/api/youtube/callback
 ```
 
 ---
 
-### 3️⃣ Iniciar o Sistema
+### 5️⃣ Iniciar o Sistema
 
-#### Opção 1: Usar o script automático
+#### Docker (Produção)
 ```bash
-cd /home/eloi/Área\ de\ trabalho/VideoForge
-./start.sh
+docker compose -f docker-compose.vps.yml up -d
 ```
 
-#### Opção 2: Manual
-
-**Terminal 1 - Backend:**
+#### Manual (Desenvolvimento)
 ```bash
-cd backend
-npm run dev
+# Terminal 1 - Backend
+cd backend && npm install && node server.js
+
+# Terminal 2 - Frontend
+cd frontend && npm install && npm run dev
 ```
-
-**Terminal 2 - Frontend:**
-```bash
-cd frontend
-npm run dev
-```
-
----
-
-### 4️⃣ Conectar o YouTube (só precisa fazer 1 vez)
-
-1. Acesse http://localhost:3000
-2. Clique em **"⚙️ Configurações"**
-3. Se o YouTube estiver configurado, aparecerá o botão **"Conectar YouTube"**
-4. Clique nele - abrirá uma janela de autenticação do Google
-5. Escolha sua conta do YouTube
-6. Aceite as permissões solicitadas
-7. Pronto! Agora pode publicar automaticamente
 
 ---
 
 ## 🎬 Como Usar
 
-### Criar um Vídeo Simples (sem publicação)
+### Modo IA (Automático)
+1. Acesse o dashboard
+2. Preencha: título, nicho, duração
+3. Escolha o tipo de vídeo (Stock, Animação, Replicate, Kling, ComfyUI, etc.)
+4. Opcionalmente: marque **"Preview de Cenas"** para revisar antes de renderizar
+5. Clique em **"🚀 Criar Vídeo"**
 
-1. Acesse http://localhost:3000
-2. Preencha:
-   - **O que criar**: "10 curiosidades sobre o espaço"
-   - **Nicho**: Curiosidades
-   - **Duração**: 10 minutos
-3. Clique em **"🚀 Criar Vídeo Automaticamente"**
-4. Acompanhe o progresso em tempo real!
+### Modo Manual (Roteiro Próprio)
+1. Clique na aba **"✍️ Roteiro Manual"**
+2. Cole ou escreva seu roteiro
+3. Escolha voz, tipo de visual
+4. Cada cena pode ter mídia customizada
+5. Clique em **"Gerar com Roteiro Manual"**
 
-### Criar e Publicar no YouTube
+### Modo Livro/Série
+1. Clique na aba **"📖 Livro / Série"**
+2. Preencha: nome do livro, autor, capítulo, texto
+3. Ideal para criar séries de vídeos episódicos
 
-1. Siga os mesmos passos acima
-2. **Marque** a opção: ☑️ Publicar automaticamente no YouTube
-3. Clique em **"🚀 Criar Vídeo Automaticamente"**
-4. O vídeo será criado E publicado no seu canal!
+### Modo Resenha
+1. Clique na aba **"⭐ Resenha"**
+2. Preencha: produto, categoria, pontos positivos/negativos, nota
+3. Template otimizado para reviews de produtos
+
+### Preview de Cenas
+1. Marque **"👀 Modo Preview"** antes de criar o vídeo
+2. Quando as cenas forem geradas, clique em **"Revisar Cenas"**
+3. Para cada cena: veja o visual, regenere ou troque a mídia
+4. Quando satisfeito: **"✅ Confirmar e Renderizar"**
+
+### Publicação Multi-Rede
+1. Após o vídeo ficar pronto, clique em **"📺 Publicar"**
+2. Escolha as redes: YouTube, Twitter, Facebook, LinkedIn, TikTok
+3. O SEO (título, descrição, tags) é gerado automaticamente para YouTube
 
 ---
 
-## 📊 O que o Sistema Faz Automaticamente
+## 📊 Pipeline Automático
 
 ```
 1. 🤖 Gera roteiro completo com Gemini
    ├─ Título otimizado para YouTube
-   ├─ Descrição com keywords
+   ├─ Descrição com keywords  
    ├─ Tags relevantes
-   └─ Divisão em cenas com timing
+   └─ Divisão em cenas com timing e prompts visuais
 
 2. 🎙️ Cria narração profissional
-   └─ Edge TTS com voz natural em PT-BR
+   ├─ Edge TTS (200+ vozes gratuitas em 50+ idiomas)
+   ├─ ElevenLabs (vozes premium/clonadas)
+   ├─ OpenAI TTS (vozes naturais)
+   └─ Ou sua gravação pelo microfone
 
-3. 🖼️ Busca material visual
-   ├─ Imagens HD do Pexels
-   └─ Baseado nas descrições do roteiro
+3. 🖼️ Busca/gera material visual
+   ├─ Pexels/Pixabay (stock grátis)
+   ├─ ComfyUI (seu servidor IA)
+   ├─ Replicate/Kling/Veo (IA generativa paga)
+   ├─ DALL-E / Flux.1 (imagens IA)
+   └─ Animações de palitinho (Remotion)
 
-4. 🎬 Renderiza vídeo completo
+4. 👀 Preview de cenas (opcional)
+   ├─ Revisão visual antes de renderizar
+   ├─ Regenerar/trocar cenas individualmente
+   └─ Confirmar quando satisfeito
+
+5. 🎬 Renderiza vídeo completo
    ├─ Efeito Ken Burns (zoom suave)
    ├─ Transições profissionais
+   ├─ Legendas sincronizadas
    └─ Sincronização perfeita com áudio
 
-5. 📺 Publica no YouTube (se habilitado)
-   ├─ Upload do vídeo
-   ├─ Define metadados
-   └─ Configura como privado/público
+6. 📺 Publica nas redes sociais
+   ├─ YouTube (com SEO automático)
+   ├─ Twitter/X, Facebook, LinkedIn, TikTok
+   └─ Ou download local
 ```
 
 ---
 
-## ⚙️ Status do Sistema
+## 🧙 Setup Wizard
 
-Após configurar, você verá no dashboard:
+O Setup Wizard (acessível pelo botão **"🧙 Configurar"**) guia o usuário passo a passo para configurar integrações pagas:
 
-- ✅ **Gemini**: Configurado e pronto!
-- ✅ **Pexels**: Configurado e pronto!
-- ✅ **YouTube**: Conectado e pronto para publicar!
+| Integração | Passos | Destaque |
+|-----------|--------|----------|
+| **Kling AI** | Criar conta → Gerar keys → Colar no VideoForge | Vídeos cinematográficos |
+| **Replicate** | Criar conta → Copiar token → Colar | Wan 2.1 / Flux.1 |
+| **Veo 2** | Google Cloud → Ativar Vertex AI → OAuth | Vídeos Google |
+| **ComfyUI** | Instalar → Baixar modelo → Configurar URL → Testar conexão | Seu servidor, sem custo |
+| **HeyGen** | Criar conta → API Key → Avatar ID | Avatar realista |
+| **D-ID** | Criar conta → API Key → URL do avatar | Apresentador animado |
+| **YouTube** | Google Cloud Console → OAuth → Conectar canal | Publicação automática |
 
 ---
 
 ## 🔧 Resolução de Problemas
 
 ### "Gemini API Key não configurada"
-- Verifique se a chave está no arquivo `backend/.env`
-- Certifique-se de que não tem espaços ou aspas extras
+- Verifique se a chave está no `.env` ou em Minha Conta → API Keys
+- Sem espaços ou aspas extras
 - Reinicie o backend
 
 ### "YouTube não autenticado"
-- Clique em "Configurações" → "Conectar YouTube"
-- Certifique-se de que adicionou seu email como "Test user" no Google Cloud Console
-- Verifique se a URL de redirect está correta
+- Minha Conta → Redes Sociais → Conectar YouTube
+- Certifique-se de ter adicionado seu email como "Test user" no Google Cloud Console
+- URL de redirect deve corresponder ao seu domínio
 
 ### Erro ao renderizar vídeo
-- Certifique-se de que o Docker está rodando
-- Verifique se o python-worker está ativo: `docker compose ps`
-- Reinicie o container: `docker compose restart python-worker`
+- Verifique se o Docker está rodando: `docker compose ps`
+- Veja os logs: `docker logs videoforge-backend --tail 50`
+- Reinicie: `docker restart videoforge-backend`
 
----
+### ComfyUI não conecta
+- Confirme que o ComfyUI está rodando com `--listen 0.0.0.0`
+- Teste a URL manualmente: `curl http://seu-ip:8188/system_stats`
+- Use o botão "🔌 Testar" no Setup Wizard
 
-## 🎯 Próximos Passos
-
-Agora que está tudo funcionando:
-
-1. **Teste com um vídeo simples** primeiro
-2. **Ajuste os prompts** no código se quiser resultados diferentes
-3. **Configure thumbnails** personalizadas (futuro)
-4. **Adicione músicas de fundo** (futuro)
-5. **Agende publicações** para horários específicos (futuro)
-
----
-
-## 📱 URLs Úteis
-
-- **Dashboard**: http://localhost:3000
-- **API**: http://localhost:3001/api/health
-- **n8n**: http://localhost:5678
-- **pgAdmin**: http://localhost:5050
+### Vídeo travado em "gerando visuais"
+- APIs externas podem demorar (Replicate: até 5min, Kling: até 10min)
+- Verifique saldo/créditos da API
+- Veja logs: `docker logs videoforge-backend --tail 100`
 
 ---
 
 ## 💡 Dicas
 
+- Use o **🧙 Setup Wizard** para configurar integrações — é mais fácil que editar .env
+- Ative o **Preview de Cenas** para vídeos importantes — permite corrigir antes de renderizar
+- **ComfyUI** é a opção mais econômica para geração IA — use seu próprio hardware
+- Vídeos são salvos em `/media/videos/`, roteiros em `/media/roteiros/`
 - Use descrições detalhadas no campo "Detalhes adicionais" para melhores resultados
-- O Gemini gera roteiros criativos e otimizados para YouTube
-- Vídeos são salvos em `/media/videos/`
-- Os roteiros ficam em `/media/roteiros/`
+- O Gemini gera roteiros criativos e otimizados para YouTube automaticamente
 
 ---
 
-**🎉 Parabéns! Você tem um sistema completo de automação de vídeos para YouTube!**
+**🎉 VideoForge v2.0 — Plataforma completa de automação de vídeos com 20+ tipos de geração!**

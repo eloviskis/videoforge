@@ -1,75 +1,149 @@
-# 🎬 VideoForge - Frontend Automático
+# 🎬 VideoForge - Frontend
 
 ## 🚀 Como Usar
 
-### Iniciar tudo de uma vez:
+### Iniciar (Desenvolvimento):
 
 ```bash
-./start.sh
+cd frontend
+npm install
+npm run dev
+# → http://localhost:3000
 ```
 
-Isso vai:
-1. ✅ Verificar se os containers Docker estão rodando
-2. ✅ Instalar dependências do backend e frontend
-3. ✅ Iniciar a API (porta 3001)
-4. ✅ Iniciar o dashboard (porta 3000)
+### Iniciar (Docker):
+```bash
+docker compose -f docker-compose.vps.yml up -d frontend
+```
 
 ### Acessar:
-
-- **Dashboard**: http://localhost:3000
+- **Dashboard**: http://localhost (produção) ou http://localhost:3000 (dev)
 - **API**: http://localhost:3001/api/health
 
-## 📝 Como Funciona
+---
 
-1. **Você digita** o que quer no formulário (ex: "10 curiosidades sobre o oceano")
-2. **Escolhe o nicho** e duração
-3. **Clica em "Criar Vídeo"**
-4. **Sistema faz tudo sozinho**:
-   - 🤖 Gera roteiro com IA
-   - 🎙️ Cria narração com TTS
-   - 🖼️ Busca/gera imagens
-   - 🎬 Renderiza o vídeo
-   - ✅ Pronto!
+## 📊 Abas do Dashboard
 
-## 📊 O que aparece no dashboard:
+| Aba | Descrição |
+|-----|-----------|
+| 🎥 **Criar Vídeos** | Modo IA, Manual, Livro/Série, Resenha |
+| 📰 **Notícias** | Pipeline RSS → vídeo automático |
+| ✂️ **Cortes** | Análise + corte de vídeos longos para Shorts |
+| ⭐ **Reviews** | Gerador de resenhas de produtos |
+| 📸 **Timeline** | Editor de clipes com múltiplos clips |
+| 🧠 **Inteligência** | Vozes, análise de canais, clonagem de voz, gravação |
+| 📱 **Social AI** | Automação de conteúdo para redes sociais |
+| 📚 **Docs** | Tutoriais interativos de configuração |
 
-- ✅ Status em tempo real
-- ✅ Barra de progresso
-- ✅ Lista de todos os vídeos
-- ✅ Atualização automática a cada 3 segundos
+---
 
-## 🛠️ Próximos Passos para Integrar com n8n:
+## 🎬 Tipos de Vídeo Disponíveis
 
-No arquivo `backend/server.js`, a função `gerarRoteiro()` atualmente retorna dados mock.
+### Gratuitos
+- 📸 Imagens Stock (Pexels)
+- 🎬 Vídeos Stock (Pexels + Pixabay)
+- 🖼️ Imagens IA Grátis (Stable Horde/Pollinations)
+- 🎨 Animação de Palitinho (Remotion + Gemini)
+- 🖤 Dark Stickman (texto animado, 100% local)
+- 🎬 Gemini Veo (Google, grátis com limites)
 
-Para integrar com o n8n de verdade:
+### Open Source / Local
+- 🤖 IA Local (CPU/GPU)
+- 🖥️ ComfyUI (seu servidor — Stable Diffusion, Flux, SDXL)
 
-1. Crie o webhook no n8n: `/webhook/gerar-roteiro`
-2. No backend, substitua a função por:
+### Pagos — IA Generativa
+- 🤖 Replicate / Wan 2.1
+- 🎥 Kling AI
+- 🧠 Hugging Face
+- 🎬 Veo 3 (Google Vertex)
+- 🌟 Sora (OpenAI)
+- 🎭 D-ID Avatar
+- 🎭 HeyGen Avatar
 
-```javascript
-async function gerarRoteiro({ nicho, topico, duracao, detalhes }) {
-  const response = await axios.post('http://localhost:5678/webhook/gerar-roteiro', {
-    nicho, topico, duracao, detalhes
-  });
-  return response.data;
-}
+### Pagos — Bancos Premium
+- 🎞️ Shutterstock
+- 🎥 Storyblocks
+
+---
+
+## 📋 Modos de Criação
+
+### 🤖 Modo IA (Automático)
+1. Preencha título, nicho, duração
+2. Escolha tipo de vídeo
+3. Opcionalmente: ative Preview de Cenas
+4. Clique em **"🚀 Criar Vídeo"**
+
+### ✍️ Modo Manual
+1. Aba "Roteiro Manual"
+2. Cole/escreva seu roteiro (livre ou JSON)
+3. Escolha voz e tipo de visual
+4. Pode subir mídia customizada por cena
+
+### 📖 Modo Livro/Série
+1. Aba "Livro / Série"
+2. Nome do livro, autor, capítulo, texto
+3. Ideal para séries episódicas
+
+### ⭐ Modo Resenha
+1. Aba "Resenha"
+2. Produto, categoria, prós/contras, nota
+3. Template otimizado para reviews
+
+---
+
+## 👀 Preview de Cenas
+
+1. Marque **"Modo Preview"** antes de criar
+2. Após geração: clique em **"Revisar Cenas"**
+3. Para cada cena: veja visual, regenere ou troque mídia
+4. **"✅ Confirmar e Renderizar"** quando satisfeito
+
+---
+
+## 🎙️ Vozes e Narração
+
+- **Edge TTS**: 200+ vozes neurais em 50+ idiomas (grátis)
+- **ElevenLabs**: Vozes premium + clonagem de voz
+- **OpenAI TTS**: Vozes naturais
+- **Gravação**: Grave pelo microfone do navegador
+- **Voz Clonada**: Upload de amostra → voz personalizada
+
+---
+
+## 🧙 Setup Wizard
+
+Botão **"🧙 Configurar"** no dashboard. Guia passo a passo para:
+- Kling AI, Replicate, Veo 2, ComfyUI, HeyGen, D-ID, YouTube
+
+---
+
+## 📱 Componentes Principais
+
+| Componente | Arquivo | Descrição |
+|-----------|---------|-----------|
+| App | `App.jsx` | App principal (criação, monitoramento) |
+| SetupWizard | `SetupWizard.jsx` | Wizard de configuração |
+| AdminPanel | `AdminPanel.jsx` | Painel admin |
+| MinhaConta | `MinhaConta.jsx` | Conta do usuário |
+| SocialAI | `SocialAI.jsx` | Automação social |
+| TimelineEditor | `TimelineEditor.jsx` | Editor de clipes |
+| AvatarStudio | `AvatarStudio.jsx` | Criador de avatares |
+| FeedbackWall | `FeedbackWall.jsx` | Parede de feedback |
+| DocsTab | `DocsTab.jsx` | Tutoriais interativos |
+
+---
+
+## 🛠️ Build para Produção
+
+```bash
+cd frontend
+npm run build
+# → Gera dist/ para servir via Nginx
 ```
 
-3. O mesmo para as outras etapas (TTS, render, upload)
+O Dockerfile do frontend faz build + serve via Nginx automaticamente.
 
-## 🎯 Exemplo de Uso
+---
 
-```javascript
-// No dashboard, você só precisa:
-- Digitar: "10 curiosidades sobre IA"
-- Escolher: Tecnologia, 10 minutos
-- Clicar: Criar Vídeo
-
-// Sistema faz:
-✅ Chama Gemini → gera roteiro estruturado
-✅ Chama Edge TTS → gera narração
-✅ Busca Pexels → baixa imagens
-✅ FFmpeg → renderiza vídeo
-✅ Salva em /media/videos/
-```
+**VideoForge v2.0** 🎬

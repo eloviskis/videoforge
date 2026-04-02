@@ -1,222 +1,173 @@
 # ⚡ VideoForge - Início Rápido
 
-**Tempo estimado: 15-20 minutos**
+**Tempo estimado: 10-15 minutos**
 
 ---
 
 ## ✅ Checklist Pré-Instalação
 
-Antes de começar, certifique-se de ter:
-
-- [ ] Windows 10/11 com Docker Desktop instalado
-- [ ] Pelo menos 8GB de RAM livre
-- [ ] 100GB de espaço em disco
+- [ ] Docker e Docker Compose instalados
+- [ ] Pelo menos 4GB de RAM livre
+- [ ] 50GB de espaço em disco
 - [ ] Conexão à internet estável
 
+> 💡 **Windows?** Use o Docker Desktop. Veja [INSTALAR-DOCKER.md](INSTALAR-DOCKER.md) e [HABILITAR-VIRTUALIZACAO.md](HABILITAR-VIRTUALIZACAO.md).
+
 ---
 
-## 🎯 Passo a Passo
+## 🎯 3 Passos Para Começar
 
-### 1️⃣ Obter API Keys (5 minutos)
+### 1️⃣ Obter API Keys Gratuitas (5 minutos)
 
-#### Google Gemini API (OBRIGATÓRIO - Grátis)
-
+#### Google Gemini API (OBRIGATÓRIO — Grátis)
 1. Acesse: https://aistudio.google.com/apikey
 2. Faça login com conta Google
-3. Clique em "Get API Key" → "Create API Key"
-4. Copie a chave gerada
-5. **Guarde em local seguro!**
+3. "Get API Key" → "Create API Key"
+4. **Copie e guarde a chave!**
 
-#### Pexels API (OBRIGATÓRIO - Grátis)
-
+#### Pexels API (RECOMENDADO — Grátis)
 1. Acesse: https://www.pexels.com/api/
-2. Clique em "Get Started"
-3. Preencha o cadastro
-4. Copie a API Key do dashboard
-5. **Guarde com a chave do Gemini!**
+2. "Get Started" → cadastro gratuito
+3. Copie a API Key do dashboard
+
+> 🎉 Com essas duas chaves, você já pode criar vídeos com imagens stock, animações de palitinho, dark stickman e Gemini Veo!
 
 ---
 
-### 2️⃣ Configurar o Projeto (5 minutos)
+### 2️⃣ Configurar e Iniciar (5 minutos)
 
-```powershell
-# Abra o PowerShell no diretório VideoForge
-cd C:\Users\elovi\Downloads\VideoForge
+#### Opção A: VPS / Linux (Produção)
 
-# Crie o arquivo .env com suas chaves
-Copy-Item .env.example .env
+```bash
+# Clone o repositório
+git clone https://github.com/eloviskis/videoforge.git
+cd videoforge
 
-# Edite o .env (abrirá no Notepad)
-notepad .env
-```
-
-**No .env, substitua estas linhas:**
-```
+# Crie o .env com suas chaves
+cat > .env << EOF
 GEMINI_API_KEY=sua_chave_gemini_aqui
 PEXELS_API_KEY=sua_chave_pexels_aqui
+JWT_SECRET=$(openssl rand -hex 32)
+POSTGRES_USER=videoforge
+POSTGRES_PASSWORD=videoforge
+POSTGRES_DB=videoforge
+EOF
+
+# Inicie os containers
+docker compose -f docker-compose.vps.yml up -d
+
+# Verifique se está tudo rodando (aguarde 1-2 minutos)
+docker compose -f docker-compose.vps.yml ps
 ```
 
-Salve e feche o arquivo.
-
----
-
-### 3️⃣ Iniciar o Sistema (5 minutos)
+#### Opção B: Windows (Desenvolvimento)
 
 ```powershell
-# Criar diretórios necessários
-New-Item -ItemType Directory -Force -Path media, workflows, python-scripts
+# Clone o repositório
+git clone https://github.com/eloviskis/videoforge.git
+cd videoforge
 
-# Iniciar os containers Docker
-docker-compose up -d
+# Crie o .env
+Copy-Item .env.example .env
+notepad .env
+# → Preencha: GEMINI_API_KEY e PEXELS_API_KEY
 
-# Aguardar containers iniciarem (2-3 minutos)
-Write-Host "⏳ Aguardando containers iniciarem..." -ForegroundColor Yellow
-Start-Sleep -Seconds 120
+# Inicie com Docker
+docker compose up -d
 
-# Verificar status
-docker-compose ps
+# Ou manualmente (sem Docker):
+cd backend; npm install; node server.js
+# Em outro terminal:
+cd frontend; npm install; npm run dev
 ```
 
-**Você deve ver algo assim:**
+**Você deve ver estes containers rodando:**
 ```
-NAME                        STATUS
-videoforge-n8n              Up
-videoforge-postgres         Up
-videoforge-python-worker    Up
-videoforge-redis            Up
-videoforge-pgadmin          Up
-```
-
----
-
-### 4️⃣ Verificar Instalação (2 minutos)
-
-Abra seu navegador e acesse:
-
-1. **n8n:** http://localhost:5678
-   - Usuário: `admin`
-   - Senha: `videoforge2026`
-   - ✅ Se abriu = Funcionando!
-
-2. **pgAdmin:** http://localhost:5050
-   - Email: `admin@videoforge.local`
-   - Senha: `admin123`
-   - ✅ Se abriu = Funcionando!
-
----
-
-### 5️⃣ Configurar Credenciais no n8n (3 minutos)
-
-1. No n8n (http://localhost:5678), clique em **Settings** (engrenagem)
-2. Vá em **Credentials**
-3. Clique em **+ Add Credential**
-
-#### Adicionar Gemini API:
-
-- Tipo: Procure por "Google" ou "HTTP Request"
-- Como não há credencial nativa do Gemini, use **HTTP Request**
-- Nome: `Gemini API`
-- Authentication: `Generic Credential Type`
-- Credential Type: `Header Auth`
-- Name: `x-goog-api-key`
-- Value: `sua_chave_gemini_aqui`
-- Salve
-
-#### Adicionar Pexels API:
-
-- Tipo: **HTTP Request**
-- Nome: `Pexels API`
-- Authentication: `Generic Credential Type`
-- Credential Type: `Header Auth`
-- Name: `Authorization`
-- Value: `sua_chave_pexels_aqui`
-- Salve
-
----
-
-## 🎉 Pronto! Sistema Instalado
-
-Agora você pode:
-
-### Próximo Passo: Criar o Primeiro Workflow
-
-Volte ao PowerShell e execute:
-
-```powershell
-# Navegar para o diretório de scripts
-cd python-scripts
-
-# Criar script de teste
-@"
-print('✅ Python Worker funcionando!')
-print('🐍 Versão Python:', __import__('sys').version)
-"@ | Out-File -FilePath test.py -Encoding UTF8
-
-# Testar o Python worker
-docker exec videoforge-python-worker python /app/scripts/test.py
-```
-
-**Resultado esperado:**
-```
-✅ Python Worker funcionando!
-🐍 Versão Python: 3.11.x
+NAME                     STATUS
+videoforge-frontend      Up
+videoforge-backend       Up
+videoforge-postgres      Up (healthy)
+videoforge-python-worker Up
+videoforge-nginx         Up
 ```
 
 ---
 
-## 🚀 Próxima Fase
+### 3️⃣ Criar Seu Primeiro Vídeo (2 minutos)
 
-Agora que o sistema está rodando, siga o guia completo em:
+1. Acesse o dashboard: **http://localhost** (ou seu domínio)
+2. Faça login (ou registre-se)
+3. No formulário principal:
+   - **Título**: "5 Curiosidades sobre o Espaço"
+   - **Nicho**: Curiosidades
+   - **Duração**: 5 minutos
+   - **Tipo**: 📸 Imagens Stock (Pexels) — gratuito!
+4. Clique em **"🚀 Criar Vídeo"**
+5. Acompanhe o progresso em tempo real! 🎉
 
-📖 **[VideoForge-Plano-Implementacao.md](VideoForge-Plano-Implementacao.md)**
+---
 
-**Próximos passos:**
-1. Criar workflow de geração de roteiro
-2. Testar geração de roteiro com IA
-3. Implementar TTS (narração)
-4. Renderizar primeiro vídeo
+## 🚀 Próximos Passos
+
+### Configurar mais integrações
+Use o **🧙 Setup Wizard** (botão no dashboard) para configurar:
+- 🎥 **Kling AI** — Vídeos cinematográficos
+- 🤖 **Replicate** — Wan 2.1 / Flux.1
+- 🖥️ **ComfyUI** — Seu próprio servidor IA (com teste de conexão integrado!)
+- 🎭 **HeyGen/D-ID** — Avatar apresentador
+
+### Conectar redes sociais
+- ⚙️ **Minha Conta → Redes Sociais** → Conectar YouTube, Twitter, etc.
+
+### Experimentar todos os modos
+- ✍️ **Roteiro Manual** — Use seu próprio texto
+- 📖 **Livro/Série** — Crie séries de vídeos por capítulos
+- ⭐ **Resenha** — Reviews de produtos
+- 👀 **Preview de Cenas** — Revise antes de renderizar
+
+### Ler o guia completo
+📖 **[GUIA-COMPLETO.md](GUIA-COMPLETO.md)** — Configuração detalhada de todas as APIs e funcionalidades
 
 ---
 
 ## ❌ Problemas Comuns
 
 ### Docker não inicia
+```bash
+# Verificar se Docker está rodando
+docker info
 
-```powershell
-# Verificar se Docker Desktop está rodando
-Get-Process "Docker Desktop"
-
-# Se não estiver, abra o Docker Desktop manualmente
+# Windows: Abra o Docker Desktop manualmente
 ```
 
 ### Erro "port is already allocated"
+```bash
+docker compose down
+docker compose up -d
+```
 
-```powershell
-# Parar containers conflitantes
-docker-compose down
+### Backend não inicia / erro de conexão
+```bash
+# Ver logs
+docker logs videoforge-backend --tail 50
 
 # Reiniciar
-docker-compose up -d
+docker restart videoforge-backend
 ```
 
-### containers param mas n8n não abre
-
-```powershell
-# Ver logs do n8n
-docker-compose logs n8n
-
-# Aguardar mais 1-2 minutos e tentar novamente
-Start-Sleep -Seconds 60
-```
+### Erro "Gemini API Key não configurada"
+- Verifique seu `.env` — a chave deve estar sem espaços ou aspas
+- Ou configure em: ⚙️ Minha Conta → Minhas API Keys
 
 ---
 
-## 📞 Precisa de Ajuda?
+## 📱 URLs do Sistema
 
-1. Verifique os logs: `docker-compose logs -f`
-2. Consulte: [README.md](README.md)
-3. Revise a documentação completa
+| Serviço | URL |
+|---------|-----|
+| **Dashboard** | http://localhost (ou seu domínio) |
+| **API Health** | http://localhost:3001/api/health |
 
 ---
 
-**🎬 VideoForge está pronto para produzir vídeos!**
+**🎬 VideoForge v2.0 — Seu sistema de automação de vídeos está pronto!**
