@@ -21,6 +21,9 @@ COPY requirements.txt .
 # Instalar dependências Python
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copiar scripts Python
+COPY *.py .
+
 # Criar diretórios
 RUN mkdir -p /app/scripts /media
 
