@@ -3011,6 +3011,17 @@ print(f'Total: {sum(duracoes):.1f}s | Cenas: {len(duracoes)}')
 print(f'DURACOES:{json.dumps(duracoes)}')
 `;
 
+  // ── Detectar idioma pela voz selecionada ───────────────────────────────────
+  const vozSelecionada = voz || 'pt-BR-AntonioNeural';
+  let idiomaOpenAI = 'Brazilian Portuguese';
+  if (/^en-/i.test(vozSelecionada)) idiomaOpenAI = 'English';
+  else if (/^es-/i.test(vozSelecionada)) idiomaOpenAI = 'Spanish';
+  else if (/^fr-/i.test(vozSelecionada)) idiomaOpenAI = 'French';
+  else if (/^de-/i.test(vozSelecionada)) idiomaOpenAI = 'German';
+  else if (/^it-/i.test(vozSelecionada)) idiomaOpenAI = 'Italian';
+  else if (/^ja-/i.test(vozSelecionada)) idiomaOpenAI = 'Japanese';
+  else if (/^zh-/i.test(vozSelecionada)) idiomaOpenAI = 'Chinese';
+
   // ── Script OpenAI TTS ──────────────────────────────────────────────────────
   const scriptOpenAI = `
 import json, subprocess, os, sys, requests
@@ -3020,7 +3031,8 @@ output_path = sys.argv[2]
 cenas_path = sys.argv[3]
 
 API_KEY = '${process.env.OPENAI_API_KEY || ''}'
-VOZ_EDGE = '${voz || 'pt-BR-AntonioNeural'}'
+VOZ_EDGE = '${vozSelecionada}'
+IDIOMA = '${idiomaOpenAI}'
 VOZES_FEMININAS = ['francisca', 'thalita', 'leila', 'brenda', 'camila', 'fernanda', 'luana']
 openai_voice = 'nova' if any(f in VOZ_EDGE.lower() for f in VOZES_FEMININAS) else 'onyx'
 cenas = json.load(open(cenas_path))
@@ -3050,7 +3062,8 @@ for i, texto in enumerate(cenas):
             r = requests.post(
                 'https://api.openai.com/v1/audio/speech',
                 headers={'Authorization': f'Bearer {API_KEY}', 'Content-Type': 'application/json'},
-                json={'model': 'tts-1-hd', 'voice': openai_voice, 'input': texto, 'response_format': 'mp3'},
+                json={'model': 'gpt-4o-mini-tts', 'voice': openai_voice, 'input': texto, 'response_format': 'mp3',
+                      'instructions': f'Speak entirely in {IDIOMA}. Use a natural, engaging narration tone. Never switch languages mid-sentence.'},
                 timeout=60
             )
             r.raise_for_status()
