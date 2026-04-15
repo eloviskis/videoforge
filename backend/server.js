@@ -136,7 +136,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // ============================================
 // AUTH: Rotas de login/registro (ANTES do middleware)
@@ -723,42 +723,73 @@ app.get('/api/youtube/analyze-channel', async (req, res) => {
 // Rota manual — usa roteiro fornecido pelo usuário, pula o Gemini
 app.post('/api/videos/manual', async (req, res) => {
   try {
-    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda, voz, vozClonada, previewMode } = req.body;
+    const { titulo, tipoVideo, publicarYoutube, texto, legendas, estiloLegenda, voz, vozClonada, previewMode, audioCustom } = req.body;
     if (!titulo?.trim()) return res.status(400).json({ error: 'Título obrigatório' });
     if (!texto?.trim()) return res.status(400).json({ error: 'Roteiro (texto) obrigatório' });
 
     // Cada parágrafo separado por linha em branco = uma cena
-    const paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 10);
+    // Auto-split: se um parágrafo tiver mais de 500 palavras, subdivide por sentenças em blocos de ~150 palavras
+    let paragrafos = texto.split(/\n\s*\n/).map(p => p.trim()).filter(p => p.length > 10);
+    const paragrafosExpandidos = [];
+    for (const p of paragrafos) {
+      const wordCount = p.split(/\s+/).length;
+      if (wordCount > 500) {
+        const sentencas = p.split(/(?<=[.!?])\s+/);
+        let bloco = '';
+        for (const s of sentencas) {
+          if (bloco && (bloco + ' ' + s).split(/\s+/).length > 180) {
+            paragrafosExpandidos.push(bloco.trim());
+            bloco = s;
+          } else {
+            bloco = bloco ? bloco + ' ' + s : s;
+          }
+        }
+        if (bloco.trim()) paragrafosExpandidos.push(bloco.trim());
+      } else {
+        paragrafosExpandidos.push(p);
+      }
+    }
+    paragrafos = paragrafosExpandidos;
     if (paragrafos.length < 1) return res.status(400).json({ error: 'Roteiro muito curto. Separe as cenas com linha em branco.' });
 
     // Gerar prompt_visual contextualizado para cada cena usando Gemini (se disponível)
-    const cenas = await Promise.all(paragrafos.map(async (texto_narracao, i) => {
+    // SEQUENCIAL para respeitar rate limit do Gemini (evitar 429)
+    const cenas = [];
+    for (let i = 0; i < paragrafos.length; i++) {
+      const texto_narracao = paragrafos[i];
       let prompt_visual = `scene ${i + 1}: ${titulo}`;
       try {
-        const geminiPrompt = `Based on this narration text for a video scene, generate a SHORT visual description in English (10-20 words) that describes what should be shown visually. Focus on concrete objects, people, actions, settings.
+        const geminiPrompt = `Based on this narration text for a video scene, generate a SHORT visual description in English (10-20 words) that describes what should be shown visually. Focus on concrete, searchable objects, people, actions, and settings. Avoid abstract or cinematic terms.
 
-Narration: "${texto_narracao.substring(0, 300)}"
 Video title: "${titulo.trim()}"
+Scene ${i + 1} of ${paragrafos.length}
+Narration: "${texto_narracao.substring(0, 500)}"
 
 Return ONLY the visual description, nothing else.`;
-        const result = await chamarGemini(geminiPrompt, 10000);
+        const result = await chamarGemini(geminiPrompt, 15000);
         if (result?.trim() && result.trim().length > 5) {
           prompt_visual = result.trim().replace(/^["']|["']$/g, '').substring(0, 150);
         }
       } catch (err) {
-        // Se Gemini falhar, usar primeira frase da narração como fallback
-        const primeiraFrase = texto_narracao.split(/[.!?]/)[0]?.trim();
-        if (primeiraFrase && primeiraFrase.length > 10) {
-          prompt_visual = primeiraFrase.substring(0, 120);
+        // Fallback: extrair keywords concretas da narração
+        const palavras = texto_narracao.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').split(/\s+/).filter(w => w.length > 4);
+        const keywords = [...new Set(palavras)].slice(0, 6).join(' ');
+        if (keywords.length > 10) {
+          prompt_visual = `${titulo.trim()} ${keywords}`.substring(0, 150);
+        } else {
+          const primeiraFrase = texto_narracao.split(/[.!?]/)[0]?.trim();
+          if (primeiraFrase && primeiraFrase.length > 10) prompt_visual = primeiraFrase.substring(0, 120);
         }
       }
-      return {
+      cenas.push({
         numero: i + 1,
         texto_narracao,
         prompt_visual,
         duracao_estimada: Math.max(10, Math.round(texto_narracao.split(' ').length / 2.5))
-      };
-    }));
+      });
+      // Delay entre chamadas para respeitar rate limit do Gemini
+      if (i < paragrafos.length - 1) await new Promise(r => setTimeout(r, 1500));
+    }
 
     const roteiro = {
       titulo: titulo.trim(),
@@ -781,6 +812,7 @@ Return ONLY the visual description, nothing else.`;
       estiloLegenda: estiloLegenda || 'classic',
       voz: voz || null,
       vozClonada: vozClonada || null,
+      audioCustom: audioCustom || null,
       previewMode: previewMode || false,
       status: 'iniciando',
       progresso: 0,

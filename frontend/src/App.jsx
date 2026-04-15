@@ -220,7 +220,7 @@ function App() {
   const [paidModalInfo, setPaidModalInfo] = useState(null)
   const [restartingBackend, setRestartingBackend] = useState(false)
   const [modoRoteiro, setModoRoteiro] = useState('ia') // 'ia' | 'manual' | 'livro'
-  const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '', voz: '', vozClonada: '', previewMode: false })
+  const [roteiroManual, setRoteiroManual] = useState({ titulo: '', tipoVideo: 'stickAnimation', publicarYoutube: false, texto: '', voz: '', vozClonada: '', previewMode: false, legendas: true, estiloLegenda: 'classic', audioFile: null })
   const [editorCenas, setEditorCenas] = useState({})
 
   // === LIVRO / SÉRIES STATE ===
@@ -1668,7 +1668,18 @@ function App() {
             if (missingManual) { setConfigBanner({ message: missingManual }); setShowConfig(true); return }
             setLoading(true)
             try {
-              const r = await axios.post(`${API_URL}/videos/manual`, roteiroManual)
+              let audioCustom = null
+              if (roteiroManual.audioFile) {
+                const audioForm = new FormData()
+                audioForm.append('audio', roteiroManual.audioFile, roteiroManual.audioFile.name)
+                const uploadResp = await axios.post(`${API_URL}/videos/upload-audio`, audioForm, {
+                  headers: { 'Content-Type': 'multipart/form-data' }
+                })
+                audioCustom = uploadResp.data.audioFile
+              }
+              const { audioFile, ...payload } = roteiroManual
+              if (audioCustom) payload.audioCustom = audioCustom
+              const r = await axios.post(`${API_URL}/videos/manual`, payload)
               await carregarVideos()
               setMonitorVideoId(r.data.videoId)
               setMonitorMinimized(false)
@@ -1886,6 +1897,56 @@ function App() {
                 {!config.youtube_connected && <span style={{ fontSize: '12px', color: '#999' }}>(conecte nas configurações)</span>}
               </label>
             </div>
+
+            {/* Legendas */}
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <input type="checkbox" checked={roteiroManual.legendas}
+                  onChange={e => setRoteiroManual(p => ({ ...p, legendas: e.target.checked }))}
+                  style={{ width: 'auto' }} />
+                <span>💬 Legendas automáticas (Whisper)</span>
+              </label>
+              {roteiroManual.legendas && (
+                <div style={{ marginTop: '8px' }}>
+                  <label style={{ fontSize: '0.9em', color: '#666' }}>Estilo da legenda:</label>
+                  <select value={roteiroManual.estiloLegenda} onChange={e => setRoteiroManual(p => ({ ...p, estiloLegenda: e.target.value }))} style={{ marginLeft: '8px' }}>
+                    <option value="classic">📝 Clássico (branco com contorno)</option>
+                    <option value="bold">💪 Bold (grande e grosso)</option>
+                    <option value="neon">💜 Neon (ciano com contorno roxo)</option>
+                    <option value="minimal">✨ Minimal (sutil e elegante)</option>
+                    <option value="cinematic">🎬 Cinematográfico (centralizado embaixo)</option>
+                    <option value="yellow">💛 Amarelo (destaque amarelo)</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Upload de narração MP3 */}
+            <details style={{ marginBottom: 16, border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
+              <summary style={{ padding: '10px 14px', cursor: 'pointer', background: '#fafafa', fontWeight: 600, fontSize: 13, userSelect: 'none' }}>
+                🎵 Narração própria (MP3/WAV) {roteiroManual.audioFile ? '— arquivo selecionado ✅' : '— opcional'}
+              </summary>
+              <div style={{ padding: '12px 14px' }}>
+                <p style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>
+                  Envie um arquivo de áudio com a narração pronta. O VideoForge vai montar o vídeo usando seu áudio ao invés de gerar TTS.
+                </p>
+                <input type="file" accept=".mp3,.wav,.ogg,.m4a,.webm"
+                  onChange={e => {
+                    const file = e.target.files?.[0] || null
+                    setRoteiroManual(p => ({ ...p, audioFile: file }))
+                  }}
+                  style={{ fontSize: 13, marginBottom: 8 }} />
+                {roteiroManual.audioFile && (
+                  <div style={{ marginTop: 8 }}>
+                    <audio controls src={URL.createObjectURL(roteiroManual.audioFile)} style={{ width: '100%', height: 36 }} />
+                    <button type="button" onClick={() => setRoteiroManual(p => ({ ...p, audioFile: null }))}
+                      style={{ marginTop: 6, padding: '4px 10px', fontSize: 12, cursor: 'pointer', border: '1px solid #e5e7eb', borderRadius: 6, background: '#fff', color: '#e53e3e' }}>
+                      ✕ Remover áudio
+                    </button>
+                  </div>
+                )}
+              </div>
+            </details>
 
             {/* Preview Mode - revisar visuais antes de renderizar */}
             {!['darkStickman', 'stickAnimation', 'heygenAvatar', 'didAvatar', 'klingGeneration', 'replicateGeneration', 'veoGeneration', 'geminiVeoGeneration'].includes(roteiroManual.tipoVideo) && (
