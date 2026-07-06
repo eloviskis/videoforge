@@ -4662,7 +4662,7 @@ async function gerarVideoReplicate(videoId, roteiro, audioPaths) {
   
   await fs.mkdir(resolve(MEDIA_DIR, 'replicate_clips'), { recursive: true });
   
-  const MODEL = process.env.REPLICATE_MODEL || 'wan-video/wan2.1-t2v-480p';
+  const MODEL = process.env.REPLICATE_MODEL || 'wavespeedai/wan-2.1-t2v-480p';
   
   const clipPaths = [];
   
@@ -4685,8 +4685,9 @@ ${cena.acao || ''}`.trim().substring(0, 500);
           {
             input: {
               prompt: prompt,
-              num_frames: 41,
               aspect_ratio: '16:9',
+              fast_mode: 'Balanced',
+              negative_prompt: 'blurry, low quality, watermark, text, logo',
             }
           },
           {
