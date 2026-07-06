@@ -4662,7 +4662,7 @@ async function gerarVideoReplicate(videoId, roteiro, audioPaths) {
   
   await fs.mkdir(resolve(MEDIA_DIR, 'replicate_clips'), { recursive: true });
   
-  const MODEL = process.env.REPLICATE_MODEL || 'wavespeedai/wan-2.1-t2v-480p';
+  const MODEL = process.env.REPLICATE_MODEL || 'bytedance/seedance-2.0-fast';
   
   const clipPaths = [];
   
@@ -4670,10 +4670,16 @@ async function gerarVideoReplicate(videoId, roteiro, audioPaths) {
     const cenaNum = cena.numero;
     const clipDocker = `/media/replicate_clips/${videoId}_cena${cenaNum}.mp4`;
     
-    const prompt = `${cena.prompt_visual || cena.descricao_visual || ''}.
-${cena.acao || ''}`.trim().substring(0, 500);
+    const promptBase = `${cena.prompt_visual || cena.descricao_visual || ''}.
+${cena.acao || ''}`.trim().substring(0, 800);
     
-    console.log(`  🎥 [Replicate] Cena ${cenaNum}: "${prompt.substring(0, 80)}..."`);
+    // Extrair duração do prompt (ex: "8 seconds." no final)
+    const durationMatch = promptBase.match(/(\d+)\s+seconds?[\.\s]*$/i);
+    const duration = durationMatch ? Math.min(16, Math.max(1, parseInt(durationMatch[1]))) : 8;
+    // Remover menção de duração do prompt (modelo não precisa)
+    const prompt = promptBase.replace(/,?\s*\d+\s+seconds?[\.\s]*$/i, '').trim();
+    
+    console.log(`  🎥 [Replicate] Cena ${cenaNum}: "${prompt.substring(0, 80)}..." (${duration}s)`);
     console.log(`  🔄 [Replicate] Usando modelo: ${MODEL}`);
     
     // Retry em caso de rate limiting
@@ -4686,8 +4692,9 @@ ${cena.acao || ''}`.trim().substring(0, 500);
             input: {
               prompt: prompt,
               aspect_ratio: '16:9',
-              fast_mode: 'Balanced',
-              negative_prompt: 'blurry, low quality, watermark, text, logo',
+              duration: duration,
+              resolution: '720p',
+              generate_audio: false,
             }
           },
           {
@@ -7376,7 +7383,7 @@ app.post('/api/admin/restart', async (req, res) => {
 // TIPOS DE VÍDEO (gratuitos vs pagos)
 // ============================================
 const PAID_VIDEO_TYPES = {
-  replicateGeneration: { label: 'Replicate / Wan 2.1', cost: '~$0.005-0.02/geração', warning: 'O Replicate requer créditos. Adicione forma de pagamento em replicate.com/account/billing.' },
+  replicateGeneration: { label: 'Replicate / Seedance 2.0 Fast', cost: '~$0.05-0.15/geração', warning: 'O Replicate requer créditos. Adicione forma de pagamento em replicate.com/account/billing.' },
   klingGeneration: { label: 'Kling AI', cost: '~$0.01-0.04/cena', warning: 'Kling AI requer KLING_ACCESS_KEY_ID e KLING_ACCESS_KEY_SECRET no .env. Crie chaves em: https://platform.klingai.com/account/developer' },
   huggingfaceGeneration: { label: 'Hugging Face', cost: 'Créditos pré-pagos HF', warning: 'A API de vídeo do Hugging Face agora requer créditos pré-pagos na sua conta.' },
   veoGeneration: { label: 'Veo 3 (Google Vertex)', cost: '~$0.35/segundo de vídeo', warning: 'Este serviço usa Google Cloud billing e cobra por segundo de vídeo gerado.' },
