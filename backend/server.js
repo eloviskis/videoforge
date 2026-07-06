@@ -4692,10 +4692,9 @@ ${cena.acao || ''}`.trim().substring(0, 500);
           {
             headers: {
               'Authorization': `Bearer ${REPLICATE_API_TOKEN}`,
-              'Content-Type': 'application/json',
-              'Prefer': 'wait=120'
+              'Content-Type': 'application/json'
             },
-            timeout: 600000
+            timeout: 30000
           }
         );
         break; // sucesso, sair do retry loop
