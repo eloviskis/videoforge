@@ -753,42 +753,64 @@ app.post('/api/videos/manual', async (req, res) => {
     if (paragrafos.length < 1) return res.status(400).json({ error: 'Roteiro muito curto. Separe as cenas com linha em branco.' });
 
     // Gerar prompt_visual contextualizado para cada cena usando Gemini (se disponível)
+    // Suporta bloco [VISUAL: ...] no início ou fim do parágrafo para pular o Gemini:
+    //   [VISUAL: Extreme wide shot in deep space, comet...]
+    //   Narração falada da cena aqui.
+    // O bloco [VISUAL:] é extraído antes do TTS — não será narrado.
     // SEQUENCIAL para respeitar rate limit do Gemini (evitar 429)
+    const VISUAL_REGEX = /^\[VISUAL:\s*([\s\S]*?)\]\s*\n?/i;
     const cenas = [];
     for (let i = 0; i < paragrafos.length; i++) {
-      const texto_narracao = paragrafos[i];
-      let prompt_visual = `scene ${i + 1}: ${titulo}`;
-      try {
-        const geminiPrompt = `Based on this narration text for a video scene, generate a SHORT visual description in English (10-20 words) that describes what should be shown visually. Focus on concrete, searchable objects, people, actions, and settings. Avoid abstract or cinematic terms.
+      let rawParagrafo = paragrafos[i];
+
+      // Extrair prompt customizado [VISUAL: ...] se presente
+      let promptCustomizado = null;
+      const matchVisual = rawParagrafo.match(VISUAL_REGEX);
+      if (matchVisual) {
+        promptCustomizado = matchVisual[1].trim();
+        rawParagrafo = rawParagrafo.replace(VISUAL_REGEX, '').trim();
+      }
+
+      const texto_narracao = rawParagrafo;
+      if (!texto_narracao) continue; // parágrafo só tinha [VISUAL:], pula
+
+      let prompt_visual = promptCustomizado || `scene ${i + 1}: ${titulo}`;
+
+      // Só chama o Gemini se não houver prompt customizado
+      if (!promptCustomizado) {
+        try {
+          const geminiPrompt = `Based on this narration text for a video scene, generate a SHORT visual description in English (10-20 words) that describes what should be shown visually. Focus on concrete, searchable objects, people, actions, and settings. Avoid abstract or cinematic terms.
 
 Video title: "${titulo.trim()}"
 Scene ${i + 1} of ${paragrafos.length}
 Narration: "${texto_narracao.substring(0, 500)}"
 
 Return ONLY the visual description, nothing else.`;
-        const result = await chamarGemini(geminiPrompt, 15000);
-        if (result?.trim() && result.trim().length > 5) {
-          prompt_visual = result.trim().replace(/^["']|["']$/g, '').substring(0, 150);
+          const result = await chamarGemini(geminiPrompt, 15000);
+          if (result?.trim() && result.trim().length > 5) {
+            prompt_visual = result.trim().replace(/^["']|["']$/g, '').substring(0, 500);
+          }
+        } catch (err) {
+          // Fallback: extrair keywords concretas da narração
+          const palavras = texto_narracao.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').split(/\s+/).filter(w => w.length > 4);
+          const keywords = [...new Set(palavras)].slice(0, 6).join(' ');
+          if (keywords.length > 10) {
+            prompt_visual = `${titulo.trim()} ${keywords}`.substring(0, 150);
+          } else {
+            const primeiraFrase = texto_narracao.split(/[.!?]/)[0]?.trim();
+            if (primeiraFrase && primeiraFrase.length > 10) prompt_visual = primeiraFrase.substring(0, 120);
+          }
         }
-      } catch (err) {
-        // Fallback: extrair keywords concretas da narração
-        const palavras = texto_narracao.replace(/[^a-zA-ZÀ-ÿ\s]/g, '').split(/\s+/).filter(w => w.length > 4);
-        const keywords = [...new Set(palavras)].slice(0, 6).join(' ');
-        if (keywords.length > 10) {
-          prompt_visual = `${titulo.trim()} ${keywords}`.substring(0, 150);
-        } else {
-          const primeiraFrase = texto_narracao.split(/[.!?]/)[0]?.trim();
-          if (primeiraFrase && primeiraFrase.length > 10) prompt_visual = primeiraFrase.substring(0, 120);
-        }
+        // Delay entre chamadas para respeitar rate limit do Gemini (só quando usa Gemini)
+        if (i < paragrafos.length - 1) await new Promise(r => setTimeout(r, 1500));
       }
+
       cenas.push({
-        numero: i + 1,
+        numero: cenas.length + 1,
         texto_narracao,
         prompt_visual,
         duracao_estimada: Math.max(10, Math.round(texto_narracao.split(' ').length / 2.5))
       });
-      // Delay entre chamadas para respeitar rate limit do Gemini
-      if (i < paragrafos.length - 1) await new Promise(r => setTimeout(r, 1500));
     }
 
     const roteiro = {
